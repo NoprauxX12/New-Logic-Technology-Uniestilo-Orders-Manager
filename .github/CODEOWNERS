@@ -1,0 +1,12 @@
+# Dueños por área: GitHub los sugiere como revisores automáticamente.
+# Descomentar cuando el equipo confirme sus usuarios de GitHub
+# (hoy solo se conoce @NoprauxX12 = Juan Sebastián Lizcano).
+#
+# /supabase/                 @<juan-jose-diaz> @<juan-jose-escobar>
+# /src/features/ordenes/     @<juan-jose-diaz>
+# /src/features/tablero/     @NoprauxX12
+# /src/components/           @<leidy-roldan>
+# /src/lib/ai/               @<jeronimo-campuzano>
+# /.github/                  @<jeronimo-campuzano> @<juan-jose-escobar>
+# /CLAUDE.md                 @<jeronimo-campuzano>
+# /CONTRIBUTING.md           @<jeronimo-campuzano>
