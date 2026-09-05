@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Uniestilo · Gestor de órdenes de producción
 
-## Getting Started
+Plataforma web para registrar y seguir las órdenes de producción de **Uniestilo S.A.S.** (confección, Marinilla, Antioquia): cada área marca su parte del proceso y el administrador ve el avance de todas las órdenes en un tablero en tiempo real. Reemplaza los cuadernos y el WhatsApp.
 
-First, run the development server:
+Proyecto Integrador 2 · Universidad EAFIT · 2026-2 · Equipo **New Logic Technology**.
+
+## Equipo
+
+| Integrante             | Rol                                    |
+| ---------------------- | -------------------------------------- |
+| Juan José Díaz         | Ingeniero de Datos & Backend           |
+| Jerónimo Campuzano     | Scrum Master & Ingeniero IA            |
+| Leidy D. Roldán        | Ingeniera Frontend & Testing           |
+| Juan José Escobar      | Ingeniero de Infraestructura & Backend |
+| Juan Sebastián Lizcano | Ingeniero Backend & Frontend           |
+
+## Stack
+
+Next.js 16 · React 19 · TypeScript · Tailwind CSS 4 · Supabase (Postgres + RLS, Auth, Storage, Realtime) · Vercel.
+
+## Empezar
+
+Requisitos: Node 22 (`nvm use` lee `.nvmrc`), npm y Docker (solo para Supabase local).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm ci
+cp .env.example .env.local   # completar con las llaves del proyecto de Supabase
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Base de datos local con la CLI de Supabase (recomendado para no tocar datos reales):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npx supabase init            # solo la primera vez en el repo
+npx supabase start           # Postgres, Auth y Studio en Docker
+npx supabase db reset        # aplica migraciones y seed
+npm run db:types             # regenera src/types/database.types.ts
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Comandos
 
-## Learn More
+| Comando            | Qué hace                                                      |
+| ------------------ | ------------------------------------------------------------- |
+| `npm run dev`      | Servidor de desarrollo                                        |
+| `npm run build`    | Build de producción                                           |
+| `npm run check`    | Formato + lint + tipos + tests. Correrlo antes de abrir un PR |
+| `npm run lint:fix` | Arregla lo que ESLint pueda arreglar solo                     |
+| `npm run format`   | Formatea todo con Prettier                                    |
+| `npm test`         | Tests en modo watch                                           |
 
-To learn more about Next.js, take a look at the following resources:
+## Documentación
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [`CLAUDE.md`](CLAUDE.md): estándares de código, estructura del proyecto y reglas del dominio. Lectura obligatoria.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md): ramas, commits, PRs y releases.
+- [`docs/adr/`](docs/adr/): decisiones de arquitectura.
+- Backlog: https://github.com/users/NoprauxX12/projects/7/views/3
