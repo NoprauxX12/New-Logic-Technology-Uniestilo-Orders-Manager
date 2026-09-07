@@ -167,7 +167,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      registrar_orden: {
+        Args: {
+          p_contacto_celular: string
+          p_contacto_nombre: string
+          p_fecha_entrega: string
+          p_fecha_ingreso: string
+          p_items: Json
+          p_nit: string
+          p_numero_orden_compra: string
+          p_observaciones: string
+          p_razon_social: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

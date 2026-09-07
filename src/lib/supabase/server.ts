@@ -3,17 +3,20 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+import type { Database } from "@/types/database.types";
+
 /**
  * Cliente de Supabase para servidor: Server Components, Server Actions y
  * Route Handlers. Lee y escribe la sesión en las cookies de la petición.
  *
- * Cuando exista `src/types/database.types.ts`, pasar el genérico:
- * `createServerClient<Database>(...)`.
+ * Va tipado con `Database`, que se genera desde el esquema con `npm run db:types`:
+ * gracias a eso el editor conoce las columnas de cada tabla y los argumentos de
+ * cada función.
  */
 export async function createClient() {
   const cookieStore = await cookies();
 
-  return createServerClient(
+  return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
