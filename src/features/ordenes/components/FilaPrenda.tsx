@@ -28,6 +28,10 @@ export function FilaPrenda({
 }: Props) {
   const errorDe = (campo: string) => errores[`items.${posicion}.${campo}`];
 
+  // El `name` se repite en todas las filas (así se agrupan las prendas), pero el
+  // `id` no puede: es lo que une la etiqueta con su campo dentro de la página.
+  const idDe = (campo: string) => `items-${posicion}-${campo}`;
+
   return (
     <fieldset className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
       <legend className="px-1 text-base font-semibold text-zinc-900">
@@ -38,6 +42,7 @@ export function FilaPrenda({
         <div className="sm:col-span-2">
           <CampoTexto
             nombre="descripcion"
+            identificador={idDe("descripcion")}
             etiqueta="¿Qué prenda es?"
             marcador="Camisas ejecutivas blancas manga larga"
             errores={errorDe("descripcion")}
@@ -47,6 +52,7 @@ export function FilaPrenda({
 
         <CampoTexto
           nombre="cantidad"
+          identificador={idDe("cantidad")}
           etiqueta="Cantidad"
           ayuda="Cuántas unidades en total"
           numerico
@@ -57,6 +63,7 @@ export function FilaPrenda({
 
         <CampoTexto
           nombre="valor"
+          identificador={idDe("valor")}
           etiqueta="Valor"
           ayuda="En pesos, sin puntos"
           numerico
@@ -68,6 +75,7 @@ export function FilaPrenda({
         <div className="sm:col-span-2">
           <CampoTexto
             nombre="tallas"
+            identificador={idDe("tallas")}
             etiqueta="Tallas"
             ayuda="Cuántas de cada talla"
             marcador="S:60, M:100, L:80"
@@ -79,6 +87,7 @@ export function FilaPrenda({
         <div className="sm:col-span-2">
           <CampoTexto
             nombre="observacionesItem"
+            identificador={idDe("observacionesItem")}
             etiqueta="Observaciones de la prenda (opcional)"
             errores={errorDe("observaciones")}
             valorInicial={valores?.observaciones}

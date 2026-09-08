@@ -7,6 +7,14 @@
 
 type Props = {
   nombre: string;
+  /**
+   * `id` del campo en la página. Por defecto es el `nombre`, que alcanza cuando
+   * el campo aparece una sola vez. Las prendas repiten el mismo `nombre` en cada
+   * fila a propósito —así las agrupa `leerFormularioOrden`—, así que ahí hay que
+   * darle uno propio: dos campos con el mismo `id` hacen que la etiqueta de la
+   * Prenda 2 enfoque el campo de la Prenda 1.
+   */
+  identificador?: string;
   etiqueta: string;
   /** Texto de apoyo debajo de la etiqueta, con un ejemplo de lo que se espera. */
   ayuda?: string;
@@ -25,6 +33,7 @@ type Props = {
 
 export function CampoTexto({
   nombre,
+  identificador,
   etiqueta,
   ayuda,
   tipo = "text",
@@ -33,13 +42,14 @@ export function CampoTexto({
   errores,
   valorInicial,
 }: Props) {
-  const idError = `${nombre}-error`;
-  const idAyuda = `${nombre}-ayuda`;
+  const idCampo = identificador ?? nombre;
+  const idError = `${idCampo}-error`;
+  const idAyuda = `${idCampo}-ayuda`;
   const tieneError = Boolean(errores?.length);
 
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={nombre} className="text-base font-medium text-zinc-900">
+      <label htmlFor={idCampo} className="text-base font-medium text-zinc-900">
         {etiqueta}
       </label>
 
@@ -50,7 +60,7 @@ export function CampoTexto({
       ) : null}
 
       <input
-        id={nombre}
+        id={idCampo}
         name={nombre}
         type={tipo}
         inputMode={numerico ? "numeric" : undefined}
