@@ -66,13 +66,22 @@ export const nuevaOrdenSchema = z
       .min(1, "Escribe el número de la orden de compra")
       .max(50, "El número de orden de compra es muy largo"),
 
-    // Datos del cliente. Si el NIT ya existe, se reutiliza ese cliente.
+    // Datos del cliente. El NIT dice de quién es la orden: si ya existe, se
+    // reutiliza ese cliente. La comparación ignora puntos, guiones y espacios,
+    // así que `900.123.456-7` y `9001234567` son el mismo cliente.
     nit: z
       .string()
       .trim()
-      .min(5, "Escribe el NIT del cliente")
+      .min(1, "Escribe el NIT del cliente")
       .max(20, "El NIT es muy largo")
-      .regex(/^[0-9.\-\s]+$/, "El NIT solo lleva números, puntos y guiones"),
+      .regex(/^[0-9.\-\s]+$/, "El NIT solo lleva números, puntos y guiones")
+      // Sin esto, un NIT de puros separadores ("....." ) pasaba la validación.
+      // Como es la llave del cliente, todo lo que se registrara así se pegaba
+      // al mismo cliente vacío.
+      .refine(
+        (valor) => valor.replace(/[^0-9]/g, "").length >= 5,
+        "El NIT debe tener al menos 5 números",
+      ),
     razonSocial: z
       .string()
       .trim()

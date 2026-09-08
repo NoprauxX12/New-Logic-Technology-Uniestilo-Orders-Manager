@@ -196,6 +196,15 @@ describe("nuevaOrdenSchema · datos del cliente", () => {
     ).toBe(true);
   });
 
+  it.each(["", ".....", "-.-.-", "12.3"])(
+    "rechaza el NIT %s porque no tiene números suficientes",
+    (nit) => {
+      const errores = erroresPorCampo(ordenValida({ nit }));
+
+      expect(errores.nit).toBeDefined();
+    },
+  );
+
   it("rechaza un celular con letras", () => {
     const errores = erroresPorCampo(
       ordenValida({ contactoCelular: "no tiene" }),
