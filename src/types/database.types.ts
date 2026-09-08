@@ -34,6 +34,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      avance_seccion: {
+        Row: {
+          fecha_hora: string
+          id: string
+          orden_id: string
+          seccion: string
+          usuario_id: string | null
+        }
+        Insert: {
+          fecha_hora?: string
+          id?: string
+          orden_id: string
+          seccion: string
+          usuario_id?: string | null
+        }
+        Update: {
+          fecha_hora?: string
+          id?: string
+          orden_id?: string
+          seccion?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avance_seccion_orden_id_fkey"
+            columns: ["orden_id"]
+            isOneToOne: false
+            referencedRelation: "orden"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cliente: {
         Row: {
           contacto_celular: string
@@ -167,6 +199,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      marcar_corte_completado: { Args: { p_orden_id: string }; Returns: string }
+      nit_normalizado: { Args: { p_nit: string }; Returns: string }
       registrar_orden: {
         Args: {
           p_contacto_celular: string
