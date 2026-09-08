@@ -58,7 +58,8 @@ export const itemOrdenSchema = z.object({
 
 export const nuevaOrdenSchema = z
   .object({
-    // Identifica la orden. La base impide que se repita (restricción unique).
+    // Identifica la orden. La base impide que se repita, sin distinguir
+    // mayúsculas: `OC-A-650225` y `oc-a-650225` son el mismo número.
     numeroOrdenCompra: z
       .string()
       .trim()
