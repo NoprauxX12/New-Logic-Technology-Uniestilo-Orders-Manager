@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { DetalleOrdenView } from "@/features/tablero/components/DetalleOrdenView";
+import { TableroEnVivo } from "@/features/tablero/components/TableroEnVivo";
 import { obtenerDetalleOrden } from "@/features/tablero/queries";
 
 type Props = {
@@ -13,5 +14,9 @@ export default async function DetalleOrdenPage({ params }: Props) {
 
   if (!orden) notFound();
 
-  return <DetalleOrdenView orden={orden} />;
+  return (
+    <TableroEnVivo>
+      <DetalleOrdenView orden={orden} />
+    </TableroEnVivo>
+  );
 }
