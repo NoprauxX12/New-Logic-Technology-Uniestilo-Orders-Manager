@@ -110,7 +110,7 @@ export const CHECKPOINTS = [
     rolDueno: "marcacion",
     hu: "HU-12",
     disponible: true,
-    ruta: null,
+    ruta: "/ordenes/marcacion",
   },
   {
     // PENDIENTE (CLAUDE.md): HU-19 la marca "terminación (Marcela)", que no es
