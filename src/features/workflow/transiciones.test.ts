@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buscarCheckpoint,
   CHECKPOINTS,
   ETIQUETAS_ROL,
   type CheckpointId,
@@ -202,5 +203,42 @@ describe("puedeMarcar", () => {
     }
 
     expect(siguienteCheckpoint(marcados)).toBeNull();
+  });
+});
+
+/**
+ * Los casos de arriba prueban las reglas del motor con un checkpoint cualquiera.
+ * Estos prueban la posición concreta de `lista_despacho` en la secuencia, que es
+ * el criterio 2 de HU-19: "solo está disponible si la orden ya pasó por
+ * marcación". Si alguien reordena `CHECKPOINTS`, los genéricos siguen en verde
+ * y estos dos no.
+ */
+describe("puedeMarcar · lista para despachar (HU-19)", () => {
+  const { rolDueno } = buscarCheckpoint("lista_despacho");
+  const pasosPrevios = SECUENCIA.indexOf("lista_despacho");
+
+  it("no se puede marcar mientras la orden no haya llegado a marcación", () => {
+    const resultado = puedeMarcar({
+      checkpoint: "lista_despacho",
+      marcados: primeros(pasosPrevios - 1),
+      rol: rolDueno,
+    });
+
+    expect(resultado.permitido).toBe(false);
+    if (resultado.permitido) return;
+    expect(resultado.motivo).toBe("fuera_de_secuencia");
+    expect(resultado.mensaje).toContain(
+      buscarCheckpoint("llegada_marcacion").etiqueta,
+    );
+  });
+
+  it("se puede marcar apenas la orden llega a marcación", () => {
+    const resultado = puedeMarcar({
+      checkpoint: "lista_despacho",
+      marcados: primeros(pasosPrevios),
+      rol: rolDueno,
+    });
+
+    expect(resultado.permitido).toBe(true);
   });
 });
