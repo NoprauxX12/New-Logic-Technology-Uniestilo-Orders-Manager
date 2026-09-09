@@ -8,6 +8,12 @@ export default function HomePage() {
         Sistema en construcción. Sprint 1: registro, corte, talleres, marcación,
         despacho y tablero.
       </p>
+      <Link
+        href="/tablero"
+        className="inline-flex min-h-12 items-center rounded-lg bg-stone-700 px-6 text-base font-semibold text-white hover:bg-stone-800"
+      >
+        Ver el tablero de órdenes
+      </Link>
     </main>
   );
 }

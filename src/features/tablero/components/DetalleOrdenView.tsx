@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { BadgeSemaforo } from "@/features/tablero/components/BadgeSemaforo";
 import type { DetalleOrden, EtapaTablero } from "@/features/tablero/types";
@@ -8,6 +9,10 @@ function formatoFechaHora(iso: string) {
   return new Date(iso).toLocaleString("es-CO", {
     dateStyle: "medium",
     timeStyle: "short",
+    // Sin zona explícita se usaría la del servidor, que en Vercel es UTC: un
+    // avance marcado a las 10:12 en Marinilla se leería "15:12". La bitácora
+    // dice cuándo se marcó de verdad (RNF-05), y la empresa tiene una sola sede.
+    timeZone: "America/Bogota",
   });
 }
 
@@ -72,7 +77,17 @@ function CardEtapa({ etapa }: { etapa: EtapaTablero }) {
   );
 }
 
-export function DetalleOrdenView({ orden }: { orden: DetalleOrden }) {
+type Props = {
+  orden: DetalleOrden;
+  /**
+   * Lo que esta sección puede marcar en la orden, si es que le toca algo. Llega
+   * como slot desde la página para que el tablero no dependa del motor de
+   * marcado: quien compone decide qué acción va aquí.
+   */
+  accion?: ReactNode;
+};
+
+export function DetalleOrdenView({ orden, accion }: Props) {
   const pct = Math.round((orden.etapasCompletadas / orden.etapasTotales) * 100);
 
   return (
@@ -115,6 +130,8 @@ export function DetalleOrdenView({ orden }: { orden: DetalleOrden }) {
           </div>
         </div>
       </header>
+
+      {accion}
 
       <section aria-labelledby="linea-tiempo-titulo">
         <h2

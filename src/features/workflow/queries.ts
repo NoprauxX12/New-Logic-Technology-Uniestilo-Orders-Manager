@@ -1,6 +1,37 @@
 import "server-only";
 
+import type { CheckpointId } from "@/features/workflow/checkpoints";
 import { createClient } from "@/lib/supabase/server";
+
+/**
+ * Lecturas del avance de las órdenes.
+ *
+ * `obtenerCheckpointsMarcados` es la que usa la action antes de escribir: le
+ * pregunta al motor con datos frescos de la base y no con lo que venga del
+ * navegador, porque una Server Action se puede invocar con un POST directo.
+ *
+ * `obtenerOrdenesParaCorte` alimenta la pantalla de corte (HU-08). Está
+ * pendiente de unificarse con la lectura genérica; ver el issue de refactor.
+ */
+
+/** Los checkpoints que la orden ya tiene marcados, sin orden garantizado. */
+export async function obtenerCheckpointsMarcados(
+  ordenId: string,
+): Promise<CheckpointId[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("avance_seccion")
+    .select("checkpoint")
+    .eq("orden_id", ordenId);
+
+  if (error) {
+    console.error("[HU-19] No se pudieron leer los avances de la orden", error);
+    throw new Error("No se pudieron leer los avances de la orden.");
+  }
+
+  return data.map((fila) => fila.checkpoint);
+}
 
 export type OrdenParaCorte = {
   id: string;
