@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { usuarioActual } from "@/features/auth/usuarioActual";
 import {
   buscarCheckpoint,
   type CheckpointId,
@@ -13,6 +12,7 @@ import { obtenerCheckpointsMarcados } from "@/features/workflow/queries";
 import { validarMarcacionCorte } from "@/features/workflow/reglas";
 import { marcarAvanceSchema } from "@/features/workflow/schemas";
 import { puedeMarcar } from "@/features/workflow/transiciones";
+import { getUsuarioActual } from "@/lib/auth/usuarioActual";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -46,7 +46,6 @@ export type EstadoMarcado = {
 export type ResultadoMarcacionCorte = EstadoMarcado;
 
 /** Código de Postgres para "violación de restricción única". */
-const VIOLACION_DE_UNICIDAD = "23505";
 
 export async function marcarAvance(
   _estadoPrevio: EstadoMarcado,
@@ -70,7 +69,18 @@ export async function marcarAvance(
   }
 
   const { ordenId, checkpoint } = validacion.data;
-  const usuario = await usuarioActual();
+
+  // Quién está marcando. Mientras no exista el login (HU-16) sale del selector
+  // del layout; después saldrá de la sesión, sin cambiar nada de aquí.
+  const usuario = await getUsuarioActual();
+
+  if (!usuario) {
+    return {
+      ok: false,
+      mensaje: "Escoge arriba con qué persona estás trabajando.",
+    };
+  }
+
   const marcados = await obtenerCheckpointsMarcados(ordenId);
 
   const veredicto = puedeMarcar({ checkpoint, marcados, rol: usuario.rol });
@@ -125,7 +135,7 @@ const ordenIdSchema = z
     "La identificación de la orden no es válida.",
   );
 
-const USUARIO_CORTE_ID = "00000000-0000-0000-0000-0000000000a4";
+const VIOLACION_DE_UNICIDAD = "23505";
 
 /**
  * HU-08 · Marca la etapa de corte como completada.
@@ -141,6 +151,17 @@ export async function marcarCorteCompletado(
     return {
       ok: false,
       mensaje: "La orden seleccionada no es válida.",
+    };
+  }
+
+  // Quién está marcando. Mientras no exista el login (HU-16) sale del selector
+  // del layout; después saldrá de la sesión, sin cambiar nada de aquí.
+  const usuario = await getUsuarioActual();
+
+  if (!usuario) {
+    return {
+      ok: false,
+      mensaje: "Escoge arriba con qué persona estás trabajando.",
     };
   }
 
@@ -182,6 +203,7 @@ export async function marcarCorteCompletado(
   const resultado = validarMarcacionCorte({
     ordenExiste: orden !== null,
     checkpointsCompletados,
+    rol: usuario.rol,
   });
 
   if (!resultado.permitido) {
@@ -196,7 +218,7 @@ export async function marcarCorteCompletado(
     .insert({
       orden_id: validacionId.data,
       checkpoint: "corte_completado",
-      usuario_id: USUARIO_CORTE_ID,
+      usuario_id: usuario.id,
     });
 
   if (errorMarcacion) {

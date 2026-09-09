@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buscarCheckpoint,
   CHECKPOINTS,
+  CHECKPOINTS_DISPONIBLES,
   ETIQUETAS_ROL,
   type CheckpointId,
   type Rol,
@@ -15,8 +16,12 @@ import {
 
 /**
  * Reglas del motor de workflow. Aquí vive el riesgo del dominio, así que se
- * prueban las tres condiciones por separado y también cuál gana cuando fallan
+ * prueban las condiciones por separado y también cuál gana cuando fallan
  * varias a la vez.
+ *
+ * Los casos se arman a partir de `CHECKPOINTS`, no de valores escritos a mano,
+ * para que sigan valiendo cuando una historia de otro sprint ponga su etapa
+ * como disponible.
  */
 
 /**
@@ -39,15 +44,26 @@ const TODOS: Record<CheckpointId, true> = {
   cerrada: true,
 };
 
-/** Los ids en el orden del flujo, para armar casos sin repetir literales. */
+/** La secuencia completa del flujo del taller. */
 const SECUENCIA = CHECKPOINTS.map((checkpoint) => checkpoint.id);
+
+/**
+ * Lo que hoy se puede marcar, en el orden del flujo.
+ *
+ * Se anota como `CheckpointId[]` a propósito: TypeScript deduce de
+ * `CHECKPOINTS_DISPONIBLES` el subconjunto exacto de etapas disponibles, y sin
+ * ensanchar aquí no dejaría preguntar si una etapa cualquiera está en la lista.
+ */
+const DISPONIBLES: CheckpointId[] = CHECKPOINTS_DISPONIBLES.map(
+  (checkpoint) => checkpoint.id,
+);
 
 /** Los seis roles del modelo, para elegir uno por su relación con otro. */
 const ROLES = Object.keys(ETIQUETAS_ROL) as Rol[];
 
-/** Lo marcado por una orden que ya recorrió los primeros `cuantos` pasos. */
-function primeros(cuantos: number): CheckpointId[] {
-  return SECUENCIA.slice(0, cuantos);
+/** Una orden que ya recorrió las primeras `cuantas` etapas disponibles. */
+function primerasDisponibles(cuantas: number): CheckpointId[] {
+  return DISPONIBLES.slice(0, cuantas);
 }
 
 describe("checkpoints · fuente única", () => {
@@ -59,44 +75,67 @@ describe("checkpoints · fuente única", () => {
     expect(new Set(SECUENCIA).size).toBe(SECUENCIA.length);
   });
 
-  it("cada checkpoint tiene un rol dueño conocido", () => {
-    for (const { rolDueno } of CHECKPOINTS) {
+  it("cada checkpoint tiene un rol dueño conocido y su HU", () => {
+    for (const { rolDueno, hu } of CHECKPOINTS) {
       expect(ETIQUETAS_ROL[rolDueno]).toBeDefined();
+      expect(hu).toMatch(/^HU-\d+$/);
     }
+  });
+
+  it("las disponibles son un subconjunto, en el mismo orden del flujo", () => {
+    const enOrden = SECUENCIA.filter((id) => DISPONIBLES.includes(id));
+
+    expect(DISPONIBLES).toEqual(enOrden);
+    expect(DISPONIBLES.length).toBeGreaterThan(0);
   });
 });
 
 describe("siguienteCheckpoint", () => {
-  it("en una orden recién registrada es el primero del flujo", () => {
-    expect(siguienteCheckpoint([])).toBe(SECUENCIA[0]);
+  it("en una orden recién registrada es la primera etapa disponible", () => {
+    expect(siguienteCheckpoint([])).toBe(DISPONIBLES[0]);
   });
 
-  it("avanza al que sigue a medida que se marcan", () => {
-    expect(siguienteCheckpoint(primeros(3))).toBe(SECUENCIA[3]);
+  it("nunca propone una etapa que todavía no tiene pantalla", () => {
+    const sinPantalla = CHECKPOINTS.filter((c) => !c.disponible).map(
+      (c) => c.id,
+    );
+
+    expect(sinPantalla).not.toContain(siguienteCheckpoint([]));
+  });
+
+  it("avanza a la que sigue a medida que se marcan", () => {
+    expect(siguienteCheckpoint(primerasDisponibles(1))).toBe(DISPONIBLES[1]);
   });
 
   it("no depende del orden en que lleguen los marcados", () => {
-    const desordenados = [...primeros(3)].reverse();
+    const desordenados = [...primerasDisponibles(2)].reverse();
 
-    expect(siguienteCheckpoint(desordenados)).toBe(SECUENCIA[3]);
+    expect(siguienteCheckpoint(desordenados)).toBe(DISPONIBLES[2]);
   });
 
-  it("es null cuando la orden ya recorrió todo", () => {
-    expect(siguienteCheckpoint(SECUENCIA)).toBeNull();
+  it("es null cuando ya se marcó todo lo que hoy se puede marcar", () => {
+    expect(siguienteCheckpoint(DISPONIBLES)).toBeNull();
   });
 });
 
 describe("checkpointsCompletados", () => {
   it("cuenta los marcados, ignorando el orden", () => {
     expect(checkpointsCompletados([])).toBe(0);
-    expect(checkpointsCompletados(primeros(4))).toBe(4);
     expect(checkpointsCompletados(SECUENCIA)).toBe(SECUENCIA.length);
+  });
+
+  it("cuenta también las etapas que vienen marcadas de otros sprints", () => {
+    const sinPantalla = CHECKPOINTS.filter((c) => !c.disponible).map(
+      (c) => c.id,
+    );
+
+    expect(checkpointsCompletados(sinPantalla)).toBe(sinPantalla.length);
   });
 });
 
 describe("puedeMarcar", () => {
-  it("deja marcar el siguiente al rol dueño de esa sección", () => {
-    const siguiente = CHECKPOINTS[0];
+  it("deja marcar la siguiente al rol dueño de esa sección", () => {
+    const siguiente = CHECKPOINTS_DISPONIBLES[0];
 
     const resultado = puedeMarcar({
       checkpoint: siguiente.id,
@@ -108,7 +147,7 @@ describe("puedeMarcar", () => {
   });
 
   it("no deja marcar dos veces el mismo checkpoint", () => {
-    const primero = CHECKPOINTS[0];
+    const primero = CHECKPOINTS_DISPONIBLES[0];
 
     const resultado = puedeMarcar({
       checkpoint: primero.id,
@@ -121,51 +160,67 @@ describe("puedeMarcar", () => {
     expect(resultado.motivo).toBe("ya_marcado");
   });
 
-  it("no deja saltarse pasos de la secuencia", () => {
-    const tercero = CHECKPOINTS[2];
+  it("no deja marcar una etapa que todavía no tiene pantalla", () => {
+    const sinPantalla = CHECKPOINTS.find((c) => !c.disponible);
+    // Cuando el Sprint 3 construya la última, este caso deja de existir.
+    if (!sinPantalla) return;
 
     const resultado = puedeMarcar({
-      checkpoint: tercero.id,
+      checkpoint: sinPantalla.id,
       marcados: [],
-      rol: tercero.rolDueno,
+      rol: sinPantalla.rolDueno,
+    });
+
+    expect(resultado.permitido).toBe(false);
+    if (resultado.permitido) return;
+    expect(resultado.motivo).toBe("todavia_no_disponible");
+  });
+
+  it("no deja saltarse pasos de la secuencia", () => {
+    const tercera = CHECKPOINTS_DISPONIBLES[2];
+
+    const resultado = puedeMarcar({
+      checkpoint: tercera.id,
+      marcados: [],
+      rol: tercera.rolDueno,
     });
 
     expect(resultado.permitido).toBe(false);
     if (resultado.permitido) return;
     expect(resultado.motivo).toBe("fuera_de_secuencia");
-    expect(resultado.mensaje).toContain(CHECKPOINTS[0].etiqueta);
+    expect(resultado.mensaje).toContain(CHECKPOINTS_DISPONIBLES[0].etiqueta);
   });
 
   it("no deja marcar a un rol que no es dueño de la sección", () => {
-    const corte = CHECKPOINTS.find((c) => c.rolDueno === "corte");
-    expect(corte).toBeDefined();
-    if (!corte) return;
+    const primera = CHECKPOINTS_DISPONIBLES[0];
+    const otroRol = ROLES.find((rol) => rol !== primera.rolDueno);
+    expect(otroRol).toBeDefined();
+    if (!otroRol) return;
 
-    const posicion = SECUENCIA.indexOf(corte.id);
     const resultado = puedeMarcar({
-      checkpoint: corte.id,
-      marcados: primeros(posicion),
-      rol: "logistica",
+      checkpoint: primera.id,
+      marcados: [],
+      rol: otroRol,
     });
 
     expect(resultado.permitido).toBe(false);
     if (resultado.permitido) return;
     expect(resultado.motivo).toBe("rol_no_autorizado");
-    expect(resultado.mensaje).toContain(ETIQUETAS_ROL.corte);
+    expect(resultado.mensaje).toContain(ETIQUETAS_ROL[primera.rolDueno]);
   });
 
   it("avisa que ya está marcado antes que del rol, cuando fallan las dos", () => {
-    const primero = CHECKPOINTS[0];
+    const primera = CHECKPOINTS_DISPONIBLES[0];
     // Cualquier rol que no sea el dueño. Se busca en vez de escribirlo porque
-    // `CHECKPOINTS` es `as const`: TypeScript conoce el rol exacto de este
-    // checkpoint y trata como imposible cualquier comparación escrita a mano.
-    const otroRol = ROLES.find((rol) => rol !== primero.rolDueno);
+    // `CHECKPOINTS` es `as const`: TypeScript conoce el rol exacto de esta
+    // etapa y trata como imposible cualquier comparación escrita a mano.
+    const otroRol = ROLES.find((rol) => rol !== primera.rolDueno);
     expect(otroRol).toBeDefined();
     if (!otroRol) return;
 
     const resultado = puedeMarcar({
-      checkpoint: primero.id,
-      marcados: [primero.id],
+      checkpoint: primera.id,
+      marcados: [primera.id],
       rol: otroRol,
     });
 
@@ -174,24 +229,10 @@ describe("puedeMarcar", () => {
     expect(resultado.motivo).toBe("ya_marcado");
   });
 
-  it("no deja marcar nada cuando la orden ya terminó su recorrido", () => {
-    const ultimo = CHECKPOINTS[CHECKPOINTS.length - 1];
-
-    const resultado = puedeMarcar({
-      checkpoint: ultimo.id,
-      marcados: SECUENCIA,
-      rol: ultimo.rolDueno,
-    });
-
-    expect(resultado.permitido).toBe(false);
-    if (resultado.permitido) return;
-    expect(resultado.motivo).toBe("ya_marcado");
-  });
-
-  it("recorre el flujo completo si cada rol marca lo suyo en orden", () => {
+  it("recorre el flujo disponible si cada rol marca lo suyo en orden", () => {
     const marcados: CheckpointId[] = [];
 
-    for (const checkpoint of CHECKPOINTS) {
+    for (const checkpoint of CHECKPOINTS_DISPONIBLES) {
       const resultado = puedeMarcar({
         checkpoint: checkpoint.id,
         marcados,
@@ -215,12 +256,14 @@ describe("puedeMarcar", () => {
  */
 describe("puedeMarcar · lista para despachar (HU-19)", () => {
   const { rolDueno } = buscarCheckpoint("lista_despacho");
-  const pasosPrevios = SECUENCIA.indexOf("lista_despacho");
+  // Se cuenta sobre las etapas disponibles, que es lo que mira el motor: las
+  // que todavía no tienen pantalla no se exigen.
+  const pasosPrevios = DISPONIBLES.indexOf("lista_despacho");
 
   it("no se puede marcar mientras la orden no haya llegado a marcación", () => {
     const resultado = puedeMarcar({
       checkpoint: "lista_despacho",
-      marcados: primeros(pasosPrevios - 1),
+      marcados: primerasDisponibles(pasosPrevios - 1),
       rol: rolDueno,
     });
 
@@ -235,7 +278,7 @@ describe("puedeMarcar · lista para despachar (HU-19)", () => {
   it("se puede marcar apenas la orden llega a marcación", () => {
     const resultado = puedeMarcar({
       checkpoint: "lista_despacho",
-      marcados: primeros(pasosPrevios),
+      marcados: primerasDisponibles(pasosPrevios),
       rol: rolDueno,
     });
 

@@ -12,15 +12,36 @@ describe("validarMarcacionCorte", () => {
         "ficha_adjunta",
         "tela_programada",
       ],
+      rol: "corte",
     });
 
     expect(resultado).toEqual({ permitido: true });
+  });
+
+  it("no deja que otro rol marque el corte", () => {
+    const resultado = validarMarcacionCorte({
+      ordenExiste: true,
+      checkpointsCompletados: [
+        "cotizacion_aprobada",
+        "programada_diseno",
+        "ficha_adjunta",
+        "tela_programada",
+      ],
+      rol: "marcacion",
+    });
+
+    expect(resultado).toEqual({
+      permitido: false,
+      motivo: "rol_no_autorizado",
+      mensaje: '"Corte completado" lo marca Corte.',
+    });
   });
 
   it("rechaza la marcación cuando la orden no existe", () => {
     const resultado = validarMarcacionCorte({
       ordenExiste: false,
       checkpointsCompletados: [],
+      rol: "corte",
     });
 
     expect(resultado).toEqual({
@@ -39,6 +60,7 @@ describe("validarMarcacionCorte", () => {
         "tela_programada",
         "corte_completado",
       ],
+      rol: "corte",
     });
 
     expect(resultado).toEqual({
