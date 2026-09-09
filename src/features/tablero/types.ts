@@ -2,11 +2,11 @@ import type { CheckpointId } from "@/features/workflow/checkpoints";
 
 /**
  * Formas de dominio del tablero (HU-14).
- * Cuando exista Supabase, `queries.ts` mapeará filas de BD → estos tipos.
+ * `queries.ts` mapea filas de la base a estos tipos.
  * El "estado" de la orden NO se guarda: se deriva de `avances` + fechas.
  */
 
-/** Fila de auditoría inmutable (futura tabla `avance_seccion`). */
+/** Fila de auditoría inmutable (`avance_seccion`). */
 export type AvanceSeccion = {
   seccion: CheckpointId;
   usuarioId: string;
@@ -15,18 +15,16 @@ export type AvanceSeccion = {
   observacion?: string;
 };
 
-/** Datos de cabecera de orden (futura tabla `orden` + joins). */
+/** Cabecera de orden (`orden` + cliente, prendas y lotes). */
 export type OrdenResumen = {
   id: string;
-  numeroOrden: string;
   numeroOrdenCompra: string;
   razonSocial: string;
   prenda: string;
   cantidad: number;
-  fechaRecepcion: string; // ISO date
+  fechaRecepcion: string; // ISO date (`fecha_ingreso`)
   fechaEntrega: string; // ISO date
   tallerNombre: string | null;
-  ubicacionEntrega: string | null;
 };
 
 /** Semáforo derivado en aplicación (no columna editable). */

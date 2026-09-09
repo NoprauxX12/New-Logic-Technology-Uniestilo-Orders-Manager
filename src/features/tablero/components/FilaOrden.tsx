@@ -61,7 +61,7 @@ export function FilaOrden({ orden }: { orden: OrdenEnTablero }) {
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-base font-semibold text-zinc-900">
-              {orden.numeroOrden}
+              {orden.numeroOrdenCompra}
             </h2>
             <BadgeSemaforo semaforo={orden.semaforo} />
           </div>
@@ -70,9 +70,7 @@ export function FilaOrden({ orden }: { orden: OrdenEnTablero }) {
             {orden.cantidad} uds · {orden.prenda}
           </p>
           <p className="text-xs text-zinc-500">
-            OC {orden.numeroOrdenCompra} · Entrega{" "}
-            {formatoCorto(orden.fechaEntrega)}
-            {orden.ubicacionEntrega ? ` · ${orden.ubicacionEntrega}` : ""}
+            Entrega {formatoCorto(orden.fechaEntrega)}
           </p>
         </div>
       </div>

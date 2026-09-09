@@ -12,121 +12,151 @@ import type {
   OrdenResumen,
   ResumenTablero,
 } from "@/features/tablero/types";
+import type { CheckpointId } from "@/features/workflow/checkpoints";
+import { createClient } from "@/lib/supabase/server";
 
 /**
- * Capa de lectura del tablero (HU-14).
- *
- * Hoy: datos mock en memoria.
- * Luego: reemplazar el cuerpo de estas funciones con Supabase
- * (`createClient` de `@/lib/supabase/server`) sin cambiar los componentes.
- *
- * Reglas puras (semáforo, etapas, resumen) viven en `reglas.ts`.
+ * Lectura del tablero (HU-14). El estado de cada orden se deriva de
+ * `avance_seccion` + fechas; no hay columna `estado` (regla 1).
  */
 
-function enriquecer(
-  orden: OrdenResumen,
-  avances: AvanceSeccion[],
-): OrdenEnTablero {
-  const etapas = armarEtapas(avances);
+const SELECCION_ORDEN = `
+  id,
+  numero_orden_compra,
+  fecha_ingreso,
+  fecha_entrega,
+  cliente ( razon_social ),
+  item_orden ( descripcion, cantidad ),
+  lote_taller ( taller, fecha_envio ),
+  avance_seccion (
+    checkpoint,
+    usuario_id,
+    fecha_hora,
+    observaciones,
+    usuario ( nombre )
+  )
+`;
+
+type Relacion<T> = T | T[] | null;
+
+type ClienteFila = { razon_social: string };
+type ItemFila = { descripcion: string; cantidad: number };
+type LoteFila = { taller: string; fecha_envio: string };
+type UsuarioFila = { nombre: string };
+type AvanceFila = {
+  checkpoint: CheckpointId;
+  usuario_id: string;
+  fecha_hora: string;
+  observaciones: string | null;
+  usuario: Relacion<UsuarioFila>;
+};
+
+type OrdenFila = {
+  id: string;
+  numero_orden_compra: string;
+  fecha_ingreso: string;
+  fecha_entrega: string;
+  cliente: Relacion<ClienteFila>;
+  item_orden: ItemFila[] | null;
+  lote_taller: LoteFila[] | null;
+  avance_seccion: AvanceFila[] | null;
+};
+
+function uno<T>(valor: Relacion<T>): T | null {
+  if (valor == null) return null;
+  return Array.isArray(valor) ? (valor[0] ?? null) : valor;
+}
+
+function prendasDe(items: ItemFila[] | null): {
+  prenda: string;
+  cantidad: number;
+} {
+  if (!items || items.length === 0) {
+    return { prenda: "—", cantidad: 0 };
+  }
+
   return {
-    ...orden,
-    semaforo: derivarSemaforo(orden.fechaEntrega),
+    prenda: items.map((item) => item.descripcion).join(" · "),
+    cantidad: items.reduce((total, item) => total + item.cantidad, 0),
+  };
+}
+
+function tallerDe(lotes: LoteFila[] | null): string | null {
+  if (!lotes || lotes.length === 0) return null;
+
+  const porEnvio = [...lotes].sort((a, b) =>
+    b.fecha_envio.localeCompare(a.fecha_envio),
+  );
+  return [...new Set(porEnvio.map((lote) => lote.taller))].join(", ");
+}
+
+function avancesDe(filas: AvanceFila[] | null): AvanceSeccion[] {
+  if (!filas) return [];
+
+  return [...filas]
+    .sort((a, b) => a.fecha_hora.localeCompare(b.fecha_hora))
+    .map((fila) => ({
+      seccion: fila.checkpoint,
+      usuarioId: fila.usuario_id,
+      usuarioNombre: uno(fila.usuario)?.nombre ?? "Sin nombre",
+      fechaHora: fila.fecha_hora,
+      observacion: fila.observaciones ?? undefined,
+    }));
+}
+
+function resumenDe(fila: OrdenFila): OrdenResumen {
+  const { prenda, cantidad } = prendasDe(fila.item_orden);
+
+  return {
+    id: fila.id,
+    numeroOrdenCompra: fila.numero_orden_compra,
+    razonSocial: uno(fila.cliente)?.razon_social ?? "Sin cliente",
+    prenda,
+    cantidad,
+    fechaRecepcion: fila.fecha_ingreso,
+    fechaEntrega: fila.fecha_entrega,
+    tallerNombre: tallerDe(fila.lote_taller),
+  };
+}
+
+function enriquecer(fila: OrdenFila): OrdenEnTablero {
+  const avances = avancesDe(fila.avance_seccion);
+  const etapas = armarEtapas(avances);
+  const cabecera = resumenDe(fila);
+
+  return {
+    ...cabecera,
+    semaforo: derivarSemaforo(cabecera.fechaEntrega),
     etapas,
-    etapasCompletadas: etapas.filter((e) => e.estado === "completada").length,
+    etapasCompletadas: etapas.filter((etapa) => etapa.estado === "completada")
+      .length,
     etapasTotales: etapas.length,
   };
 }
 
-// --- Mock temporal (borrar cuando exista la BD) -------------------------------
+async function leerOrdenes(ordenId?: string): Promise<OrdenFila[]> {
+  const supabase = await createClient();
+  let consulta = supabase
+    .from("orden")
+    .select(SELECCION_ORDEN)
+    .order("fecha_entrega", { ascending: true });
 
-const MOCK_ORDENES: OrdenResumen[] = [
-  {
-    id: "ord-089",
-    numeroOrden: "ORD-2024-089",
-    numeroOrdenCompra: "OC-4412",
-    razonSocial: "Almacenes Éxito S.A.",
-    prenda: "Camisas ejecutivas",
-    cantidad: 240,
-    fechaRecepcion: "2024-07-01",
-    fechaEntrega: "2024-07-28",
-    tallerNombre: "Taller Fontibón",
-    ubicacionEntrega: "Fontibón",
-  },
-  {
-    id: "ord-092",
-    numeroOrden: "ORD-2024-092",
-    numeroOrdenCompra: "OC-4480",
-    razonSocial: "Universidad EAFIT",
-    prenda: "Uniformes deportivos",
-    cantidad: 120,
-    fechaRecepcion: "2024-07-10",
-    fechaEntrega: "2026-09-08",
-    tallerNombre: "Taller Marinilla",
-    ubicacionEntrega: "Medellín",
-  },
-];
+  if (ordenId) {
+    consulta = consulta.eq("id", ordenId);
+  }
 
-const MOCK_AVANCES: Record<string, AvanceSeccion[]> = {
-  "ord-089": [
-    {
-      seccion: "cotizacion_aprobada",
-      usuarioId: "u-sec",
-      usuarioNombre: "Laura Secretaría",
-      fechaHora: "2024-07-01T09:00:00",
-      observacion: "Cliente confirmó paleta de colores.",
-    },
-    {
-      seccion: "programada_diseno",
-      usuarioId: "u-sec",
-      usuarioNombre: "Laura Secretaría",
-      fechaHora: "2024-07-01T14:30:00",
-    },
-    {
-      seccion: "ficha_adjunta",
-      usuarioId: "u-dis",
-      usuarioNombre: "Ana Diseño",
-      fechaHora: "2024-07-03T16:00:00",
-    },
-    {
-      seccion: "tela_programada",
-      usuarioId: "u-sec",
-      usuarioNombre: "Laura Secretaría",
-      fechaHora: "2024-07-04T11:00:00",
-    },
-    {
-      seccion: "corte_completado",
-      usuarioId: "u-cor",
-      usuarioNombre: "Carlos Corte",
-      fechaHora: "2024-07-08T17:00:00",
-    },
-    {
-      seccion: "recogido_bordado",
-      usuarioId: "u-log",
-      usuarioNombre: "Pedro Logística",
-      fechaHora: "2024-07-10T12:00:00",
-    },
-  ],
-  "ord-092": [
-    {
-      seccion: "cotizacion_aprobada",
-      usuarioId: "u-sec",
-      usuarioNombre: "Laura Secretaría",
-      fechaHora: "2024-07-10T09:00:00",
-    },
-    {
-      seccion: "programada_diseno",
-      usuarioId: "u-sec",
-      usuarioNombre: "Laura Secretaría",
-      fechaHora: "2024-07-10T15:00:00",
-    },
-  ],
-};
+  const { data, error } = await consulta;
 
-// --- API pública de la feature ------------------------------------------------
+  if (error) {
+    throw new Error(`No se pudieron leer las órdenes: ${error.message}`);
+  }
+
+  return (data ?? []) as OrdenFila[];
+}
 
 export async function listarOrdenesTablero(): Promise<OrdenEnTablero[]> {
-  // TODO(BD): select orden + avances; enriquecer en memoria
-  return MOCK_ORDENES.map((o) => enriquecer(o, MOCK_AVANCES[o.id] ?? []));
+  const filas = await leerOrdenes();
+  return filas.map(enriquecer);
 }
 
 export async function obtenerResumenTablero(
@@ -139,13 +169,11 @@ export async function obtenerResumenTablero(
 export async function obtenerDetalleOrden(
   ordenId: string,
 ): Promise<DetalleOrden | null> {
-  // TODO(BD): select por id; 404 si no existe
-  const orden = MOCK_ORDENES.find((o) => o.id === ordenId);
-  if (!orden) return null;
+  const [fila] = await leerOrdenes(ordenId);
+  if (!fila) return null;
 
-  const avances = MOCK_AVANCES[orden.id] ?? [];
   return {
-    ...enriquecer(orden, avances),
-    avances,
+    ...enriquecer(fila),
+    avances: avancesDe(fila.avance_seccion),
   };
 }

@@ -22,7 +22,6 @@ function ordenStub(
 ): OrdenEnTablero {
   return {
     id: "x",
-    numeroOrden: "ORD-X",
     numeroOrdenCompra: "OC-X",
     razonSocial: "Cliente",
     prenda: "Prenda",
@@ -30,7 +29,6 @@ function ordenStub(
     fechaRecepcion: "2026-09-01",
     fechaEntrega: "2026-09-30",
     tallerNombre: null,
-    ubicacionEntrega: null,
     etapas: [],
     ...parcial,
   };

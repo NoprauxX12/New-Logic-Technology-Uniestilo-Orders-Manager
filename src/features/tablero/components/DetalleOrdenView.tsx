@@ -67,14 +67,14 @@ export function DetalleOrdenView({ orden }: { orden: DetalleOrden }) {
 
       <header className="space-y-2 rounded-xl border border-zinc-200 bg-white p-5">
         <h1 className="text-2xl font-semibold text-zinc-900">
-          {orden.numeroOrden}
+          {orden.numeroOrdenCompra}
         </h1>
         <p className="text-zinc-700">{orden.razonSocial}</p>
         <p className="text-sm text-zinc-600">
           {orden.prenda} · {orden.cantidad} unidades
         </p>
         <p className="text-sm text-zinc-600">
-          OC {orden.numeroOrdenCompra} · Entrega {orden.fechaEntrega}
+          Entrega {orden.fechaEntrega}
           {orden.tallerNombre ? ` · ${orden.tallerNombre}` : ""}
         </p>
 
