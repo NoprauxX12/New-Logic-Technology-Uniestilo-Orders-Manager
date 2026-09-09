@@ -61,3 +61,31 @@ export function describirEstadoDeTalleres(
 
   return `En confección · ${afuera} de ${lotes.length} lotes todavía en taller.`;
 }
+
+/**
+ * HU-11 · Reglas de la recepción de un lote.
+ *
+ * Igual que el despacho: un lote no es un checkpoint (regla 6), así que esto
+ * no lo decide el motor de workflow. "La orden fue despachada antes" (criterio
+ * de aceptación) se cumple con que el lote exista: no hay recepción sin un
+ * lote que la haya originado.
+ */
+export function puedeConfirmarRecepcion(
+  lote: LoteEnviado | undefined,
+): ResultadoDespacho {
+  if (!lote) {
+    return {
+      permitido: false,
+      mensaje: "Ese lote no pertenece a esta orden.",
+    };
+  }
+
+  if (lote.recibido) {
+    return {
+      permitido: false,
+      mensaje: "Ya se confirmó la recepción de este lote.",
+    };
+  }
+
+  return { permitido: true };
+}

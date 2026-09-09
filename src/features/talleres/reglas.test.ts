@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   describirEstadoDeTalleres,
   lotesEnTaller,
+  puedeConfirmarRecepcion,
   puedeDespachar,
 } from "@/features/talleres/reglas";
 import type { CheckpointId } from "@/features/workflow/checkpoints";
@@ -91,6 +92,34 @@ describe("describirEstadoDeTalleres", () => {
   it("avisa cuando todo volvió del taller", () => {
     expect(describirEstadoDeTalleres([{ recibido: true }])).toBe(
       "Todo el trabajo volvió del taller.",
+    );
+  });
+});
+
+describe("puedeConfirmarRecepcion", () => {
+  it("deja confirmar un lote que sigue en el taller", () => {
+    expect(puedeConfirmarRecepcion({ recibido: false })).toEqual({
+      permitido: true,
+    });
+  });
+
+  it("no deja confirmar dos veces el mismo lote", () => {
+    const resultado = puedeConfirmarRecepcion({ recibido: true });
+
+    expect(resultado.permitido).toBe(false);
+    expect(resultado.permitido === false && resultado.mensaje).toContain(
+      "Ya se confirmó",
+    );
+  });
+
+  it("no deja confirmar un lote que no pertenece a la orden", () => {
+    // Criterio de aceptación: solo se puede confirmar si la orden fue
+    // despachada antes. Sin un lote de verdad, no hay qué confirmar.
+    const resultado = puedeConfirmarRecepcion(undefined);
+
+    expect(resultado.permitido).toBe(false);
+    expect(resultado.permitido === false && resultado.mensaje).toContain(
+      "no pertenece",
     );
   });
 });

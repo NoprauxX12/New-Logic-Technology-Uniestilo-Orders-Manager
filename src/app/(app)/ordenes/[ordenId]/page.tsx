@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { FormularioConfirmarRecepcion } from "@/features/talleres/components/FormularioConfirmarRecepcion";
 import { FormularioDespacharTaller } from "@/features/talleres/components/FormularioDespacharTaller";
 import {
   obtenerOrdenParaDespacho,
@@ -11,6 +12,7 @@ import {
   describirEstadoDeTalleres,
   puedeDespachar,
 } from "@/features/talleres/reglas";
+import { getUsuarioActual } from "@/lib/auth/usuarioActual";
 
 export const metadata: Metadata = {
   title: "Orden · Uniestilo",
@@ -43,7 +45,16 @@ function formatearMomento(momentoIso: string): string {
   });
 }
 
-function TarjetaLote({ lote }: { lote: LoteDespachado }) {
+function TarjetaLote({
+  lote,
+  ordenId,
+  puedeConfirmar,
+}: {
+  lote: LoteDespachado;
+  ordenId: string;
+  /** HU-11: solo logística, y solo si el lote sigue en el taller. */
+  puedeConfirmar: boolean;
+}) {
   return (
     <li className="rounded-lg border border-zinc-300 bg-white px-4 py-3">
       <p className="text-base font-semibold text-zinc-900">{lote.taller}</p>
@@ -58,6 +69,16 @@ function TarjetaLote({ lote }: { lote: LoteDespachado }) {
       {lote.observacionesRecepcion ? (
         <p className="text-sm text-zinc-600">{lote.observacionesRecepcion}</p>
       ) : null}
+
+      {!lote.recibido && puedeConfirmar ? (
+        <div className="mt-3">
+          <FormularioConfirmarRecepcion
+            ordenId={ordenId}
+            loteId={lote.id}
+            descripcionPrendas={lote.descripcionPrendas}
+          />
+        </div>
+      ) : null}
     </li>
   );
 }
@@ -65,15 +86,17 @@ function TarjetaLote({ lote }: { lote: LoteDespachado }) {
 export default async function OrdenPage({ params }: Props) {
   const { ordenId } = await params;
 
-  const [orden, personalDeLogistica] = await Promise.all([
+  const [orden, personalDeLogistica, usuario] = await Promise.all([
     obtenerOrdenParaDespacho(ordenId),
     obtenerUsuariosDeLogistica(),
+    getUsuarioActual(),
   ]);
 
   if (!orden) notFound();
 
   const permiso = puedeDespachar(orden.marcados);
   const yaDespachada = orden.lotes.length > 0;
+  const esLogistica = usuario?.rol === "logistica";
 
   return (
     <div className="flex-1 bg-white">
@@ -116,7 +139,12 @@ export default async function OrdenPage({ params }: Props) {
             </h2>
             <ul className="flex flex-col gap-3">
               {orden.lotes.map((lote) => (
-                <TarjetaLote key={lote.id} lote={lote} />
+                <TarjetaLote
+                  key={lote.id}
+                  lote={lote}
+                  ordenId={orden.id}
+                  puedeConfirmar={esLogistica}
+                />
               ))}
             </ul>
           </section>

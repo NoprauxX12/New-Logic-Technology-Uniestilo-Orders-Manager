@@ -37,3 +37,27 @@ export const despacharLoteSchema = z.object({
 
 /** Datos ya validados y sin espacios sobrantes. */
 export type DespachoLote = z.infer<typeof despacharLoteSchema>;
+
+/**
+ * HU-11 · Validación de la recepción de un lote.
+ *
+ * `completo` llega del formulario como texto ("si"/"no"), no como booleano:
+ * así es como viaja un radio en un FormData. Se convierte aquí y no en la
+ * action, para que sea parte de lo que ya se validó.
+ */
+export const confirmarRecepcionSchema = z.object({
+  loteId: z.guid({ error: "No se sabe de qué lote se trata" }),
+
+  completo: z
+    .enum(["si", "no"], "Marca si llegó completo o no")
+    .transform((valor) => valor === "si"),
+
+  observaciones: z
+    .string()
+    .trim()
+    .max(1000, "Las observaciones son muy largas")
+    .optional(),
+});
+
+/** Datos ya validados: `completo` sale como booleano. */
+export type RecepcionLote = z.infer<typeof confirmarRecepcionSchema>;
