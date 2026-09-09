@@ -1,7 +1,5 @@
 import "server-only";
 
-import { cookies } from "next/headers";
-
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database.types";
 
@@ -9,21 +7,19 @@ import type { Database } from "@/types/database.types";
  * Quién está actuando en el sistema.
  *
  * Es el único lugar de la aplicación que responde esa pregunta. Las actions no
- * saben de dónde sale la persona: le preguntan a esta función. Hoy sale de una
- * cookie que pone el desplegable de `features/auth`; cuando llegue el login
- * (HU-16) saldrá de la sesión de Supabase y solo cambia el cuerpo de aquí.
+ * saben de dónde sale la persona: le preguntan a esta función.
+ *
+ * Sale de la sesión real de Supabase Auth (HU-16): `supabase.auth.getUser()`
+ * revalida contra el servidor de Auth en vez de confiar en la cookie sin más,
+ * y de ahí se relee `usuario` para el nombre y el rol. El JWT ya trae el rol
+ * como claim `user_role` (ver la migración `..._hook_rol_en_jwt.sql`), pero
+ * esta función sigue consultando la tabla: es más simple, no depende de que el
+ * token esté fresco, y dejar el claim sin usar todavía no cuesta nada. HU-17
+ * lo aprovechará para las políticas RLS.
  *
  * Vive en `lib/` y no en `features/auth/` porque la necesitan varias features
- * —workflow, talleres, tablero— y una feature no puede importar de otra.
- *
- * Existe porque `avance_seccion.usuario_id`, `lote_taller.enviado_por` y
- * `lote_taller.recibido_por` son obligatorios (regla 3, RNF-05) y el Sprint 1
- * no tiene login. La alternativa era que cada historia escribiera un id fijo en
- * su propia action.
- *
- * PROVISIONAL Y SIN SEGURIDAD: cualquiera puede cambiar esa cookie y decir que
- * es otra persona. No pasa nada hoy porque las políticas RLS también están
- * abiertas; las dos cosas se cierran juntas en HU-16 y HU-17.
+ * —workflow, talleres, tablero, documentos— y una feature no puede importar de
+ * otra.
  */
 
 export type Rol = Database["public"]["Enums"]["rol"];
@@ -34,27 +30,26 @@ export type UsuarioActual = {
   rol: Rol;
 };
 
-export const COOKIE_USUARIO_ACTUAL = "uniestilo_usuario";
-
 /**
- * La persona que está actuando, o `null` si todavía no han escogido ninguna.
+ * La persona que inició sesión, o `null` si nadie ha entrado.
  *
- * Devuelve `null` en vez de lanzar para que cada action decida qué decirle a
- * quien está usando la pantalla.
+ * Devuelve `null` en vez de lanzar para que cada action y cada página decidan
+ * qué hacer: la mayoría manda a `/login`, pero el mensaje varía.
  */
 export async function getUsuarioActual(): Promise<UsuarioActual | null> {
-  const cookieStore = await cookies();
-  const id = cookieStore.get(COOKIE_USUARIO_ACTUAL)?.value;
-
-  if (!id) return null;
-
-  // Se relee de la base en vez de confiar en la cookie: así el nombre y el rol
-  // siempre son los de verdad, y una cookie con un id inventado no sirve.
   const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: errorSesion,
+  } = await supabase.auth.getUser();
+
+  if (errorSesion || !user) return null;
+
   const { data, error } = await supabase
     .from("usuario")
     .select("id, nombre, rol")
-    .eq("id", id)
+    .eq("id", user.id)
     .maybeSingle();
 
   if (error) {
