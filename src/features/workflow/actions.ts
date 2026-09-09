@@ -14,14 +14,19 @@ export type ResultadoMarcacionCorte = {
 
 const ordenIdSchema = z
   .string()
-  .uuid("La identificación de la orden no es válida.");
+  .regex(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    "La identificación de la orden no es válida.",
+  );
 
 const VIOLACION_DE_UNICIDAD = "23505";
 
+const USUARIO_CORTE_ID = "00000000-0000-0000-0000-0000000000a4";
+
 /**
  * HU-08 · Marca la etapa de corte como completada.
- * Consulta la situación de la orden, aplica las reglas del workflow y delega
- * el registro definitivo en la función de PostgreSQL.
+ * Consulta los avances de la orden, aplica las reglas del workflow común
+ * y guarda el checkpoint con el responsable del área de corte.
  */
 export async function marcarCorteCompletado(
   ordenId: string,
@@ -54,9 +59,8 @@ export async function marcarCorteCompletado(
 
   const { data: avances, error: errorAvances } = await supabase
     .from("avance_seccion")
-    .select("seccion")
-    .eq("orden_id", validacionId.data)
-    .eq("seccion", "corte_completado");
+    .select("checkpoint")
+    .eq("orden_id", validacionId.data);
 
   if (errorAvances) {
     console.error("No se pudieron consultar los avances", errorAvances);
@@ -67,8 +71,9 @@ export async function marcarCorteCompletado(
     };
   }
 
-  const checkpointsCompletados: CheckpointId[] =
-    avances.length > 0 ? ["corte_completado"] : [];
+  const checkpointsCompletados: CheckpointId[] = avances.map(
+    (avance) => avance.checkpoint,
+  );
 
   const resultado = validarMarcacionCorte({
     ordenExiste: orden !== null,
@@ -82,12 +87,13 @@ export async function marcarCorteCompletado(
     };
   }
 
-  const { error: errorMarcacion } = await supabase.rpc(
-    "marcar_corte_completado",
-    {
-      p_orden_id: validacionId.data,
-    },
-  );
+  const { error: errorMarcacion } = await supabase
+    .from("avance_seccion")
+    .insert({
+      orden_id: validacionId.data,
+      checkpoint: "corte_completado",
+      usuario_id: USUARIO_CORTE_ID,
+    });
 
   if (errorMarcacion) {
     if (errorMarcacion.code === VIOLACION_DE_UNICIDAD) {

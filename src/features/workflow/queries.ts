@@ -43,7 +43,7 @@ export async function obtenerOrdenesParaCorte(): Promise<OrdenParaCorte[]> {
       .from("avance_seccion")
       .select("orden_id, fecha_hora")
       .in("orden_id", ordenIds)
-      .eq("seccion", "corte_completado"),
+      .eq("checkpoint", "corte_completado"),
   ]);
 
   if (errorClientes) {
@@ -55,7 +55,7 @@ export async function obtenerOrdenesParaCorte(): Promise<OrdenParaCorte[]> {
   }
 
   if (errorAvances) {
-    console.error("[HU-08] No se pudieron consultar los avances", errorAvances);
+    console.error("No se pudieron consultar los avances", errorAvances);
     throw new Error("No se pudieron consultar los avances.");
   }
 

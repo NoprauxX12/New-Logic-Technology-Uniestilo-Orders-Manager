@@ -1,4 +1,5 @@
 import type { CheckpointId } from "@/features/workflow/checkpoints";
+import { puedeMarcar } from "@/features/workflow/transiciones";
 
 export type ResultadoValidacion =
   { permitido: true } | { permitido: false; mensaje: string };
@@ -24,12 +25,11 @@ export function validarMarcacionCorte({
     };
   }
 
-  if (checkpointsCompletados.includes("corte_completado")) {
-    return {
-      permitido: false,
-      mensaje: "La etapa de corte ya fue marcada como completada.",
-    };
-  }
+  return puedeMarcar({
+    checkpoint: "corte_completado",
+    marcados: checkpointsCompletados,
+    rol: "corte",
+  });
 
   return { permitido: true };
 }
