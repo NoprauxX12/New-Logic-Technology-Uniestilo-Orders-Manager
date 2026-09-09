@@ -31,11 +31,17 @@ npm run dev                  # http://localhost:3000
 Base de datos local con la CLI de Supabase (recomendado para no tocar datos reales):
 
 ```bash
-npx supabase init            # solo la primera vez en el repo
 npx supabase start           # Postgres, Auth y Studio en Docker
 npx supabase db reset        # aplica migraciones y seed
 npm run db:types             # regenera src/types/database.types.ts
 ```
+
+`npx supabase init` ya no hace falta: la configuración está versionada en
+`supabase/config.toml` y volver a inicializarla la dejaría distinta a la del
+resto del equipo. El `start` imprime las llaves que van en `.env.local`.
+
+Para mirar las tablas y correr consultas está **Supabase Studio**, el panel web
+que levanta el `start`: http://127.0.0.1:54323
 
 ## Comandos
 
