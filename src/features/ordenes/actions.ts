@@ -7,6 +7,7 @@ import {
   type EntradaFormularioOrden,
 } from "@/features/ordenes/formulario";
 import { nuevaOrdenSchema } from "@/features/ordenes/schemas";
+import { getUsuarioActual } from "@/lib/auth/usuarioActual";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -16,10 +17,15 @@ import { createClient } from "@/lib/supabase/server";
  * la escritura en la función `registrar_orden` de Postgres, que hace las tres
  * inserciones (cliente, orden, prendas) en una sola transacción.
  *
- * Nota de seguridad: una Server Action se puede invocar con un POST directo,
- * sin pasar por el formulario. Hoy no hay a quién autenticar porque el login
- * llega en HU-16; la verificación de sesión y rol se agrega aquí en HU-17,
- * junto con el cierre de las políticas RLS abiertas.
+ * Solo el administrador registra órdenes, y por eso el rol se verifica aquí y
+ * no únicamente en la pantalla: una Server Action se puede invocar con un POST
+ * directo, así que esconder el formulario no impediría nada por sí solo.
+ *
+ * Nota de seguridad: la verificación es provisional y de una sola capa. La
+ * persona sale del desplegable del layout, que cualquiera puede cambiar porque
+ * todavía no hay login (HU-16), y las políticas RLS siguen abiertas. HU-17
+ * cierra las dos cosas a la vez: la sesión de verdad aquí y el control por rol
+ * en la base.
  */
 
 /** Lo que la action le devuelve al formulario. */
@@ -41,6 +47,30 @@ export async function registrarOrden(
   formData: FormData,
 ): Promise<EstadoFormularioOrden> {
   const escrito = leerFormularioOrden(formData);
+
+  // Quién está registrando. Se verifica aquí y no solo en la pantalla porque
+  // una Server Action se puede invocar con un POST directo: si el rol solo se
+  // mirara en la página, esconder el formulario no impediría nada.
+  const usuario = await getUsuarioActual();
+
+  if (!usuario) {
+    return {
+      ok: false,
+      mensaje: "Escoge arriba con qué persona estás trabajando.",
+      errores: {},
+      valores: escrito,
+    };
+  }
+
+  if (usuario.rol !== "admin") {
+    return {
+      ok: false,
+      mensaje: "Las órdenes las registra administración.",
+      errores: {},
+      valores: escrito,
+    };
+  }
+
   const validacion = nuevaOrdenSchema.safeParse(escrito);
 
   if (!validacion.success) {
