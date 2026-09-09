@@ -6,19 +6,15 @@ import type { CheckpointId } from "@/features/workflow/checkpoints";
 
 /** Etiquetas cortas para la fila del tablero (el nombre completo va en title + detalle). */
 const ETIQUETA_CORTA: Record<CheckpointId, string> = {
-  contacto: "Contacto",
-  recepcion: "Recepción",
-  validacion: "Validac.",
-  ficha_tecnica: "Ficha",
-  programacion: "Program.",
-  trazo_corte: "Corte",
-  bordado_estampado: "Bordado",
-  despacho_satelites: "Despacho",
-  confeccion: "Confecc.",
-  recoleccion: "Recolec.",
-  planchado: "Planchado",
-  empaque: "Empaque",
-  facturacion: "Factura",
+  cotizacion_aprobada: "Cotizac.",
+  programada_diseno: "Diseño",
+  ficha_adjunta: "Ficha",
+  tela_programada: "Tela",
+  corte_completado: "Corte",
+  recogido_bordado: "Bordado",
+  llegada_marcacion: "Marcación",
+  lista_despacho: "Despacho",
+  cerrada: "Cierre",
 };
 
 function formatoCorto(iso: string) {
@@ -81,7 +77,7 @@ export function FilaOrden({ orden }: { orden: OrdenEnTablero }) {
         </div>
       </div>
 
-      {/* Línea de tiempo a ancho completo: evita comprimir 13 etapas al lado del texto */}
+      {/* Línea de tiempo a ancho completo: evita comprimir las etapas al lado del texto */}
       <ol
         className="mt-4 flex gap-0 overflow-x-auto border-t border-zinc-100 pt-4 pb-1"
         aria-label="Avance por etapa"

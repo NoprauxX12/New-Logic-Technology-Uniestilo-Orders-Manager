@@ -24,6 +24,8 @@ next-env.d.ts
 supabase/.temp
 supabase/.branches
 supabase/.env
+# Consultas que cada quien guarda en el editor de Studio: son personales.
+supabase/snippets
 
 # Vercel
 .vercel

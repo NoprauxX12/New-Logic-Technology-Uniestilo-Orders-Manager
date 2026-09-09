@@ -69,64 +69,52 @@ const MOCK_ORDENES: OrdenResumen[] = [
 const MOCK_AVANCES: Record<string, AvanceSeccion[]> = {
   "ord-089": [
     {
-      seccion: "contacto",
+      seccion: "cotizacion_aprobada",
       usuarioId: "u-sec",
       usuarioNombre: "Laura Secretaría",
       fechaHora: "2024-07-01T09:00:00",
       observacion: "Cliente confirmó paleta de colores.",
     },
     {
-      seccion: "recepcion",
+      seccion: "programada_diseno",
       usuarioId: "u-sec",
       usuarioNombre: "Laura Secretaría",
       fechaHora: "2024-07-01T14:30:00",
     },
     {
-      seccion: "validacion",
-      usuarioId: "u-sec",
-      usuarioNombre: "Laura Secretaría",
-      fechaHora: "2024-07-02T10:00:00",
-    },
-    {
-      seccion: "ficha_tecnica",
+      seccion: "ficha_adjunta",
       usuarioId: "u-dis",
       usuarioNombre: "Ana Diseño",
       fechaHora: "2024-07-03T16:00:00",
     },
     {
-      seccion: "programacion",
+      seccion: "tela_programada",
       usuarioId: "u-sec",
       usuarioNombre: "Laura Secretaría",
       fechaHora: "2024-07-04T11:00:00",
     },
     {
-      seccion: "trazo_corte",
+      seccion: "corte_completado",
       usuarioId: "u-cor",
       usuarioNombre: "Carlos Corte",
       fechaHora: "2024-07-08T17:00:00",
     },
     {
-      seccion: "bordado_estampado",
+      seccion: "recogido_bordado",
       usuarioId: "u-log",
       usuarioNombre: "Pedro Logística",
       fechaHora: "2024-07-10T12:00:00",
     },
-    {
-      seccion: "despacho_satelites",
-      usuarioId: "u-log",
-      usuarioNombre: "Pedro Logística",
-      fechaHora: "2024-07-11T08:00:00",
-    },
   ],
   "ord-092": [
     {
-      seccion: "contacto",
+      seccion: "cotizacion_aprobada",
       usuarioId: "u-sec",
       usuarioNombre: "Laura Secretaría",
       fechaHora: "2024-07-10T09:00:00",
     },
     {
-      seccion: "recepcion",
+      seccion: "programada_diseno",
       usuarioId: "u-sec",
       usuarioNombre: "Laura Secretaría",
       fechaHora: "2024-07-10T15:00:00",

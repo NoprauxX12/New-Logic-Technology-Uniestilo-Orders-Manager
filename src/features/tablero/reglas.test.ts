@@ -76,13 +76,13 @@ describe("armarEtapas", () => {
   it("marca completada solo las secciones con avance y conserva quién/cuándo", () => {
     const avances: AvanceSeccion[] = [
       {
-        seccion: "contacto",
+        seccion: "cotizacion_aprobada",
         usuarioId: "u1",
         usuarioNombre: "Laura Secretaría",
         fechaHora: "2026-09-01T09:00:00",
       },
       {
-        seccion: "recepcion",
+        seccion: "programada_diseno",
         usuarioId: "u1",
         usuarioNombre: "Laura Secretaría",
         fechaHora: "2026-09-01T15:00:00",
@@ -90,20 +90,20 @@ describe("armarEtapas", () => {
     ];
 
     const etapas = armarEtapas(avances);
-    const contacto = etapas.find((e) => e.seccion === "contacto");
-    const validacion = etapas.find((e) => e.seccion === "validacion");
+    const cotizacion = etapas.find((e) => e.seccion === "cotizacion_aprobada");
+    const ficha = etapas.find((e) => e.seccion === "ficha_adjunta");
 
-    expect(contacto?.estado).toBe("completada");
-    expect(contacto?.avance?.usuarioNombre).toBe("Laura Secretaría");
-    expect(contacto?.avance?.fechaHora).toBe("2026-09-01T09:00:00");
-    expect(validacion?.estado).toBe("pendiente");
-    expect(validacion?.avance).toBeNull();
+    expect(cotizacion?.estado).toBe("completada");
+    expect(cotizacion?.avance?.usuarioNombre).toBe("Laura Secretaría");
+    expect(cotizacion?.avance?.fechaHora).toBe("2026-09-01T09:00:00");
+    expect(ficha?.estado).toBe("pendiente");
+    expect(ficha?.avance).toBeNull();
   });
 
   it("no deja ambigüedad: cada etapa es completada o pendiente", () => {
     const etapas = armarEtapas([
       {
-        seccion: "contacto",
+        seccion: "cotizacion_aprobada",
         usuarioId: "u1",
         usuarioNombre: "Laura",
         fechaHora: "2026-09-01T09:00:00",
@@ -121,29 +121,29 @@ describe("resumirTablero", () => {
     const resumen = resumirTablero([
       ordenStub({
         semaforo: "atrasada",
-        etapasCompletadas: 8,
-        etapasTotales: 13,
+        etapasCompletadas: 6,
+        etapasTotales: 9,
       }),
       ordenStub({
         semaforo: "en_riesgo",
         etapasCompletadas: 2,
-        etapasTotales: 13,
+        etapasTotales: 9,
       }),
       ordenStub({
         semaforo: "a_tiempo",
         etapasCompletadas: 0,
-        etapasTotales: 13,
+        etapasTotales: 9,
       }),
       ordenStub({
         semaforo: "a_tiempo",
-        etapasCompletadas: 13,
-        etapasTotales: 13,
+        etapasCompletadas: 9,
+        etapasTotales: 9,
       }),
     ]);
 
     expect(resumen).toEqual({
       totalOrdenes: 4,
-      enProduccion: 2, // 8/13 y 2/13; no 0/13 ni 13/13
+      enProduccion: 2, // 6/9 y 2/9; no 0/9 ni 9/9
       atrasadas: 1,
       enRiesgo: 1,
     });
