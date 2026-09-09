@@ -34,6 +34,96 @@ export type Database = {
   }
   public: {
     Tables: {
+      alerta: {
+        Row: {
+          destinatario_id: string
+          detalle: string
+          estado: Database["public"]["Enums"]["estado_alerta"]
+          fecha_atencion: string | null
+          fecha_creacion: string
+          id: string
+          orden_id: string
+          tipo: Database["public"]["Enums"]["tipo_alerta"]
+        }
+        Insert: {
+          destinatario_id: string
+          detalle: string
+          estado?: Database["public"]["Enums"]["estado_alerta"]
+          fecha_atencion?: string | null
+          fecha_creacion?: string
+          id?: string
+          orden_id: string
+          tipo: Database["public"]["Enums"]["tipo_alerta"]
+        }
+        Update: {
+          destinatario_id?: string
+          detalle?: string
+          estado?: Database["public"]["Enums"]["estado_alerta"]
+          fecha_atencion?: string | null
+          fecha_creacion?: string
+          id?: string
+          orden_id?: string
+          tipo?: Database["public"]["Enums"]["tipo_alerta"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alerta_destinatario_id_fkey"
+            columns: ["destinatario_id"]
+            isOneToOne: false
+            referencedRelation: "usuario"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerta_orden_id_fkey"
+            columns: ["orden_id"]
+            isOneToOne: false
+            referencedRelation: "orden"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      avance_seccion: {
+        Row: {
+          checkpoint: Database["public"]["Enums"]["checkpoint"]
+          fecha_hora: string
+          id: string
+          observaciones: string | null
+          orden_id: string
+          usuario_id: string
+        }
+        Insert: {
+          checkpoint: Database["public"]["Enums"]["checkpoint"]
+          fecha_hora?: string
+          id?: string
+          observaciones?: string | null
+          orden_id: string
+          usuario_id: string
+        }
+        Update: {
+          checkpoint?: Database["public"]["Enums"]["checkpoint"]
+          fecha_hora?: string
+          id?: string
+          observaciones?: string | null
+          orden_id?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avance_seccion_orden_id_fkey"
+            columns: ["orden_id"]
+            isOneToOne: false
+            referencedRelation: "orden"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avance_seccion_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuario"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cliente: {
         Row: {
           contacto_celular: string
@@ -60,6 +150,45 @@ export type Database = {
           razon_social?: string
         }
         Relationships: []
+      }
+      ficha_tecnica: {
+        Row: {
+          archivo_ruta: string
+          fecha_subida: string
+          id: string
+          orden_id: string
+          subida_por: string
+        }
+        Insert: {
+          archivo_ruta: string
+          fecha_subida?: string
+          id?: string
+          orden_id: string
+          subida_por: string
+        }
+        Update: {
+          archivo_ruta?: string
+          fecha_subida?: string
+          id?: string
+          orden_id?: string
+          subida_por?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ficha_tecnica_orden_id_fkey"
+            columns: ["orden_id"]
+            isOneToOne: false
+            referencedRelation: "orden"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ficha_tecnica_subida_por_fkey"
+            columns: ["subida_por"]
+            isOneToOne: false
+            referencedRelation: "usuario"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       item_orden: {
         Row: {
@@ -101,6 +230,67 @@ export type Database = {
             columns: ["orden_id"]
             isOneToOne: false
             referencedRelation: "orden"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lote_taller: {
+        Row: {
+          descripcion_prendas: string
+          enviado_por: string
+          fecha_envio: string
+          fecha_recepcion: string | null
+          id: string
+          observaciones_recepcion: string | null
+          orden_id: string
+          recibido_completo: boolean | null
+          recibido_por: string | null
+          taller: string
+        }
+        Insert: {
+          descripcion_prendas: string
+          enviado_por: string
+          fecha_envio?: string
+          fecha_recepcion?: string | null
+          id?: string
+          observaciones_recepcion?: string | null
+          orden_id: string
+          recibido_completo?: boolean | null
+          recibido_por?: string | null
+          taller: string
+        }
+        Update: {
+          descripcion_prendas?: string
+          enviado_por?: string
+          fecha_envio?: string
+          fecha_recepcion?: string | null
+          id?: string
+          observaciones_recepcion?: string | null
+          orden_id?: string
+          recibido_completo?: boolean | null
+          recibido_por?: string | null
+          taller?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lote_taller_enviado_por_fkey"
+            columns: ["enviado_por"]
+            isOneToOne: false
+            referencedRelation: "usuario"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lote_taller_orden_id_fkey"
+            columns: ["orden_id"]
+            isOneToOne: false
+            referencedRelation: "orden"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lote_taller_recibido_por_fkey"
+            columns: ["recibido_por"]
+            isOneToOne: false
+            referencedRelation: "usuario"
             referencedColumns: ["id"]
           },
         ]
@@ -162,11 +352,36 @@ export type Database = {
           },
         ]
       }
+      usuario: {
+        Row: {
+          creado_en: string
+          email: string
+          id: string
+          nombre: string
+          rol: Database["public"]["Enums"]["rol"]
+        }
+        Insert: {
+          creado_en?: string
+          email: string
+          id: string
+          nombre: string
+          rol: Database["public"]["Enums"]["rol"]
+        }
+        Update: {
+          creado_en?: string
+          email?: string
+          id?: string
+          nombre?: string
+          rol?: Database["public"]["Enums"]["rol"]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      nit_normalizado: { Args: { p_nit: string }; Returns: string }
       registrar_orden: {
         Args: {
           p_contacto_celular: string
@@ -183,7 +398,25 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      checkpoint:
+        | "cotizacion_aprobada"
+        | "programada_diseno"
+        | "ficha_adjunta"
+        | "tela_programada"
+        | "corte_completado"
+        | "recogido_bordado"
+        | "llegada_marcacion"
+        | "lista_despacho"
+        | "cerrada"
+      estado_alerta: "pendiente" | "atendida"
+      rol:
+        | "admin"
+        | "secretaria"
+        | "diseno"
+        | "corte"
+        | "logistica"
+        | "marcacion"
+      tipo_alerta: "falta_tela" | "proximidad_entrega"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -313,7 +546,22 @@ export const Constants = {
     Enums: {},
   },
   public: {
-    Enums: {},
+    Enums: {
+      checkpoint: [
+        "cotizacion_aprobada",
+        "programada_diseno",
+        "ficha_adjunta",
+        "tela_programada",
+        "corte_completado",
+        "recogido_bordado",
+        "llegada_marcacion",
+        "lista_despacho",
+        "cerrada",
+      ],
+      estado_alerta: ["pendiente", "atendida"],
+      rol: ["admin", "secretaria", "diseno", "corte", "logistica", "marcacion"],
+      tipo_alerta: ["falta_tela", "proximidad_entrega"],
+    },
   },
 } as const
 
