@@ -1,6 +1,7 @@
 import {
   buscarCheckpoint,
   CHECKPOINTS,
+  CHECKPOINTS_DISPONIBLES,
   ETIQUETAS_ROL,
   type CheckpointId,
   type Rol,
@@ -23,22 +24,30 @@ import {
  */
 
 export type MotivoRechazo =
-  "ya_marcado" | "fuera_de_secuencia" | "rol_no_autorizado";
+  | "ya_marcado"
+  | "todavia_no_disponible"
+  | "fuera_de_secuencia"
+  | "rol_no_autorizado";
 
 export type ResultadoMarcado =
   | { permitido: true }
   | { permitido: false; motivo: MotivoRechazo; mensaje: string };
 
 /**
- * El checkpoint que sigue en la secuencia: el primero que todavía no se ha
- * marcado. Devuelve `null` cuando la orden ya recorrió todo el flujo.
+ * El checkpoint que sigue: el primero que todavía no se ha marcado, contando
+ * solo las etapas que ya tienen pantalla. Devuelve `null` cuando la orden ya
+ * recorrió todo lo que hoy se puede marcar.
+ *
+ * Se saltan las que no están disponibles a propósito: sus historias son de
+ * otros sprints, y exigirlas dejaría trancada cualquier orden nueva.
  */
 export function siguienteCheckpoint(
   marcados: readonly CheckpointId[],
 ): CheckpointId | null {
   const yaEsta = new Set(marcados);
   return (
-    CHECKPOINTS.find((checkpoint) => !yaEsta.has(checkpoint.id))?.id ?? null
+    CHECKPOINTS_DISPONIBLES.find((checkpoint) => !yaEsta.has(checkpoint.id))
+      ?.id ?? null
   );
 }
 
@@ -70,13 +79,21 @@ export function puedeMarcar({
   marcados,
   rol,
 }: Peticion): ResultadoMarcado {
-  const { etiqueta, rolDueno } = buscarCheckpoint(checkpoint);
+  const { etiqueta, rolDueno, disponible } = buscarCheckpoint(checkpoint);
 
   if (marcados.includes(checkpoint)) {
     return {
       permitido: false,
       motivo: "ya_marcado",
       mensaje: `"${etiqueta}" ya está marcado en esta orden.`,
+    };
+  }
+
+  if (!disponible) {
+    return {
+      permitido: false,
+      motivo: "todavia_no_disponible",
+      mensaje: `"${etiqueta}" todavía no se puede marcar en el sistema.`,
     };
   }
 

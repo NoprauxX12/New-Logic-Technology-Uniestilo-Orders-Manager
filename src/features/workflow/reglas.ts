@@ -1,4 +1,4 @@
-import type { CheckpointId } from "@/features/workflow/checkpoints";
+import type { CheckpointId, Rol } from "@/features/workflow/checkpoints";
 import { puedeMarcar } from "@/features/workflow/transiciones";
 
 export type ResultadoValidacion =
@@ -7,6 +7,8 @@ export type ResultadoValidacion =
 type DatosMarcacionCorte = {
   ordenExiste: boolean;
   checkpointsCompletados: readonly CheckpointId[];
+  /** El rol de quien está marcando. El motor decide si es el dueño de corte. */
+  rol: Rol;
 };
 
 /**
@@ -17,6 +19,7 @@ type DatosMarcacionCorte = {
 export function validarMarcacionCorte({
   ordenExiste,
   checkpointsCompletados,
+  rol,
 }: DatosMarcacionCorte): ResultadoValidacion {
   if (!ordenExiste) {
     return {
@@ -28,8 +31,6 @@ export function validarMarcacionCorte({
   return puedeMarcar({
     checkpoint: "corte_completado",
     marcados: checkpointsCompletados,
-    rol: "corte",
+    rol,
   });
-
-  return { permitido: true };
 }
