@@ -292,6 +292,14 @@ message_service_sid = ""
 # DO NOT commit your Twilio auth token to git. Use environment variable substitution instead:
 auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
 
+# HU-16 · Le mete el rol de `usuario` como claim `user_role` a cada JWT que se
+# emite. La función vive en supabase/migrations/20260909180000_hook_rol_en_jwt.sql.
+# En un proyecto hospedado esto se activa desde el dashboard (Authentication →
+# Hooks), no desde este archivo: `config.toml` solo gobierna el CLI local.
+[auth.hook.custom_access_token]
+enabled = true
+uri = "pg-functions://postgres/public/custom_access_token_hook"
+
 # Multi-factor-authentication is available to Supabase Pro plan.
 [auth.mfa]
 # Control how many MFA factors can be enrolled at once per user.
