@@ -2,11 +2,11 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 
+import { CampoTexto } from "@/components/ui/CampoTexto";
 import {
   registrarOrden,
   type EstadoFormularioOrden,
 } from "@/features/ordenes/actions";
-import { CampoTexto } from "@/features/ordenes/components/CampoTexto";
 import { FilaPrenda } from "@/features/ordenes/components/FilaPrenda";
 import { ENTRADA_VACIA } from "@/features/ordenes/formulario";
 
