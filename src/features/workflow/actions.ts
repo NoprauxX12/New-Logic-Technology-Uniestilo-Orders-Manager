@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import type { CheckpointId } from "@/features/workflow/checkpoints";
 import { validarMarcacionCorte } from "@/features/workflow/reglas";
+import { getUsuarioActual } from "@/lib/auth/usuarioActual";
 import { createClient } from "@/lib/supabase/server";
 
 export type ResultadoMarcacionCorte = {
@@ -21,8 +22,6 @@ const ordenIdSchema = z
 
 const VIOLACION_DE_UNICIDAD = "23505";
 
-const USUARIO_CORTE_ID = "00000000-0000-0000-0000-0000000000a4";
-
 /**
  * HU-08 · Marca la etapa de corte como completada.
  * Consulta los avances de la orden, aplica las reglas del workflow común
@@ -37,6 +36,17 @@ export async function marcarCorteCompletado(
     return {
       ok: false,
       mensaje: "La orden seleccionada no es válida.",
+    };
+  }
+
+  // Quién está marcando. Mientras no exista el login (HU-16) sale del selector
+  // del layout; después saldrá de la sesión, sin cambiar nada de aquí.
+  const usuario = await getUsuarioActual();
+
+  if (!usuario) {
+    return {
+      ok: false,
+      mensaje: "Escoge arriba con qué persona estás trabajando.",
     };
   }
 
@@ -78,6 +88,7 @@ export async function marcarCorteCompletado(
   const resultado = validarMarcacionCorte({
     ordenExiste: orden !== null,
     checkpointsCompletados,
+    rol: usuario.rol,
   });
 
   if (!resultado.permitido) {
@@ -92,7 +103,7 @@ export async function marcarCorteCompletado(
     .insert({
       orden_id: validacionId.data,
       checkpoint: "corte_completado",
-      usuario_id: USUARIO_CORTE_ID,
+      usuario_id: usuario.id,
     });
 
   if (errorMarcacion) {

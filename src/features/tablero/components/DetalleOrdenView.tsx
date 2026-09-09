@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { BadgeSemaforo } from "@/features/tablero/components/BadgeSemaforo";
 import type { DetalleOrden, EtapaTablero } from "@/features/tablero/types";
+import { buscarCheckpoint } from "@/features/workflow/checkpoints";
 
 function formatoFechaHora(iso: string) {
   return new Date(iso).toLocaleString("es-CO", {
@@ -12,6 +13,10 @@ function formatoFechaHora(iso: string) {
 
 function CardEtapa({ etapa }: { etapa: EtapaTablero }) {
   const completada = etapa.estado === "completada";
+  // De dónde salen el enlace y el "todavía no disponible": la fuente única de
+  // la secuencia (regla 4), para no mantener aparte un mapa de etapa → página.
+  const { ruta, disponible } = buscarCheckpoint(etapa.seccion);
+  const sePuedeIrAMarcar = !completada && disponible && ruta !== null;
 
   return (
     <li className="rounded-xl border border-zinc-200 bg-white p-4">
@@ -25,7 +30,11 @@ function CardEtapa({ etapa }: { etapa: EtapaTablero }) {
               : "bg-zinc-100 text-zinc-600",
           ].join(" ")}
         >
-          {completada ? "Completada" : "Pendiente"}
+          {completada
+            ? "Completada"
+            : disponible
+              ? "Pendiente"
+              : "Todavía no disponible"}
         </span>
       </div>
 
@@ -37,9 +46,22 @@ function CardEtapa({ etapa }: { etapa: EtapaTablero }) {
           </span>{" "}
           · {formatoFechaHora(etapa.avance.fechaHora)}
         </p>
-      ) : (
+      ) : disponible ? (
         <p className="mt-2 text-sm text-zinc-500">Aún no marcada.</p>
+      ) : (
+        <p className="mt-2 text-sm text-zinc-500">
+          Esta parte del proceso todavía no se marca en el sistema.
+        </p>
       )}
+
+      {sePuedeIrAMarcar ? (
+        <Link
+          href={ruta}
+          className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-stone-400 px-4 text-base font-medium text-stone-800 hover:bg-stone-100"
+        >
+          Ir a marcar {etapa.etiqueta.toLowerCase()}
+        </Link>
+      ) : null}
 
       {etapa.avance?.observacion ? (
         <p className="mt-2 rounded-lg bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
