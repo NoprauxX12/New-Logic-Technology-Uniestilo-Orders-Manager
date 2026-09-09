@@ -43,14 +43,17 @@ describe("loQueSigue · a quién le toca", () => {
     expect(sigue.checkpoint).toEqual(CHECKPOINTS_DISPONIBLES[0]);
   });
 
-  it("después de marcar lista para despachar el cierre le queda a secretaría", () => {
+  it("después de marcar lista para despachar la orden le queda a secretaría", () => {
     const sigue = loQueSigue(
       primerasDisponibles(recorridoHasta("lista_despacho")),
     );
 
     expect(sigue).not.toBeNull();
     if (!sigue) return;
-    expect(sigue.checkpoint.id).toBe("cerrada");
+    // El criterio 3 de HU-19 es a quién le queda, no cuál es el paso exacto: el
+    // cierre son varias etapas (HU-13 agregó etiquetas, documentos y factura) y
+    // todas son de secretaría. Afirmar el id de la siguiente ataría este caso al
+    // sprint en que se escribió.
     expect(sigue.responsable).toBe(ETIQUETAS_ROL.secretaria);
   });
 
