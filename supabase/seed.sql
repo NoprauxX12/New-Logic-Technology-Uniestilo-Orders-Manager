@@ -171,6 +171,9 @@ insert into public.avance_seccion (orden_id, checkpoint, usuario_id, fecha_hora,
   ('00000000-0000-0000-0000-0000000000f7', 'recogido_bordado',    '00000000-0000-0000-0000-0000000000a5', now() - interval '30 days', null),
   ('00000000-0000-0000-0000-0000000000f7', 'llegada_marcacion',   '00000000-0000-0000-0000-0000000000a6', now() - interval '20 days', null),
   ('00000000-0000-0000-0000-0000000000f7', 'lista_despacho',      '00000000-0000-0000-0000-0000000000a6', now() - interval '14 days', null),
+  ('00000000-0000-0000-0000-0000000000f7', 'etiquetas',           '00000000-0000-0000-0000-0000000000a2', now() - interval '13 days', null),
+  ('00000000-0000-0000-0000-0000000000f7', 'documentos_despacho', '00000000-0000-0000-0000-0000000000a2', now() - interval '12 days', null),
+  ('00000000-0000-0000-0000-0000000000f7', 'factura_generada',    '00000000-0000-0000-0000-0000000000a2', now() - interval '11 days', 'Factura FV-2214'),
   ('00000000-0000-0000-0000-0000000000f7', 'cerrada',             '00000000-0000-0000-0000-0000000000a2', now() - interval '11 days', 'Despachada y facturada');
 
 -- ---------------------------------------------------------------------------

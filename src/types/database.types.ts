@@ -396,6 +396,14 @@ export type Database = {
         }
         Returns: string
       }
+      reportar_factura: {
+        Args: {
+          p_numero_factura: string
+          p_orden_id: string
+          p_usuario_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       checkpoint:
@@ -407,6 +415,9 @@ export type Database = {
         | "recogido_bordado"
         | "llegada_marcacion"
         | "lista_despacho"
+        | "etiquetas"
+        | "documentos_despacho"
+        | "factura_generada"
         | "cerrada"
       estado_alerta: "pendiente" | "atendida"
       rol:
@@ -556,6 +567,9 @@ export const Constants = {
         "recogido_bordado",
         "llegada_marcacion",
         "lista_despacho",
+        "etiquetas",
+        "documentos_despacho",
+        "factura_generada",
         "cerrada",
       ],
       estado_alerta: ["pendiente", "atendida"],

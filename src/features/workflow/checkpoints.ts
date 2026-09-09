@@ -125,12 +125,36 @@ export const CHECKPOINTS = [
     ruta: null,
   },
   {
+    id: "etiquetas",
+    etiqueta: "Etiquetas asignadas",
+    rolDueno: "secretaria",
+    hu: "HU-13",
+    disponible: true,
+    ruta: "/ordenes/cierre",
+  },
+  {
+    id: "documentos_despacho",
+    etiqueta: "Documentos de despacho",
+    rolDueno: "secretaria",
+    hu: "HU-13",
+    disponible: true,
+    ruta: "/ordenes/cierre",
+  },
+  {
+    id: "factura_generada",
+    etiqueta: "Factura generada",
+    rolDueno: "secretaria",
+    hu: "HU-13",
+    disponible: true,
+    ruta: "/ordenes/cierre",
+  },
+  {
     id: "cerrada",
     etiqueta: "Orden cerrada",
     rolDueno: "secretaria",
     hu: "HU-13",
     disponible: true,
-    ruta: null,
+    ruta: "/ordenes/cierre",
   },
 ] as const satisfies readonly Checkpoint[];
 
