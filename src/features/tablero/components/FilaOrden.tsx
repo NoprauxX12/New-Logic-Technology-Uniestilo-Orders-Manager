@@ -14,6 +14,9 @@ const ETIQUETA_CORTA: Record<CheckpointId, string> = {
   recogido_bordado: "Bordado",
   llegada_marcacion: "Marcación",
   lista_despacho: "Despacho",
+  etiquetas: "Etiquetas",
+  documentos_despacho: "Docs.",
+  factura_generada: "Factura",
   cerrada: "Cierre",
 };
 

@@ -76,6 +76,21 @@ export const CHECKPOINTS = [
     rolDueno: "marcacion",
   },
   {
+    id: "etiquetas",
+    etiqueta: "Etiquetas asignadas",
+    rolDueno: "secretaria",
+  },
+  {
+    id: "documentos_despacho",
+    etiqueta: "Documentos de despacho",
+    rolDueno: "secretaria",
+  },
+  {
+    id: "factura_generada",
+    etiqueta: "Factura generada",
+    rolDueno: "secretaria",
+  },
+  {
     id: "cerrada",
     etiqueta: "Orden cerrada",
     rolDueno: "secretaria",

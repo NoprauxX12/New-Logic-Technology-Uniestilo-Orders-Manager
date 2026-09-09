@@ -35,6 +35,9 @@ const TODOS: Record<CheckpointId, true> = {
   recogido_bordado: true,
   llegada_marcacion: true,
   lista_despacho: true,
+  etiquetas: true,
+  documentos_despacho: true,
+  factura_generada: true,
   cerrada: true,
 };
 
