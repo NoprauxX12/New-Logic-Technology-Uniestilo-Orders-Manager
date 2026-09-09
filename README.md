@@ -91,7 +91,13 @@ if (!veredicto.permitido) return { ok: false, mensaje: veredicto.mensaje };
 
 `marcados` son los checkpoints que la orden ya tiene; `rol` es el de quien marca. El motor verifica que no esté ya marcado, que sea el siguiente de la secuencia y que el rol sea el dueño, y devuelve el mensaje listo para mostrar. La base respalda lo primero por su cuenta con un índice único sobre `(orden_id, checkpoint)`.
 
-Falta definir de dónde sale el usuario que marca mientras no exista el login (HU-16): `avance_seccion.usuario_id` es obligatorio.
+Quien marca sale de `usuarioActual()` (`src/features/auth/usuarioActual.ts`), no de un UUID escrito en cada action: `avance_seccion.usuario_id` es obligatorio y todavía no hay login. Mientras tanto devuelve siempre a la persona de marcación del seed, así que una historia cuyo checkpoint sea de otra sección verá el botón deshabilitado hasta que HU-16 reemplace el cuerpo de esa función por la sesión real.
+
+En vez de escribir en `avance_seccion` por su cuenta, una historia de marcado cablea la acción genérica que ya existe, pasándole su propio checkpoint:
+
+```tsx
+<AccionMarcarAvance ordenId={orden.id} checkpoint="corte_completado" veredicto={...} />
+```
 
 ## Comandos
 

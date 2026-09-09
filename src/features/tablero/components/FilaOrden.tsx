@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BadgeSemaforo } from "@/features/tablero/components/BadgeSemaforo";
 import type { EtapaTablero, OrdenEnTablero } from "@/features/tablero/types";
 import type { CheckpointId } from "@/features/workflow/checkpoints";
+import { loQueSigue } from "@/features/workflow/estado";
 
 /** Etiquetas cortas para la fila del tablero (el nombre completo va en title + detalle). */
 const ETIQUETA_CORTA: Record<CheckpointId, string> = {
@@ -55,6 +56,14 @@ function NodoEtapa({ etapa }: { etapa: EtapaTablero }) {
 }
 
 export function FilaOrden({ orden }: { orden: OrdenEnTablero }) {
+  // A quién le toca mover la orden. Es lo que hace visible que, al marcarla
+  // lista para despachar, la orden le queda a secretaría para el cierre.
+  const sigue = loQueSigue(
+    orden.etapas
+      .filter((etapa) => etapa.estado === "completada")
+      .map((etapa) => etapa.seccion),
+  );
+
   return (
     <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -72,6 +81,15 @@ export function FilaOrden({ orden }: { orden: OrdenEnTablero }) {
           <p className="text-xs text-zinc-500">
             Entrega {formatoCorto(orden.fechaEntrega)}
           </p>
+          {sigue ? (
+            <p className="text-xs font-medium text-stone-700">
+              Sigue: {sigue.checkpoint.etiqueta} — {sigue.responsable}
+            </p>
+          ) : (
+            <p className="text-xs font-medium text-emerald-700">
+              Orden terminada
+            </p>
+          )}
         </div>
       </div>
 
