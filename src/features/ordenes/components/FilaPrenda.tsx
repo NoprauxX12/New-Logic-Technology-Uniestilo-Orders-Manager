@@ -1,4 +1,4 @@
-import { CampoTexto } from "@/features/ordenes/components/CampoTexto";
+import { CampoTexto } from "@/components/ui/CampoTexto";
 import type { EntradaPrenda } from "@/features/ordenes/formulario";
 
 /**
