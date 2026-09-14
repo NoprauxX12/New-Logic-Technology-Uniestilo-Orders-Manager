@@ -47,9 +47,7 @@ que levanta el `start`: http://127.0.0.1:54323
 
 `npx supabase db reset` aplica las migraciones y carga `supabase/seed.sql`. Todo lo que trae es inventado —clientes, personas y órdenes— sobre el proceso real de Uniestilo. Los correos usan el dominio `.test`, reservado para pruebas.
 
-Hay una persona por rol. **Nadie "entra" con estas cuentas: todavía no hay pantalla de login**, llega en HU-16. Existen porque `avance_seccion.usuario_id` es obligatorio y los avances necesitan autor, así que mientras tanto quien construya una historia de marcado escoge uno de estos ids a mano en su código. Cómo lo va a saber la aplicación cuando haya usuarios de verdad es una decisión abierta del equipo.
-
-El seed también les crea la cuenta de autenticación, con la contraseña `uniestilo123` igual para todas. Hoy no sirve para nada —no hay dónde escribirla— pero deja el terreno listo para HU-16.
+Hay una persona por rol, con su cuenta de autenticación ya creada y la contraseña `uniestilo123` igual para todas (solo en local). Con eso se entra por `/login`: ver [Iniciar sesión](#iniciar-sesión).
 
 | Rol          | Id en `usuario`                        | Correo                      | Marca                                      |
 | ------------ | -------------------------------------- | --------------------------- | ------------------------------------------ |
@@ -74,6 +72,23 @@ Y hay siete órdenes, cada una parada en un punto distinto del flujo, para que n
 
 HU-10 despacha un lote nuevo desde cualquier orden que ya tenga el corte hecho (`OC-5003` en adelante); HU-11 confirma los lotes que el seed dejó abiertos.
 
+## Iniciar sesión
+
+Login real contra Supabase Auth (HU-16), en `/login`, con las seis cuentas del seed. Al entrar, `/` muestra a quién le toca qué y un botón a su pantalla:
+
+| Rol          | Botón                                                       | Ruta                         |
+| ------------ | ----------------------------------------------------------- | ---------------------------- |
+| `admin`      | Ver el tablero / Registrar una orden                        | `/tablero`, `/ordenes/nueva` |
+| `secretaria` | Cerrar órdenes                                              | `/ordenes/cierre`            |
+| `corte`      | Marcar corte completado                                     | `/ordenes/corte`             |
+| `marcacion`  | Marcar llegada a marcación                                  | `/ordenes/marcacion`         |
+| `diseno`     | Ver el tablero (su pantalla, HU-04, no existe aún)          | `/tablero`                   |
+| `logistica`  | Ver el tablero (sus pantallas, HU-09/HU-11, no existen aún) | `/tablero`                   |
+
+El rol de cada persona viaja además como claim `user_role` en su JWT (ver `docs/adr/0006-login-con-supabase-auth-y-rol-en-el-jwt.md`): infraestructura lista para las políticas RLS de HU-17, que hoy todavía no lo leen.
+
+Sin sesión, el proxy manda a `/login` a cualquier ruta que no sea `/` o `/login` — exige sesión, no exige rol por pantalla, salvo donde ya se pidió antes (`/ordenes/nueva`, admin).
+
 ## Marcar un avance
 
 La secuencia de checkpoints y el rol dueño de cada uno viven en un solo archivo: `src/features/workflow/checkpoints.ts`. **Ninguna action inserta en `avance_seccion` por su cuenta** (regla 2 de `CLAUDE.md`): primero le pregunta al motor.
@@ -91,7 +106,7 @@ if (!veredicto.permitido) return { ok: false, mensaje: veredicto.mensaje };
 
 `marcados` son los checkpoints que la orden ya tiene; `rol` es el de quien marca. El motor verifica que no esté ya marcado, que sea el siguiente de la secuencia y que el rol sea el dueño, y devuelve el mensaje listo para mostrar. La base respalda lo primero por su cuenta con un índice único sobre `(orden_id, checkpoint)`.
 
-Quien marca sale de `usuarioActual()` (`src/features/auth/usuarioActual.ts`), no de un UUID escrito en cada action: `avance_seccion.usuario_id` es obligatorio y todavía no hay login. Mientras tanto devuelve siempre a la persona de marcación del seed, así que una historia cuyo checkpoint sea de otra sección verá el botón deshabilitado hasta que HU-16 reemplace el cuerpo de esa función por la sesión real.
+Quien marca sale de `getUsuarioActual()` (`src/lib/auth/usuarioActual.ts`), no de un UUID escrito en cada action: `avance_seccion.usuario_id` es obligatorio, y desde HU-16 esa función lee la sesión real en vez de una cookie sin verificar. Si el rol de quien inició sesión no es el dueño del checkpoint, el botón sale deshabilitado con el motivo.
 
 En vez de escribir en `avance_seccion` por su cuenta, una historia de marcado cablea la acción genérica que ya existe, pasándole su propio checkpoint:
 

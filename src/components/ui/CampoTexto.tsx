@@ -18,7 +18,7 @@ type Props = {
   etiqueta: string;
   /** Texto de apoyo debajo de la etiqueta, con un ejemplo de lo que se espera. */
   ayuda?: string;
-  tipo?: "text" | "date";
+  tipo?: "text" | "date" | "email" | "password";
   /** Muestra el teclado numérico en el celular sin usar type="number". */
   numerico?: boolean;
   marcador?: string;
@@ -29,6 +29,8 @@ type Props = {
    * conserva lo escrito cuando la orden no se pudo guardar.
    */
   valorInicial?: string;
+  /** Para que el navegador y el gestor de contraseñas sepan qué es el campo. */
+  autocompletar?: string;
 };
 
 export function CampoTexto({
@@ -41,6 +43,7 @@ export function CampoTexto({
   marcador,
   errores,
   valorInicial,
+  autocompletar,
 }: Props) {
   const idCampo = identificador ?? nombre;
   const idError = `${idCampo}-error`;
@@ -66,6 +69,7 @@ export function CampoTexto({
         inputMode={numerico ? "numeric" : undefined}
         placeholder={marcador}
         defaultValue={valorInicial}
+        autoComplete={autocompletar}
         aria-invalid={tieneError}
         aria-describedby={
           [ayuda ? idAyuda : null, tieneError ? idError : null]

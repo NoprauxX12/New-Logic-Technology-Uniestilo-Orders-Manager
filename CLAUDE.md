@@ -181,6 +181,6 @@ Las decisiones cerradas están en `docs/adr/`. Abierto con el equipo o la PO:
 
 - HU-19 la marca "terminación (Marcela)", pero el modelo tiene 6 roles y `terminacion` no es uno. Definir si es un rol nuevo o si lo marca `marcacion`.
 - El documento de arquitectura asigna la autenticación a HU-21; el backlog la pone en HU-16/HU-17 y HU-21 es el asistente. Unificar.
-- El Sprint 1 exige "queda registro de quién marcó" pero el login (HU-16) es Sprint 2. Hace falta al menos un login básico en Sprint 1.
+- ~~El Sprint 1 exige "queda registro de quién marcó" pero el login (HU-16) es Sprint 2. Hace falta al menos un login básico en Sprint 1.~~ Resuelto: login real con Supabase Auth y el rol como claim del JWT (`docs/adr/0006`). Falta HU-17: la protección hoy es de sesión, no de rol por pantalla.
 - Proveedor de LLM.
 - Catálogo de talleres satélite (hoy texto libre en HU-10).

@@ -40,3 +40,27 @@ export function leerFormularioDespacho(formData: FormData): EntradaDespacho {
 export function leerOrdenId(formData: FormData): string {
   return texto(formData.get("ordenId"));
 }
+
+/** HU-11 · Lo que la persona escribió o escogió al confirmar una recepción. */
+export type EntradaRecepcion = {
+  completo: string;
+  observaciones: string;
+};
+
+/** Formulario en blanco: al abrir la pantalla y después de confirmar. */
+export const ENTRADA_RECEPCION_VACIA: EntradaRecepcion = {
+  completo: "",
+  observaciones: "",
+};
+
+export function leerFormularioRecepcion(formData: FormData): EntradaRecepcion {
+  return {
+    completo: texto(formData.get("completo")),
+    observaciones: texto(formData.get("observaciones")),
+  };
+}
+
+/** El lote que se está recibiendo, que viaja en un campo oculto. */
+export function leerLoteId(formData: FormData): string {
+  return texto(formData.get("loteId"));
+}

@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { despacharLoteSchema } from "@/features/talleres/schemas";
+import {
+  confirmarRecepcionSchema,
+  despacharLoteSchema,
+} from "@/features/talleres/schemas";
 
 const ORDEN_ID = "00000000-0000-0000-0000-0000000000f3";
 const LOGISTICA_ID = "00000000-0000-0000-0000-0000000000a5";
+const LOTE_ID = "00000000-0000-0000-0000-000000000abc";
 
 const DESPACHO_VALIDO = {
   ordenId: ORDEN_ID,
@@ -69,5 +73,45 @@ describe("despacharLoteSchema", () => {
     expect(errores.ordenId).toContain(
       "No se sabe a qué orden pertenece este despacho",
     );
+  });
+});
+
+describe("confirmarRecepcionSchema", () => {
+  it("acepta una recepción completa, sin observaciones", () => {
+    const resultado = confirmarRecepcionSchema.safeParse({
+      loteId: LOTE_ID,
+      completo: "si",
+    });
+
+    expect(resultado.success).toBe(true);
+    expect(resultado.success && resultado.data.completo).toBe(true);
+  });
+
+  it("convierte 'no' en false, no en un texto", () => {
+    const resultado = confirmarRecepcionSchema.safeParse({
+      loteId: LOTE_ID,
+      completo: "no",
+      observaciones: "Faltaron 3 camisas talla M",
+    });
+
+    expect(resultado.success && resultado.data.completo).toBe(false);
+  });
+
+  it("pide marcar si llegó completo o no", () => {
+    const resultado = confirmarRecepcionSchema.safeParse({
+      loteId: LOTE_ID,
+      completo: "",
+    });
+
+    expect(resultado.success).toBe(false);
+  });
+
+  it("rechaza un lote que no es un identificador válido", () => {
+    const resultado = confirmarRecepcionSchema.safeParse({
+      loteId: "",
+      completo: "si",
+    });
+
+    expect(resultado.success).toBe(false);
   });
 });
