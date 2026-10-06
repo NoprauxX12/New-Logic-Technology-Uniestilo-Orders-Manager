@@ -58,7 +58,7 @@ src/
     workflow/             Motor de checkpoints: HU-08, HU-09, HU-12, HU-19, HU-13 (RNF-05)
     talleres/             Lotes a taller satélite: HU-10, HU-11
     tablero/              HU-14 + suscripción Realtime
-    auth/                 Sesión, roles y MFA: HU-16, HU-17
+    auth/                 Sesión y acceso por rol (accesoPorRuta.ts, guardia.ts): HU-16, HU-17
     alertas/              HU-06, HU-07, HU-20 (post-MVP)
     documentos/           Etiquetas y documentos de despacho: HU-13
   components/
@@ -66,6 +66,8 @@ src/
     layout/               AppShell, navegación por rol
   lib/
     supabase/             client.ts (navegador), server.ts (servidor), session.ts (proxy)
+    auth/                 getUsuarioActual(): la única respuesta a "quién está actuando"
+    talleres/             Estado derivado de los lotes; lo usan talleres y tablero
     ai/                   Interfaz propia sobre el LLM (post-MVP)
     utils/                Helpers puros: fechas, moneda, cn()
   types/                  database.types.ts (generado) y tipos de dominio
@@ -115,11 +117,12 @@ Salen del diseño de arquitectura y de los RNF. Un PR que las rompa no se mezcla
 2. **Toda mutación de avance pasa por el motor de workflow** (`src/features/workflow`). Ninguna action inserta en `avance_seccion` por su cuenta. El motor verifica que el checkpoint sea el siguiente válido en la secuencia, que el rol del usuario sea el dueño de esa sección y que no se repita uno ya marcado.
 3. **La auditoría es inmutable (RNF-05).** Un avance registra `usuario_id` y `fecha_hora` y nunca se edita ni se borra. Un error se corrige con un registro nuevo o con una orden de corrección (HU-18).
 4. **La secuencia de checkpoints y el rol dueño de cada uno viven en un solo lugar:** `src/features/workflow/checkpoints.ts`. UI, actions y políticas RLS se derivan de ahí. Si cambia el flujo, cambia ese archivo y una migración.
-5. **Autorización en dos capas.** La UI muestra a cada rol solo lo suyo; RLS lo garantiza en la base aunque la UI falle (RNF-04). Ninguna tabla se crea sin políticas RLS.
-6. **Un lote a taller es entidad propia** (`lote_taller`), no un checkpoint: una orden se reparte en varios lotes y HU-11 confronta lo recibido contra lo enviado.
-7. **Las alertas son persistentes** (`alerta` con destinatario y estado), no notificaciones efímeras (HU-07).
-8. **Facturación fuera de alcance.** El sistema no emite facturas: en el cierre (HU-13) solo registra que se emitió y captura el número.
-9. **La IA solo informa, no decide ni muta** (HU-15, HU-21). Acceso de solo lectura a los datos.
+5. **Autorización en dos capas.** La UI muestra a cada rol solo lo suyo; RLS lo garantiza en la base aunque la UI falle (RNF-04). Ninguna tabla se crea sin políticas RLS. Cada página llama a `exigirAcceso(ruta)` antes de leer nada, y el mapa ruta → roles vive en `src/features/auth/accesoPorRuta.ts` (`docs/adr/0007`).
+6. **Quién actúa sale de la sesión, nunca del formulario.** Las actions usan `getUsuarioActual()` y las funciones de Postgres `auth.uid()`. Ningún `usuario_id`, `enviado_por` ni `recibido_por` se recibe como dato (RNF-05).
+7. **Un lote a taller es entidad propia** (`lote_taller`), no un checkpoint: una orden se reparte en varios lotes y HU-11 confronta lo recibido contra lo enviado.
+8. **Las alertas son persistentes** (`alerta` con destinatario y estado), no notificaciones efímeras (HU-07).
+9. **Facturación fuera de alcance.** El sistema no emite facturas: en el cierre (HU-13) solo registra que se emitió y captura el número.
+10. **La IA solo informa, no decide ni muta** (HU-15, HU-21). Acceso de solo lectura a los datos.
 
 Roles (enum `rol`) y lo que marca cada uno:
 
@@ -151,9 +154,12 @@ HU-19 (lista para despachar) la marca "terminación"; ver pendientes al final.
 
 - Un solo cliente por contexto: `createClient()` de `@/lib/supabase/server` en Server Components, actions y route handlers; `@/lib/supabase/client` solo dentro de `"use client"`. No se instancian clientes de `@supabase/supabase-js` en ningún otro lado.
 - `SUPABASE_SECRET_KEY` salta RLS: jamás en código que llegue al navegador ni en `NEXT_PUBLIC_*`. Solo para scripts de seed o administración en servidor.
+- Toda función nueva de Postgres: `revoke execute on function ... from public, anon; grant execute ... to authenticated`. Postgres le da EXECUTE a `public` por defecto y quitárselo a `anon` no basta.
+- El registro de cuentas está apagado en `config.toml`; en el proyecto hospedado hay que dejarlo igual (Authentication → Sign In / Up). Los usuarios los crea administración con el seed o la secret key.
+- Las políticas de `avance_seccion` usan `rol_dueno(checkpoint)`, copia SQL del mapa de `checkpoints.ts` verificada por `rlsPorRol.test.ts`. Si cambia el flujo, cambian los dos.
 - Esquema con migraciones: `npx supabase migration new <nombre>` → escribir el SQL → `npx supabase db reset` en local → PR. Nombres descriptivos en snake_case: `crear_orden_e_items`, `rls_avance_seccion`.
 - Tras cambiar el esquema: `npm run db:types` y subir `database.types.ts` en el mismo PR.
-- Realtime solo para el tablero (HU-14); el resto son lecturas normales.
+- Realtime solo para el tablero (HU-14), que escucha `avance_seccion` y `lote_taller`; el resto son lecturas normales.
 - Archivos (fichas técnicas, documentos de despacho) en Storage bajo `<bucket>/<orden_id>/<archivo>`; en la base solo la ruta y los metadatos.
 
 ## Testing
@@ -181,6 +187,8 @@ Las decisiones cerradas están en `docs/adr/`. Abierto con el equipo o la PO:
 
 - HU-19 la marca "terminación (Marcela)", pero el modelo tiene 6 roles y `terminacion` no es uno. Definir si es un rol nuevo o si lo marca `marcacion`.
 - El documento de arquitectura asigna la autenticación a HU-21; el backlog la pone en HU-16/HU-17 y HU-21 es el asistente. Unificar.
-- ~~El Sprint 1 exige "queda registro de quién marcó" pero el login (HU-16) es Sprint 2. Hace falta al menos un login básico en Sprint 1.~~ Resuelto: login real con Supabase Auth y el rol como claim del JWT (`docs/adr/0006`). Falta HU-17: la protección hoy es de sesión, no de rol por pantalla.
+- ~~El Sprint 1 exige "queda registro de quién marcó" pero el login (HU-16) es Sprint 2. Hace falta al menos un login básico en Sprint 1.~~ Resuelto: login real con Supabase Auth y el rol como claim del JWT (`docs/adr/0006`). ~~Falta HU-17.~~ Resuelto: RLS por rol y acceso por pantalla (`docs/adr/0007`). El PR #37 quedó reemplazado y debe cerrarse.
+- Segundo factor (MFA). Propuesta: TOTP obligatorio para `admin` y `secretaria` exigiendo `aal2` en el proxy y en las políticas sensibles; passkeys para todos cuando Supabase las saque de beta. Antes hace falta SMTP propio para recuperar contraseñas.
+- Content-Security-Policy: `next.config.ts` pone las cabeceras que no dependen de la aplicación; una CSP exige nonces por petición.
 - Proveedor de LLM.
 - Catálogo de talleres satélite (hoy texto libre en HU-10).

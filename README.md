@@ -76,18 +76,18 @@ HU-10 despacha un lote nuevo desde cualquier orden que ya tenga el corte hecho (
 
 Login real contra Supabase Auth (HU-16), en `/login`, con las seis cuentas del seed. Al entrar, `/` muestra a quién le toca qué y un botón a su pantalla:
 
-| Rol          | Botón                                                       | Ruta                         |
-| ------------ | ----------------------------------------------------------- | ---------------------------- |
-| `admin`      | Ver el tablero / Registrar una orden                        | `/tablero`, `/ordenes/nueva` |
-| `secretaria` | Cerrar órdenes                                              | `/ordenes/cierre`            |
-| `corte`      | Marcar corte completado                                     | `/ordenes/corte`             |
-| `marcacion`  | Marcar llegada a marcación                                  | `/ordenes/marcacion`         |
-| `diseno`     | Ver el tablero (su pantalla, HU-04, no existe aún)          | `/tablero`                   |
-| `logistica`  | Ver el tablero (sus pantallas, HU-09/HU-11, no existen aún) | `/tablero`                   |
+| Rol          | Botón                                            | Ruta                         |
+| ------------ | ------------------------------------------------ | ---------------------------- |
+| `admin`      | Ver el tablero / Registrar una orden             | `/tablero`, `/ordenes/nueva` |
+| `secretaria` | Cerrar órdenes                                   | `/ordenes/cierre`            |
+| `corte`      | Marcar corte completado                          | `/ordenes/corte`             |
+| `marcacion`  | Marcar llegada a marcación                       | `/ordenes/marcacion`         |
+| `logistica`  | Despachar y recibir lotes                        | `/ordenes/talleres`          |
+| `diseno`     | Solo un aviso: su pantalla (HU-04) no existe aún | —                            |
 
-El rol de cada persona viaja además como claim `user_role` en su JWT (ver `docs/adr/0006-login-con-supabase-auth-y-rol-en-el-jwt.md`): infraestructura lista para las políticas RLS de HU-17, que hoy todavía no lo leen.
+Sin sesión, el proxy manda a `/login` a cualquier ruta que no sea `/` o `/login`. Con sesión, cada pantalla exige el rol que le toca (HU-17): el mapa está en `src/features/auth/accesoPorRuta.ts` y lo aplica `exigirAcceso()` al principio de cada página. Administración entra a todo; quien abre una pantalla ajena vuelve a `/` con un aviso.
 
-Sin sesión, el proxy manda a `/login` a cualquier ruta que no sea `/` o `/login` — exige sesión, no exige rol por pantalla, salvo donde ya se pidió antes (`/ordenes/nueva`, admin).
+La base repite el control con RLS (`docs/adr/0007-rls-por-rol-y-acceso-por-pantalla.md`): solo se lee con sesión, solo escribe el rol dueño y siempre a su propio nombre. `anon` no tiene permisos y el registro de cuentas está apagado. El rol de cada persona viaja además como claim `user_role` en su JWT (ADR 0006), todavía sin usar.
 
 ## Marcar un avance
 
