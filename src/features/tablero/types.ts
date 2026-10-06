@@ -25,6 +25,8 @@ export type OrdenResumen = {
   fechaRecepcion: string; // ISO date (`fecha_ingreso`)
   fechaEntrega: string; // ISO date
   tallerNombre: string | null;
+  /** HU-10 y HU-11: derivado de los lotes ("En confección", "Todo volvió"…). */
+  estadoTalleres: string;
 };
 
 /** Semáforo derivado en aplicación (no columna editable). */

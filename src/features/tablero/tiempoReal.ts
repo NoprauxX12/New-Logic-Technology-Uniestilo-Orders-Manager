@@ -8,9 +8,18 @@ const FILTRO_AVANCE = {
   table: "avance_seccion" as const,
 };
 
+// HU-10 y HU-11: un lote se crea al despachar y se completa al recibir, y las
+// dos cosas cambian el estado que el tablero muestra.
+const FILTRO_LOTES = {
+  event: "*" as const,
+  schema: "public" as const,
+  table: "lote_taller" as const,
+};
+
 /**
- * Se suscribe a un avance nuevo. Devuelve la función para cerrar el canal.
- * El tablero no muta aquí: solo avisa para que se vuelvan a leer las órdenes.
+ * Se suscribe a un avance nuevo y a los cambios en los lotes a taller. Devuelve
+ * la función para cerrar el canal. El tablero no muta aquí: solo avisa para que
+ * se vuelvan a leer las órdenes.
  */
 export function suscribirAvancesTablero(
   supabase: SupabaseClient<Database>,
@@ -19,6 +28,7 @@ export function suscribirAvancesTablero(
   const canal: RealtimeChannel = supabase
     .channel("tablero-avances")
     .on("postgres_changes", FILTRO_AVANCE, alCambiar)
+    .on("postgres_changes", FILTRO_LOTES, alCambiar)
     .subscribe();
 
   return () => {
