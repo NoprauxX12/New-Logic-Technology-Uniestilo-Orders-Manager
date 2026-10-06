@@ -7,6 +7,7 @@ import {
   type EntradaFormularioOrden,
 } from "@/features/ordenes/formulario";
 import { nuevaOrdenSchema } from "@/features/ordenes/schemas";
+import { getUsuarioActual } from "@/lib/auth/usuarioActual";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -16,10 +17,10 @@ import { createClient } from "@/lib/supabase/server";
  * la escritura en la función `registrar_orden` de Postgres, que hace las tres
  * inserciones (cliente, orden, prendas) en una sola transacción.
  *
- * Nota de seguridad: una Server Action se puede invocar con un POST directo,
- * sin pasar por el formulario. Hoy no hay a quién autenticar porque el login
- * llega en HU-16; la verificación de sesión y rol se agrega aquí en HU-17,
- * junto con el cierre de las políticas RLS abiertas.
+ * Solo administración registra órdenes (HU-17). El rol se verifica aquí y no
+ * únicamente en la pantalla: una Server Action se puede invocar con un POST
+ * directo, así que esconder el formulario no impediría nada por sí solo. La
+ * base lo repite con RLS, y `registrar_orden` firma `creado_por` con la sesión.
  */
 
 /** Lo que la action le devuelve al formulario. */
@@ -41,6 +42,27 @@ export async function registrarOrden(
   formData: FormData,
 ): Promise<EstadoFormularioOrden> {
   const escrito = leerFormularioOrden(formData);
+
+  const usuario = await getUsuarioActual();
+
+  if (!usuario) {
+    return {
+      ok: false,
+      mensaje: "Inicia sesión para registrar una orden.",
+      errores: {},
+      valores: escrito,
+    };
+  }
+
+  if (usuario.rol !== "admin") {
+    return {
+      ok: false,
+      mensaje: "Las órdenes las registra administración.",
+      errores: {},
+      valores: escrito,
+    };
+  }
+
   const validacion = nuevaOrdenSchema.safeParse(escrito);
 
   if (!validacion.success) {

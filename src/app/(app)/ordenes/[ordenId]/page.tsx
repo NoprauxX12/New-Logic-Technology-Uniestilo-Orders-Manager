@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
+import { exigirAcceso } from "@/features/auth/guardia";
 import { FormularioDespacharTaller } from "@/features/talleres/components/FormularioDespacharTaller";
 import { LotesDeLaOrden } from "@/features/talleres/components/LotesDeLaOrden";
 import { obtenerOrdenParaDespacho } from "@/features/talleres/queries";
 import { puedeDespachar, ROL_DE_TALLERES } from "@/features/talleres/reglas";
-import { getUsuarioActual } from "@/lib/auth/usuarioActual";
 import { describirEstadoDeTalleres } from "@/lib/talleres/estadoLotes";
 import { formatearFecha } from "@/lib/utils/fechas";
 
@@ -28,12 +28,9 @@ type Props = {
 export default async function OrdenPage({ params }: Props) {
   const { ordenId } = await params;
 
-  const [orden, usuario] = await Promise.all([
-    obtenerOrdenParaDespacho(ordenId),
-    getUsuarioActual(),
-  ]);
+  const usuario = await exigirAcceso(`/ordenes/${ordenId}`);
+  const orden = await obtenerOrdenParaDespacho(ordenId);
 
-  if (!usuario) redirect("/login");
   if (!orden) notFound();
 
   const permiso = puedeDespachar(orden.marcados, usuario.rol);

@@ -2,6 +2,7 @@ import "server-only";
 
 import type { CheckpointId } from "@/features/workflow/checkpoints";
 import { createClient } from "@/lib/supabase/server";
+import { describirEstadoDeTalleres } from "@/lib/talleres/estadoLotes";
 
 /**
  * HU-10 · Lecturas de la pantalla de despacho a taller.
@@ -105,4 +106,60 @@ export async function obtenerOrdenParaDespacho(
       }))
       .sort((uno, otro) => otro.fechaEnvio.localeCompare(uno.fechaEnvio)),
   };
+}
+
+export type OrdenParaTalleres = {
+  id: string;
+  numeroOrdenCompra: string;
+  razonSocial: string;
+  fechaEntrega: string;
+  /** Derivado de los lotes (regla 1): "En confección", "Todo volvió"… */
+  estadoTalleres: string;
+};
+
+/**
+ * Las órdenes con las que logística puede trabajar: las que ya tienen el corte
+ * completado y todavía no se cerraron. Desde aquí se entra al detalle de cada
+ * una para despachar (HU-10) o recibir (HU-11).
+ */
+export async function listarOrdenesParaTalleres(): Promise<
+  OrdenParaTalleres[]
+> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("orden")
+    .select(
+      `id,
+       numero_orden_compra,
+       fecha_entrega,
+       cliente ( razon_social ),
+       avance_seccion ( checkpoint ),
+       lote_taller ( recibido_completo )`,
+    )
+    .order("fecha_entrega", { ascending: true });
+
+  if (error) {
+    console.error("[HU-10] No se pudieron leer las órdenes", error);
+    throw new Error("No se pudieron leer las órdenes.");
+  }
+
+  return data
+    .filter((orden) => {
+      const marcados = orden.avance_seccion.map((avance) => avance.checkpoint);
+      return (
+        marcados.includes("corte_completado") && !marcados.includes("cerrada")
+      );
+    })
+    .map((orden) => ({
+      id: orden.id,
+      numeroOrdenCompra: orden.numero_orden_compra,
+      razonSocial: orden.cliente?.razon_social ?? "Cliente sin nombre",
+      fechaEntrega: orden.fecha_entrega,
+      estadoTalleres: describirEstadoDeTalleres(
+        orden.lote_taller.map((lote) => ({
+          recibido: lote.recibido_completo !== null,
+        })),
+      ),
+    }));
 }

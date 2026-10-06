@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { exigirAcceso } from "@/features/auth/guardia";
 import { ListaOrdenesCierre } from "@/features/documentos/components/ListaOrdenesCierre";
 import { listarOrdenesParaCierre } from "@/features/documentos/queries";
 
@@ -16,6 +17,8 @@ export const metadata: Metadata = {
  * de que sale del listado de órdenes en curso.
  */
 export default async function CerrarOrdenesPage() {
+  await exigirAcceso("/ordenes/cierre");
+
   const ordenes = await listarOrdenesParaCierre();
 
   return (

@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-
+import { exigirAcceso } from "@/features/auth/guardia";
 import { ListaOrdenesSeccion } from "@/features/workflow/components/ListaOrdenesSeccion";
 import { obtenerOrdenesParaSeccion } from "@/features/workflow/queries";
-import { getUsuarioActual } from "@/lib/auth/usuarioActual";
 
 export const metadata: Metadata = {
   title: "Órdenes para marcación · Uniestilo",
@@ -11,8 +9,7 @@ export const metadata: Metadata = {
 
 /** HU-12 · Pantalla de marcación. Solo enruta: la lista y la action son genéricas. */
 export default async function OrdenesMarcacionPage() {
-  const usuario = await getUsuarioActual();
-  if (!usuario) redirect("/login");
+  const usuario = await exigirAcceso("/ordenes/marcacion");
 
   const ordenes = await obtenerOrdenesParaSeccion(
     "llegada_marcacion",

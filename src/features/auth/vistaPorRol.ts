@@ -4,9 +4,9 @@ import type { Rol } from "@/lib/auth/usuarioActual";
 /**
  * HU-16 · A dónde manda el botón de cada rol al entrar.
  *
- * Diseño (HU-04) y logística (HU-09/HU-11) todavía no tienen pantalla propia:
- * sus historias son de otros sprints. Mientras tanto ven el tablero y un aviso,
- * para que la sesión no sea un callejón sin salida.
+ * Diseño (HU-04) todavía no tiene pantalla propia: su historia es de otro
+ * sprint. Mientras tanto ve un aviso. No se le manda al tablero porque con
+ * HU-17 el tablero es solo de administración.
  *
  * Las etiquetas de corte y marcación salen de `checkpoints.ts` y no se repiten
  * a mano (regla 4): son el mismo texto que ya usa `AccionMarcarAvance`.
@@ -37,8 +37,9 @@ const VISTAS: Record<Rol, VistaDeRol> = {
     aviso: null,
   },
   diseno: {
-    botones: [{ etiqueta: "Ver el tablero", ruta: "/tablero" }],
-    aviso: "Tu pantalla para adjuntar la ficha técnica todavía no existe.",
+    botones: [],
+    aviso:
+      "Tu pantalla para adjuntar la ficha técnica todavía no existe. Cuando esté lista, aparecerá aquí.",
   },
   corte: {
     botones: [
@@ -50,9 +51,10 @@ const VISTAS: Record<Rol, VistaDeRol> = {
     aviso: null,
   },
   logistica: {
-    botones: [{ etiqueta: "Ver el tablero", ruta: "/tablero" }],
-    aviso:
-      "Tu pantalla de recogido y bordado todavía no existe. Para despachar un lote a un taller, entra a una orden desde el tablero.",
+    botones: [
+      { etiqueta: "Despachar y recibir lotes", ruta: "/ordenes/talleres" },
+    ],
+    aviso: null,
   },
   marcacion: {
     botones: [

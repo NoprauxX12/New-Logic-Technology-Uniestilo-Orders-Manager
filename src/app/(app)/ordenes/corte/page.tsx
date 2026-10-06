@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-
+import { exigirAcceso } from "@/features/auth/guardia";
 import { ListaOrdenesSeccion } from "@/features/workflow/components/ListaOrdenesSeccion";
 import { obtenerOrdenesParaSeccion } from "@/features/workflow/queries";
-import { getUsuarioActual } from "@/lib/auth/usuarioActual";
 
 export const metadata: Metadata = {
   title: "Órdenes para corte · Uniestilo",
@@ -11,8 +9,7 @@ export const metadata: Metadata = {
 
 /** HU-08 · Pantalla de corte. Solo enruta: la lista y la action son genéricas. */
 export default async function OrdenesCortePage() {
-  const usuario = await getUsuarioActual();
-  if (!usuario) redirect("/login");
+  const usuario = await exigirAcceso("/ordenes/corte");
 
   const ordenes = await obtenerOrdenesParaSeccion(
     "corte_completado",
