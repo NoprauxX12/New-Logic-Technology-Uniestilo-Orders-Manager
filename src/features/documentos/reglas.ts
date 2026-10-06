@@ -1,6 +1,7 @@
 import {
   buscarCheckpoint,
   type CheckpointId,
+  type Rol,
 } from "@/features/workflow/checkpoints";
 import { puedeMarcar } from "@/features/workflow/transiciones";
 
@@ -52,6 +53,8 @@ export function reportesPendientes(
 type Situacion = {
   ordenExiste: boolean;
   marcados: readonly CheckpointId[];
+  /** El rol de quien reporta. Sale de la sesión; el motor decide si es el dueño. */
+  rol: Rol;
 };
 
 /** ¿Se puede reportar esta parte del cierre? */
@@ -59,16 +62,13 @@ export function validarReporte({
   ordenExiste,
   marcados,
   reporte,
+  rol,
 }: Situacion & { reporte: ReporteDelCierre }): ResultadoCierre {
   if (!ordenExiste) {
     return { permitido: false, mensaje: "La orden indicada no existe." };
   }
 
-  const veredicto = puedeMarcar({
-    checkpoint: reporte,
-    marcados,
-    rol: "secretaria",
-  });
+  const veredicto = puedeMarcar({ checkpoint: reporte, marcados, rol });
 
   return veredicto.permitido
     ? { permitido: true }
@@ -85,6 +85,7 @@ export function validarReporte({
 export function validarCierre({
   ordenExiste,
   marcados,
+  rol,
 }: Situacion): ResultadoCierre {
   if (!ordenExiste) {
     return { permitido: false, mensaje: "La orden indicada no existe." };
@@ -103,11 +104,7 @@ export function validarCierre({
     };
   }
 
-  const veredicto = puedeMarcar({
-    checkpoint: "cerrada",
-    marcados,
-    rol: "secretaria",
-  });
+  const veredicto = puedeMarcar({ checkpoint: "cerrada", marcados, rol });
 
   return veredicto.permitido
     ? { permitido: true }

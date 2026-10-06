@@ -17,6 +17,9 @@ import type { CheckpointId } from "@/features/workflow/checkpoints";
  * Cada reporte es su propio formulario porque ocurren en momentos distintos, y
  * el botón de completar solo aparece cuando los tres están: desde la pantalla
  * no hay forma de intentar cerrar una orden a medias.
+ *
+ * Los formularios solo mandan la orden y el reporte. Quién reporta lo sabe la
+ * action por la sesión (HU-16); un campo oculto lo podría cambiar cualquiera.
  */
 
 export type OrdenEnCierre = {
@@ -30,8 +33,6 @@ export type OrdenEnCierre = {
 
 type Props = {
   orden: OrdenEnCierre;
-  /** Quién está reportando, escogido arriba en la pantalla. */
-  usuarioId: string;
 };
 
 const ESTADO_INICIAL: ResultadoCierre = { ok: false, mensaje: "" };
@@ -70,7 +71,7 @@ function Reportado({ titulo, detalle }: { titulo: string; detalle?: string }) {
   );
 }
 
-export function FilaOrdenCierre({ orden, usuarioId }: Props) {
+export function FilaOrdenCierre({ orden }: Props) {
   const [estadoEtiquetas, enviarEtiquetas, enviandoEtiquetas] = useActionState(
     reportarParteDelCierre,
     ESTADO_INICIAL,
@@ -86,7 +87,6 @@ export function FilaOrdenCierre({ orden, usuarioId }: Props) {
     ESTADO_INICIAL,
   );
 
-  const sinPersona = usuarioId === "";
   const pendientes = reportesPendientes(orden.marcados);
   const listaParaCerrar = pendientes.length === 0;
 
@@ -111,7 +111,6 @@ export function FilaOrdenCierre({ orden, usuarioId }: Props) {
           <li className="rounded-lg border border-zinc-200 px-4 py-3">
             <form action={enviarEtiquetas} className="flex flex-col gap-2">
               <input type="hidden" name="ordenId" value={orden.id} />
-              <input type="hidden" name="usuarioId" value={usuarioId} />
               <input type="hidden" name="reporte" value="etiquetas" />
               <p className="text-base font-medium text-zinc-900">
                 Etiquetas asignadas
@@ -119,7 +118,7 @@ export function FilaOrdenCierre({ orden, usuarioId }: Props) {
               <Aviso estado={estadoEtiquetas} />
               <button
                 type="submit"
-                disabled={enviandoEtiquetas || sinPersona}
+                disabled={enviandoEtiquetas}
                 className={BOTON}
               >
                 {enviandoEtiquetas ? "Guardando…" : "Reportar etiquetas"}
@@ -134,7 +133,6 @@ export function FilaOrdenCierre({ orden, usuarioId }: Props) {
           <li className="rounded-lg border border-zinc-200 px-4 py-3">
             <form action={enviarDocumentos} className="flex flex-col gap-2">
               <input type="hidden" name="ordenId" value={orden.id} />
-              <input type="hidden" name="usuarioId" value={usuarioId} />
               <input type="hidden" name="reporte" value="documentos_despacho" />
               <p className="text-base font-medium text-zinc-900">
                 Documentos de despacho generados
@@ -142,7 +140,7 @@ export function FilaOrdenCierre({ orden, usuarioId }: Props) {
               <Aviso estado={estadoDocumentos} />
               <button
                 type="submit"
-                disabled={enviandoDocumentos || sinPersona}
+                disabled={enviandoDocumentos}
                 className={BOTON}
               >
                 {enviandoDocumentos ? "Guardando…" : "Reportar documentos"}
@@ -164,7 +162,6 @@ export function FilaOrdenCierre({ orden, usuarioId }: Props) {
           <li className="rounded-lg border border-zinc-200 px-4 py-3">
             <form action={enviarFactura} className="flex flex-col gap-3">
               <input type="hidden" name="ordenId" value={orden.id} />
-              <input type="hidden" name="usuarioId" value={usuarioId} />
               <p className="text-base font-medium text-zinc-900">
                 Factura generada en el sistema externo
               </p>
@@ -192,7 +189,7 @@ export function FilaOrdenCierre({ orden, usuarioId }: Props) {
               </div>
               <button
                 type="submit"
-                disabled={enviandoFactura || sinPersona}
+                disabled={enviandoFactura}
                 className={BOTON}
               >
                 {enviandoFactura ? "Guardando…" : "Reportar factura"}
@@ -205,11 +202,10 @@ export function FilaOrdenCierre({ orden, usuarioId }: Props) {
       {listaParaCerrar ? (
         <form action={enviarCierre} className="mt-4 flex flex-col gap-2">
           <input type="hidden" name="ordenId" value={orden.id} />
-          <input type="hidden" name="usuarioId" value={usuarioId} />
           <Aviso estado={estadoCierre} />
           <button
             type="submit"
-            disabled={enviandoCierre || sinPersona}
+            disabled={enviandoCierre}
             className="min-h-14 rounded-lg bg-stone-700 px-6 text-lg font-semibold text-white hover:bg-stone-800 disabled:bg-zinc-400"
           >
             {enviandoCierre ? "Guardando…" : "Dar la orden por completada"}

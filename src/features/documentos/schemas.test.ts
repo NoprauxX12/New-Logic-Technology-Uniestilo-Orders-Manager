@@ -8,7 +8,6 @@ import {
 } from "@/features/documentos/schemas";
 
 const ORDEN_ID = "00000000-0000-0000-0000-0000000000f6";
-const SECRETARIA_ID = "00000000-0000-0000-0000-0000000000a2";
 
 type ErroresPorCampo = Record<string, string[] | undefined>;
 
@@ -23,7 +22,6 @@ describe("reporteSimpleSchema", () => {
     for (const reporte of ["etiquetas", "documentos_despacho"]) {
       const resultado = reporteSimpleSchema.safeParse({
         ordenId: ORDEN_ID,
-        usuarioId: SECRETARIA_ID,
         reporte,
       });
 
@@ -34,7 +32,6 @@ describe("reporteSimpleSchema", () => {
   it("rechaza cualquier otra etapa", () => {
     const errores = erroresDe(reporteSimpleSchema, {
       ordenId: ORDEN_ID,
-      usuarioId: SECRETARIA_ID,
       reporte: "cerrada",
     });
 
@@ -44,7 +41,6 @@ describe("reporteSimpleSchema", () => {
   it("acepta los identificadores del seed, que no son UUID canónicos", () => {
     const resultado = reporteSimpleSchema.safeParse({
       ordenId: ORDEN_ID,
-      usuarioId: SECRETARIA_ID,
       reporte: "etiquetas",
     });
 
@@ -54,7 +50,6 @@ describe("reporteSimpleSchema", () => {
   it("rechaza una orden que no tiene forma de identificador", () => {
     const errores = erroresDe(reporteSimpleSchema, {
       ordenId: "la-sexta",
-      usuarioId: SECRETARIA_ID,
       reporte: "etiquetas",
     });
 
@@ -68,7 +63,6 @@ describe("facturaSchema", () => {
   it("acepta el número de la factura externa", () => {
     const resultado = facturaSchema.safeParse({
       ordenId: ORDEN_ID,
-      usuarioId: SECRETARIA_ID,
       numeroFactura: "FE-9021",
     });
 
@@ -78,7 +72,6 @@ describe("facturaSchema", () => {
   it("no deja reportar la factura sin número", () => {
     const errores = erroresDe(facturaSchema, {
       ordenId: ORDEN_ID,
-      usuarioId: SECRETARIA_ID,
       numeroFactura: "   ",
     });
 
@@ -88,7 +81,6 @@ describe("facturaSchema", () => {
   it("quita los espacios sobrantes del número", () => {
     const resultado = facturaSchema.safeParse({
       ordenId: ORDEN_ID,
-      usuarioId: SECRETARIA_ID,
       numeroFactura: "  FE-9021  ",
     });
 
@@ -97,23 +89,21 @@ describe("facturaSchema", () => {
 });
 
 describe("cierreSchema", () => {
-  it("acepta el cierre con quien lo hace", () => {
+  it("acepta el cierre identificando solo la orden: quién cierra sale de la sesión", () => {
     const resultado = cierreSchema.safeParse({
       ordenId: ORDEN_ID,
-      usuarioId: SECRETARIA_ID,
     });
 
     expect(resultado.success).toBe(true);
   });
 
-  it("pide saber quién cierra, para dejar el registro", () => {
-    const errores = erroresDe(cierreSchema, {
+  it("ignora un usuarioId que llegue en el formulario: no es la persona quien lo decide", () => {
+    const resultado = cierreSchema.safeParse({
       ordenId: ORDEN_ID,
-      usuarioId: "",
+      usuarioId: "00000000-0000-0000-0000-0000000000a1",
     });
 
-    expect(errores.usuarioId).toContain(
-      "Escoge quién está haciendo el reporte",
-    );
+    expect(resultado.success).toBe(true);
+    expect(resultado.success && "usuarioId" in resultado.data).toBe(false);
   });
 });
