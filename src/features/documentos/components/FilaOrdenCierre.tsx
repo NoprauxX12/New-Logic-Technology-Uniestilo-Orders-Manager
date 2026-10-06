@@ -10,6 +10,7 @@ import {
 } from "@/features/documentos/actions";
 import { reportesPendientes } from "@/features/documentos/reglas";
 import type { CheckpointId } from "@/features/workflow/checkpoints";
+import { formatearFecha } from "@/lib/utils/fechas";
 
 /**
  * HU-13 · Una orden lista para despachar, con sus tres reportes y el cierre.
@@ -39,11 +40,6 @@ const ESTADO_INICIAL: ResultadoCierre = { ok: false, mensaje: "" };
 
 const BOTON =
   "min-h-12 self-start rounded-lg border border-zinc-400 px-4 text-base font-medium text-zinc-900 hover:bg-zinc-100 disabled:text-zinc-500";
-
-function formatearFecha(fechaIso: string): string {
-  const [anio, mes, dia] = fechaIso.split("-");
-  return `${dia}/${mes}/${anio}`;
-}
 
 function Aviso({ estado }: { estado: ResultadoCierre }) {
   if (!estado.mensaje) return null;

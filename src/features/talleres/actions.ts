@@ -13,10 +13,7 @@ import {
   type EntradaDespacho,
   type EntradaRecepcion,
 } from "@/features/talleres/formulario";
-import {
-  obtenerOrdenParaDespacho,
-  obtenerUsuariosDeLogistica,
-} from "@/features/talleres/queries";
+import { obtenerOrdenParaDespacho } from "@/features/talleres/queries";
 import {
   puedeConfirmarRecepcion,
   puedeDespachar,
@@ -35,11 +32,13 @@ import { createClient } from "@/lib/supabase/server";
  * casual:
  *
  * 1. El esquema revisa lo que se escribió (taller obligatorio).
- * 2. Las reglas de la feature comprueban que el corte esté completado, y que
- *    quien despacha sea de logística. Esto último lo hará HU-17 con la sesión;
- *    mientras tanto se valida contra la lista de usuarios de ese rol.
- * 3. La base vuelve a comprobar el corte con un trigger, porque una server
- *    action se puede invocar con un POST directo sin pasar por el formulario.
+ * 2. Se identifica a la persona con sesión (HU-16): quien despacha sale de ahí,
+ *    nunca de un campo del formulario.
+ * 3. Las reglas de la feature comprueban que sea de logística y que el corte
+ *    esté completado.
+ * 4. La base vuelve a comprobar las dos cosas —el rol y la firma con RLS
+ *    (HU-17), el corte con un trigger—, porque una server action se puede
+ *    invocar con un POST directo sin pasar por el formulario.
  *
  * Despachar no marca ningún checkpoint: un lote es entidad propia (regla 6) y
  * el enum `checkpoint` no incluye el despacho. Que la orden esté "en confección"
@@ -58,6 +57,8 @@ export type EstadoFormularioDespacho = {
 const CORTE_SIN_COMPLETAR = "UE001";
 /** La orden o el usuario referenciados no existen. */
 const REFERENCIA_INEXISTENTE = "23503";
+/** RLS rechazó la fila: el rol o la firma no corresponden. */
+const RLS_RECHAZO = "42501";
 
 export async function despacharLote(
   _estadoPrevio: EstadoFormularioDespacho,
@@ -79,10 +80,19 @@ export async function despacharLote(
 
   const despacho = validacion.data;
 
-  const [orden, logistica] = await Promise.all([
+  const [usuario, orden] = await Promise.all([
+    getUsuarioActual(),
     obtenerOrdenParaDespacho(despacho.ordenId),
-    obtenerUsuariosDeLogistica(),
   ]);
+
+  if (!usuario) {
+    return {
+      ok: false,
+      mensaje: "Inicia sesión para despachar un lote.",
+      errores: {},
+      valores: escrito,
+    };
+  }
 
   if (!orden) {
     return {
@@ -93,7 +103,7 @@ export async function despacharLote(
     };
   }
 
-  const permiso = puedeDespachar(orden.marcados);
+  const permiso = puedeDespachar(orden.marcados, usuario.rol);
 
   if (!permiso.permitido) {
     return {
@@ -104,22 +114,13 @@ export async function despacharLote(
     };
   }
 
-  if (!logistica.some((persona) => persona.id === despacho.enviadoPor)) {
-    return {
-      ok: false,
-      mensaje: "",
-      errores: { enviadoPor: ["Quien despacha tiene que ser de logística"] },
-      valores: escrito,
-    };
-  }
-
   const supabase = await createClient();
 
   const { error } = await supabase.from("lote_taller").insert({
     orden_id: despacho.ordenId,
     taller: despacho.taller,
     descripcion_prendas: despacho.descripcionPrendas,
-    enviado_por: despacho.enviadoPor,
+    enviado_por: usuario.id,
   });
 
   if (error) {
@@ -136,7 +137,16 @@ export async function despacharLote(
     if (error.code === REFERENCIA_INEXISTENTE) {
       return {
         ok: false,
-        mensaje: "No encontramos esa orden o esa persona.",
+        mensaje: "No encontramos esa orden.",
+        errores: {},
+        valores: escrito,
+      };
+    }
+
+    if (error.code === RLS_RECHAZO) {
+      return {
+        ok: false,
+        mensaje: "Los lotes a taller los despacha logística.",
         errores: {},
         valores: escrito,
       };
@@ -151,8 +161,10 @@ export async function despacharLote(
     };
   }
 
-  // La pantalla de la orden tiene que mostrar el taller recién guardado.
+  // La pantalla de la orden tiene que mostrar el taller recién guardado, y el
+  // tablero deriva "en confección" de los lotes.
   revalidatePath(`/ordenes/${despacho.ordenId}`);
+  revalidatePath("/tablero");
 
   return {
     ok: true,
@@ -165,15 +177,9 @@ export async function despacharLote(
 /**
  * HU-11 · Confirmar la recepción de un lote que vuelve del taller.
  *
- * A diferencia del despacho, esto sí sale de la sesión (HU-16): logística ya
- * inicia sesión de verdad, así que no hace falta un desplegable de personas.
- *
- * Orden de verificaciones:
- * 1. El esquema revisa la forma del formulario.
- * 2. Hay alguien identificado y es de logística.
- * 3. El lote existe en esta orden y todavía no tiene recepción.
- * 4. La base respalda lo último con `lote_taller_recepcion_completa`: los tres
- *    campos de recepción van juntos o ninguno.
+ * Mismo orden que el despacho: esquema, persona con sesión, reglas de la
+ * feature (logística, el lote existe en esta orden y no tiene recepción), y la
+ * base respalda con RLS y con `lote_taller_recepcion_completa`.
  */
 
 /** Lo que la action le devuelve al formulario de recepción. */
@@ -217,15 +223,6 @@ export async function confirmarRecepcion(
     };
   }
 
-  if (usuario.rol !== "logistica") {
-    return {
-      ok: false,
-      mensaje: "La recepción del taller la confirma logística.",
-      errores: {},
-      valores: escrito,
-    };
-  }
-
   const supabase = await createClient();
 
   const { data: lote, error: errorLote } = await supabase
@@ -247,6 +244,7 @@ export async function confirmarRecepcion(
 
   const permiso = puedeConfirmarRecepcion(
     lote ? { recibido: lote.recibido_completo !== null } : undefined,
+    usuario.rol,
   );
 
   if (!permiso.permitido) {
@@ -273,6 +271,15 @@ export async function confirmarRecepcion(
     .eq("id", validacion.data.loteId);
 
   if (error) {
+    if (error.code === RLS_RECHAZO) {
+      return {
+        ok: false,
+        mensaje: "La recepción del taller la confirma logística.",
+        errores: {},
+        valores: escrito,
+      };
+    }
+
     console.error("[HU-11] No se pudo confirmar la recepción", error);
     return {
       ok: false,

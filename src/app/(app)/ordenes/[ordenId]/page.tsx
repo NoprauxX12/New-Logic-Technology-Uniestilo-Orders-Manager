@@ -1,102 +1,44 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
-import { FormularioConfirmarRecepcion } from "@/features/talleres/components/FormularioConfirmarRecepcion";
 import { FormularioDespacharTaller } from "@/features/talleres/components/FormularioDespacharTaller";
-import {
-  obtenerOrdenParaDespacho,
-  obtenerUsuariosDeLogistica,
-  type LoteDespachado,
-} from "@/features/talleres/queries";
-import {
-  describirEstadoDeTalleres,
-  puedeDespachar,
-} from "@/features/talleres/reglas";
+import { LotesDeLaOrden } from "@/features/talleres/components/LotesDeLaOrden";
+import { obtenerOrdenParaDespacho } from "@/features/talleres/queries";
+import { puedeDespachar, ROL_DE_TALLERES } from "@/features/talleres/reglas";
 import { getUsuarioActual } from "@/lib/auth/usuarioActual";
+import { describirEstadoDeTalleres } from "@/lib/talleres/estadoLotes";
+import { formatearFecha } from "@/lib/utils/fechas";
 
 export const metadata: Metadata = {
   title: "Orden · Uniestilo",
 };
 
 /**
- * HU-10 · Detalle de una orden y despacho a taller.
+ * HU-10 y HU-11 · Detalle de una orden para logística: despacho a taller y
+ * recepción de lotes.
  *
  * Solo enruta: los datos los trae `queries.ts`, la decisión de si se puede
  * despachar la toman las reglas de la feature y el guardado vive en la action.
- *
- * El fondo se fija en blanco igual que en la pantalla de registro, mientras el
- * equipo decide qué hacer con el modo oscuro.
  */
 
 type Props = {
   params: Promise<{ ordenId: string }>;
 };
 
-/** Las fechas llegan como 2026-09-09. Se parten a mano para no correr el día. */
-function formatearFecha(fechaIso: string): string {
-  const [anio, mes, dia] = fechaIso.split("-");
-  return `${dia}/${mes}/${anio}`;
-}
-
-function formatearMomento(momentoIso: string): string {
-  return new Date(momentoIso).toLocaleString("es-CO", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
-}
-
-function TarjetaLote({
-  lote,
-  ordenId,
-  puedeConfirmar,
-}: {
-  lote: LoteDespachado;
-  ordenId: string;
-  /** HU-11: solo logística, y solo si el lote sigue en el taller. */
-  puedeConfirmar: boolean;
-}) {
-  return (
-    <li className="rounded-lg border border-zinc-300 bg-white px-4 py-3">
-      <p className="text-base font-semibold text-zinc-900">{lote.taller}</p>
-      <p className="text-base text-zinc-700">{lote.descripcionPrendas}</p>
-      <p className="mt-1 text-sm text-zinc-600">
-        Despachado el {formatearMomento(lote.fechaEnvio)}
-        {lote.enviadoPor ? ` por ${lote.enviadoPor}` : ""}
-      </p>
-      <p className="text-sm font-medium text-zinc-700">
-        {lote.recibido ? "Ya volvió del taller" : "Todavía en el taller"}
-      </p>
-      {lote.observacionesRecepcion ? (
-        <p className="text-sm text-zinc-600">{lote.observacionesRecepcion}</p>
-      ) : null}
-
-      {!lote.recibido && puedeConfirmar ? (
-        <div className="mt-3">
-          <FormularioConfirmarRecepcion
-            ordenId={ordenId}
-            loteId={lote.id}
-            descripcionPrendas={lote.descripcionPrendas}
-          />
-        </div>
-      ) : null}
-    </li>
-  );
-}
-
 export default async function OrdenPage({ params }: Props) {
   const { ordenId } = await params;
 
-  const [orden, personalDeLogistica, usuario] = await Promise.all([
+  const [orden, usuario] = await Promise.all([
     obtenerOrdenParaDespacho(ordenId),
-    obtenerUsuariosDeLogistica(),
     getUsuarioActual(),
   ]);
 
+  if (!usuario) redirect("/login");
   if (!orden) notFound();
 
-  const permiso = puedeDespachar(orden.marcados);
+  const permiso = puedeDespachar(orden.marcados, usuario.rol);
   const yaDespachada = orden.lotes.length > 0;
-  const esLogistica = usuario?.rol === "logistica";
+  const esLogistica = usuario.rol === ROL_DE_TALLERES;
 
   return (
     <div className="flex-1 bg-white">
@@ -132,23 +74,11 @@ export default async function OrdenPage({ params }: Props) {
           </ul>
         </section>
 
-        {yaDespachada ? (
-          <section className="flex flex-col gap-3">
-            <h2 className="text-lg font-semibold text-zinc-900">
-              Lotes enviados a taller
-            </h2>
-            <ul className="flex flex-col gap-3">
-              {orden.lotes.map((lote) => (
-                <TarjetaLote
-                  key={lote.id}
-                  lote={lote}
-                  ordenId={orden.id}
-                  puedeConfirmar={esLogistica}
-                />
-              ))}
-            </ul>
-          </section>
-        ) : null}
+        <LotesDeLaOrden
+          ordenId={orden.id}
+          lotes={orden.lotes}
+          puedeConfirmar={esLogistica}
+        />
 
         <section className="flex flex-col gap-4">
           <h2 className="text-lg font-semibold text-zinc-900">
@@ -162,10 +92,7 @@ export default async function OrdenPage({ params }: Props) {
           ) : null}
 
           {permiso.permitido ? (
-            <FormularioDespacharTaller
-              ordenId={orden.id}
-              personal={personalDeLogistica}
-            />
+            <FormularioDespacharTaller ordenId={orden.id} />
           ) : (
             <p className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-base font-medium text-amber-900">
               {permiso.mensaje}

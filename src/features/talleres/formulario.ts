@@ -9,14 +9,12 @@
 export type EntradaDespacho = {
   taller: string;
   descripcionPrendas: string;
-  enviadoPor: string;
 };
 
 /** Formulario en blanco: al abrir la pantalla y después de despachar. */
 export const ENTRADA_VACIA: EntradaDespacho = {
   taller: "",
   descripcionPrendas: "",
-  enviadoPor: "",
 };
 
 function texto(valor: FormDataEntryValue | null): string {
@@ -32,7 +30,6 @@ export function leerFormularioDespacho(formData: FormData): EntradaDespacho {
   return {
     taller: texto(formData.get("taller")),
     descripcionPrendas: texto(formData.get("descripcionPrendas")),
-    enviadoPor: texto(formData.get("enviadoPor")),
   };
 }
 

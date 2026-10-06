@@ -7,14 +7,12 @@ import {
 } from "@/features/talleres/schemas";
 
 const ORDEN_ID = "00000000-0000-0000-0000-0000000000f3";
-const LOGISTICA_ID = "00000000-0000-0000-0000-0000000000a5";
 const LOTE_ID = "00000000-0000-0000-0000-000000000abc";
 
 const DESPACHO_VALIDO = {
   ordenId: ORDEN_ID,
   taller: "Taller Marinilla Centro",
   descripcionPrendas: "250 polos verdes talla S y M",
-  enviadoPor: LOGISTICA_ID,
 };
 
 type ErroresPorCampo = Record<string, string[] | undefined>;
@@ -61,10 +59,14 @@ describe("despacharLoteSchema", () => {
     );
   });
 
-  it("pide escoger quién hace el despacho", () => {
-    const errores = erroresDe({ ...DESPACHO_VALIDO, enviadoPor: "" });
+  it("ignora un enviadoPor que llegue en el formulario: quien despacha sale de la sesión", () => {
+    const resultado = despacharLoteSchema.safeParse({
+      ...DESPACHO_VALIDO,
+      enviadoPor: "00000000-0000-0000-0000-0000000000a1",
+    });
 
-    expect(errores.enviadoPor).toContain("Escoge quién hace el despacho");
+    expect(resultado.success).toBe(true);
+    expect(resultado.success && "enviadoPor" in resultado.data).toBe(false);
   });
 
   it("rechaza una orden que no es un identificador válido", () => {

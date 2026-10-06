@@ -7,7 +7,8 @@ import { createClient } from "@/lib/supabase/server";
  * HU-10 · Lecturas de la pantalla de despacho a taller.
  *
  * Las usa el Server Component de la orden y la propia action, que antes de
- * escribir necesita saber qué checkpoints lleva marcados la orden.
+ * escribir necesita saber qué checkpoints lleva marcados la orden. Quién
+ * despacha o recibe sale de la sesión, así que aquí no se lista a nadie.
  */
 
 export type PrendaDeLaOrden = {
@@ -40,11 +41,6 @@ export type OrdenParaDespacho = {
   marcados: CheckpointId[];
   /** Del más reciente al más antiguo. */
   lotes: LoteDespachado[];
-};
-
-export type UsuarioDeLogistica = {
-  id: string;
-  nombre: string;
 };
 
 export async function obtenerOrdenParaDespacho(
@@ -109,28 +105,4 @@ export async function obtenerOrdenParaDespacho(
       }))
       .sort((uno, otro) => otro.fechaEnvio.localeCompare(uno.fechaEnvio)),
   };
-}
-
-/**
- * Quién puede despachar. Mientras no exista el login (HU-16), el formulario
- * ofrece esta lista y quien despacha se escoge a mano; después saldrá de la
- * sesión y esta consulta desaparece.
- */
-export async function obtenerUsuariosDeLogistica(): Promise<
-  UsuarioDeLogistica[]
-> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("usuario")
-    .select("id, nombre")
-    .eq("rol", "logistica")
-    .order("nombre");
-
-  if (error) {
-    console.error("[HU-10] No se pudo leer el personal de logística", error);
-    return [];
-  }
-
-  return data;
 }
