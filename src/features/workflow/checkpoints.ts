@@ -31,6 +31,13 @@ export type Checkpoint = {
    */
   ruta: string | null;
   /**
+   * Una condición que no es un checkpoint pero que debe cumplirse antes de
+   * marcar este. Hoy solo existe una: la llegada a marcación (HU-12) exige que
+   * logística haya confirmado la recepción de un lote (HU-11). El motor la
+   * verifica con lo que la action lee de la base.
+   */
+  requisito?: "recepcion_de_taller";
+  /**
    * Si el sistema ya permite marcarlo.
    *
    * El flujo del taller tiene nueve etapas, pero el Sprint 1 solo construye
@@ -109,6 +116,7 @@ export const CHECKPOINTS = [
     etiqueta: "Llegada a marcación",
     rolDueno: "marcacion",
     hu: "HU-12",
+    requisito: "recepcion_de_taller",
     disponible: true,
     ruta: "/ordenes/marcacion",
   },

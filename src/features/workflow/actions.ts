@@ -1,15 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 
 import {
   buscarCheckpoint,
+  ETIQUETAS_ROL,
   type CheckpointId,
 } from "@/features/workflow/checkpoints";
 import { loQueSigue } from "@/features/workflow/estado";
-import { obtenerCheckpointsMarcados } from "@/features/workflow/queries";
-import { validarMarcacionCorte } from "@/features/workflow/reglas";
+import { obtenerSituacionDeOrden } from "@/features/workflow/queries";
 import { marcarAvanceSchema } from "@/features/workflow/schemas";
 import { puedeMarcar } from "@/features/workflow/transiciones";
 import { getUsuarioActual } from "@/lib/auth/usuarioActual";
@@ -19,33 +18,35 @@ import { createClient } from "@/lib/supabase/server";
  * Marcar un avance de una orden.
  *
  * Única vía para escribir en `avance_seccion` (regla 2): antes de insertar le
- * pregunta al motor si ese checkpoint es el siguiente de la secuencia y si el
- * rol de quien marca es el dueño de esa sección.
+ * pregunta al motor si ese checkpoint es el siguiente de la secuencia, si el
+ * rol de quien marca es el dueño de esa sección y si se cumple el requisito
+ * extra que la etapa declare. Sirve igual para corte (HU-08), marcación
+ * (HU-12), la salida a despacho (HU-19) y las que vengan: lo único que cambia
+ * es el checkpoint.
  *
- * `marcarAvance` es genérica y sirve para las cinco historias de marcado; lo
- * único que cambia entre ellas es el checkpoint que se le pasa.
- * `marcarCorteCompletado` es la versión propia de HU-08, que llegó por otra
- * rama: hace lo mismo para `corte_completado` y está pendiente de migrarse a la
- * genérica (ver el issue de refactor). Hasta entonces conviven.
+ * Hay dos puertas al mismo trabajo: `marcarAvance` recibe un FormData (para
+ * `useActionState`) y `marcarCheckpoint` recibe los dos datos directos (para
+ * una lista con un botón por orden).
  *
  * Nota de seguridad: una Server Action se puede invocar con un POST directo,
- * sin pasar por el botón, así que ni el usuario ni los avances de la orden se
- * toman de lo que llega en el formulario. Hoy las políticas RLS de
- * `avance_seccion` dejan insertar a cualquiera ("temporal HU-17"), de modo que
- * la llamada al motor es la única barrera real de secuencia y de rol; HU-17 la
- * duplica en la base.
+ * así que ni la persona ni los avances de la orden se toman de lo que llega en
+ * el formulario. La persona sale de la sesión (HU-16) y los avances se leen de
+ * la base. Las políticas RLS (HU-17) repiten la comprobación de rol y de firma
+ * en la base, por si esta capa fallara.
  */
 
-/** Lo que la action le devuelve al botón. */
+/** Lo que la action le devuelve a la pantalla. */
 export type EstadoMarcado = {
   ok: boolean;
   mensaje: string;
 };
 
-/** HU-08 devuelve la misma forma; se mantiene el nombre por sus llamadas. */
-export type ResultadoMarcacionCorte = EstadoMarcado;
-
 /** Código de Postgres para "violación de restricción única". */
+const VIOLACION_DE_UNICIDAD = "23505";
+/** RLS rechazó la fila: el rol o la firma no corresponden. */
+const RLS_RECHAZO = "42501";
+/** La orden ya está completada (trigger de HU-13). */
+const ORDEN_COMPLETADA = "UE004";
 
 export async function marcarAvance(
   _estadoPrevio: EstadoMarcado,
@@ -58,7 +59,7 @@ export async function marcarAvance(
 
   if (!validacion.success) {
     console.error(
-      "[HU-19] Entrada inválida al marcar un avance",
+      "[workflow] Entrada inválida al marcar un avance",
       validacion.error.issues,
     );
     return {
@@ -68,26 +69,53 @@ export async function marcarAvance(
     };
   }
 
-  const { ordenId, checkpoint } = validacion.data;
+  return ejecutarMarcado(validacion.data);
+}
 
-  // Quién está marcando. Mientras no exista el login (HU-16) sale del selector
-  // del layout; después saldrá de la sesión, sin cambiar nada de aquí.
+export async function marcarCheckpoint(
+  ordenId: string,
+  checkpoint: CheckpointId,
+): Promise<EstadoMarcado> {
+  const validacion = marcarAvanceSchema.safeParse({ ordenId, checkpoint });
+
+  if (!validacion.success) {
+    return { ok: false, mensaje: "La orden seleccionada no es válida." };
+  }
+
+  return ejecutarMarcado(validacion.data);
+}
+
+async function ejecutarMarcado({
+  ordenId,
+  checkpoint,
+}: {
+  ordenId: string;
+  checkpoint: CheckpointId;
+}): Promise<EstadoMarcado> {
   const usuario = await getUsuarioActual();
 
   if (!usuario) {
-    return {
-      ok: false,
-      mensaje: "Escoge arriba con qué persona estás trabajando.",
-    };
+    return { ok: false, mensaje: "Inicia sesión para poder marcar." };
   }
 
-  const marcados = await obtenerCheckpointsMarcados(ordenId);
+  const situacion = await obtenerSituacionDeOrden(ordenId);
 
-  const veredicto = puedeMarcar({ checkpoint, marcados, rol: usuario.rol });
+  if (!situacion) {
+    return { ok: false, mensaje: "La orden indicada no existe." };
+  }
+
+  const veredicto = puedeMarcar({
+    checkpoint,
+    marcados: situacion.marcados,
+    rol: usuario.rol,
+    recepcionConfirmada: situacion.recepcionConfirmada,
+  });
+
   if (!veredicto.permitido) {
     return { ok: false, mensaje: veredicto.mensaje };
   }
 
+  const { etiqueta, rolDueno, ruta } = buscarCheckpoint(checkpoint);
   const supabase = await createClient();
 
   // `fecha_hora` no se manda: la pone el `default now()` de la columna. Una hora
@@ -99,17 +127,30 @@ export async function marcarAvance(
     usuario_id: usuario.id,
   });
 
+  if (error && error.code === RLS_RECHAZO) {
+    return {
+      ok: false,
+      mensaje: `"${etiqueta}" lo marca ${ETIQUETAS_ROL[rolDueno]}.`,
+    };
+  }
+
+  if (error && error.code === ORDEN_COMPLETADA) {
+    return {
+      ok: false,
+      mensaje: "La orden ya está completada y no admite más cambios.",
+    };
+  }
+
   if (error && error.code !== VIOLACION_DE_UNICIDAD) {
-    console.error("[HU-19] No se pudo marcar el avance", error);
+    console.error("[workflow] No se pudo marcar el avance", error);
     return { ok: false, mensaje: "No se pudo marcar. Vuelve a intentarlo." };
   }
 
   // También se revalida cuando el insert chocó con el índice único: en ese caso
   // la base sí cambió —lo marcó otra persona— y la pantalla está mintiendo.
+  if (ruta) revalidatePath(ruta);
   revalidatePath(`/tablero/${ordenId}`);
   revalidatePath("/tablero");
-
-  const { etiqueta } = buscarCheckpoint(checkpoint);
 
   if (error) {
     return {
@@ -118,131 +159,12 @@ export async function marcarAvance(
     };
   }
 
-  const sigue = loQueSigue([...marcados, checkpoint]);
+  const sigue = loQueSigue([...situacion.marcados, checkpoint]);
 
   return {
     ok: true,
     mensaje: sigue
       ? `Listo: ${etiqueta}. Ahora le toca a ${sigue.responsable}.`
       : `Listo: ${etiqueta}. La orden terminó su recorrido.`,
-  };
-}
-
-const ordenIdSchema = z
-  .string()
-  .regex(
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-    "La identificación de la orden no es válida.",
-  );
-
-const VIOLACION_DE_UNICIDAD = "23505";
-
-/**
- * HU-08 · Marca la etapa de corte como completada.
- * Consulta los avances de la orden, aplica las reglas del workflow común
- * y guarda el checkpoint con el responsable del área de corte.
- */
-export async function marcarCorteCompletado(
-  ordenId: string,
-): Promise<ResultadoMarcacionCorte> {
-  const validacionId = ordenIdSchema.safeParse(ordenId);
-
-  if (!validacionId.success) {
-    return {
-      ok: false,
-      mensaje: "La orden seleccionada no es válida.",
-    };
-  }
-
-  // Quién está marcando. Mientras no exista el login (HU-16) sale del selector
-  // del layout; después saldrá de la sesión, sin cambiar nada de aquí.
-  const usuario = await getUsuarioActual();
-
-  if (!usuario) {
-    return {
-      ok: false,
-      mensaje: "Escoge arriba con qué persona estás trabajando.",
-    };
-  }
-
-  const supabase = await createClient();
-
-  const { data: orden, error: errorOrden } = await supabase
-    .from("orden")
-    .select("id")
-    .eq("id", validacionId.data)
-    .maybeSingle();
-
-  if (errorOrden) {
-    console.error("No se pudo consultar la orden", errorOrden);
-
-    return {
-      ok: false,
-      mensaje: "No se pudo consultar la orden. Vuelve a intentarlo.",
-    };
-  }
-
-  const { data: avances, error: errorAvances } = await supabase
-    .from("avance_seccion")
-    .select("checkpoint")
-    .eq("orden_id", validacionId.data);
-
-  if (errorAvances) {
-    console.error("No se pudieron consultar los avances", errorAvances);
-
-    return {
-      ok: false,
-      mensaje: "No se pudo consultar el avance de la orden.",
-    };
-  }
-
-  const checkpointsCompletados: CheckpointId[] = avances.map(
-    (avance) => avance.checkpoint,
-  );
-
-  const resultado = validarMarcacionCorte({
-    ordenExiste: orden !== null,
-    checkpointsCompletados,
-    rol: usuario.rol,
-  });
-
-  if (!resultado.permitido) {
-    return {
-      ok: false,
-      mensaje: resultado.mensaje,
-    };
-  }
-
-  const { error: errorMarcacion } = await supabase
-    .from("avance_seccion")
-    .insert({
-      orden_id: validacionId.data,
-      checkpoint: "corte_completado",
-      usuario_id: usuario.id,
-    });
-
-  if (errorMarcacion) {
-    if (errorMarcacion.code === VIOLACION_DE_UNICIDAD) {
-      return {
-        ok: false,
-        mensaje: "La etapa de corte ya fue marcada como completada.",
-      };
-    }
-
-    console.error("No se pudo completar corte", errorMarcacion);
-
-    return {
-      ok: false,
-      mensaje: "No se pudo completar corte. Vuelve a intentarlo.",
-    };
-  }
-
-  revalidatePath("/ordenes/corte");
-  revalidatePath("/tablero");
-  revalidatePath(`/tablero/${validacionId.data}`);
-
-  return {
-    ok: true,
-    mensaje: "La etapa de corte fue marcada como completada.",
   };
 }
