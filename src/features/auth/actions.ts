@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 
+import { rutaSegura } from "@/features/auth/rutaSegura";
 import { iniciarSesionSchema } from "@/features/auth/schemas";
 import { createClient } from "@/lib/supabase/server";
 
@@ -21,18 +22,6 @@ export type EstadoIniciarSesion = {
    *  contraseña nunca se guarda aquí. */
   email: string;
 };
-
-/**
- * Adónde volver tras entrar. Solo rutas de esta aplicación: el proxy la pone
- * en la URL (`?next=`) cuando manda a `/login` a alguien sin sesión, y eso es
- * texto que llega de la petición, no algo en lo que se pueda confiar sin más.
- */
-function rutaSegura(valor: FormDataEntryValue | null): string {
-  if (typeof valor !== "string" || valor === "") return "/";
-  // Tiene que ser una ruta interna: `//otro-sitio.com` también empieza por "/".
-  if (!valor.startsWith("/") || valor.startsWith("//")) return "/";
-  return valor;
-}
 
 export async function iniciarSesion(
   _estadoPrevio: EstadoIniciarSesion,
