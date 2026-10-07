@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { ETIQUETAS_ROL, type Rol } from "@/features/workflow/checkpoints";
+import {
+  buscarCheckpoint,
+  ETIQUETAS_ROL,
+  type Rol,
+} from "@/features/workflow/checkpoints";
 import { vistaDeRol } from "@/features/auth/vistaPorRol";
 
 /**
@@ -76,6 +80,15 @@ describe("vistaDeRol · roles con pantalla propia", () => {
 
     expect(vista.botones[0].ruta).toBe("/ordenes/marcacion");
     expect(vista.botones[0].etiqueta).toMatch(/llegada a marcación/i);
+  });
+
+  it("marcación también marca la salida a despacho (HU-19), en su propia pantalla", () => {
+    const vista = vistaDeRol("marcacion");
+    const ruta = buscarCheckpoint("lista_despacho").ruta;
+
+    expect(ruta).not.toBeNull();
+    expect(vista.botones.map((b) => b.ruta)).toContain(ruta);
+    expect(vista.botones[1].etiqueta).toMatch(/lista para despachar/i);
   });
 
   it("secretaría va al cierre", () => {

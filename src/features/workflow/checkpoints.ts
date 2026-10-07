@@ -130,7 +130,7 @@ export const CHECKPOINTS = [
     rolDueno: "marcacion",
     hu: "HU-19",
     disponible: true,
-    ruta: null,
+    ruta: "/ordenes/despacho",
   },
   {
     id: "etiquetas",
