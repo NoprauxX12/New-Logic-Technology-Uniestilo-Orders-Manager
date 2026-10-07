@@ -220,8 +220,10 @@ web3 = 30
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
-# HU-17: apagado por la misma razón que `[auth].enable_signup`.
-enable_signup = false
+# OJO: en GoTrue esto es GOTRUE_EXTERNAL_EMAIL_ENABLED y apaga el proveedor de
+# correo entero, incluido el login con contraseña. Se deja en true; el registro
+# de cuentas lo cierra `[auth].enable_signup = false` (GOTRUE_DISABLE_SIGNUP).
+enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
