@@ -61,11 +61,13 @@ src/
     auth/                 Sesión y acceso por rol (accesoPorRuta.ts, guardia.ts): HU-16, HU-17
     alertas/              HU-06, HU-07, HU-20 (post-MVP)
     documentos/           Etiquetas y documentos de despacho: HU-13
+    usuarios/             Cuentas de las personas (crear, editar, desactivar, borrar), solo admin: HU-24 (docs/adr/0008)
   components/
     ui/                   Primitivos reutilizables sin dominio (Button, Input, Badge…)
     layout/               AppShell, navegación por rol
   lib/
-    supabase/             client.ts (navegador), server.ts (servidor), session.ts (proxy)
+    supabase/             client.ts (navegador), server.ts (servidor), session.ts (proxy),
+                          admin.ts (secret key, solo para Supabase Auth)
     auth/                 getUsuarioActual(): la única respuesta a "quién está actuando"
     talleres/             Estado derivado de los lotes; lo usan talleres y tablero
     ai/                   Interfaz propia sobre el LLM (post-MVP)
@@ -128,7 +130,7 @@ Roles (enum `rol`) y lo que marca cada uno:
 
 | Rol          | Marca                                                                              |
 | ------------ | ---------------------------------------------------------------------------------- |
-| `admin`      | Registra órdenes, ve todo el tablero, resuelve alertas, usa el asistente           |
+| `admin`      | Registra órdenes, crea las cuentas (HU-24), ve todo el tablero, resuelve alertas   |
 | `secretaria` | Cotización, programación a diseño y de tela, validación de insumos, cierre (HU-13) |
 | `diseno`     | Ficha técnica (HU-04)                                                              |
 | `corte`      | Corte completado (HU-08)                                                           |
@@ -153,9 +155,10 @@ HU-19 (lista para despachar) la marca "terminación"; ver pendientes al final.
 ## Supabase
 
 - Un solo cliente por contexto: `createClient()` de `@/lib/supabase/server` en Server Components, actions y route handlers; `@/lib/supabase/client` solo dentro de `"use client"`. No se instancian clientes de `@supabase/supabase-js` en ningún otro lado.
-- `SUPABASE_SECRET_KEY` salta RLS: jamás en código que llegue al navegador ni en `NEXT_PUBLIC_*`. Solo para scripts de seed o administración en servidor.
+- `SUPABASE_SECRET_KEY` salta RLS: jamás en código que llegue al navegador ni en `NEXT_PUBLIC_*`. Dentro de la aplicación solo la usa `@/lib/supabase/admin`, y solo para la API de Supabase Auth (cuentas, HU-24). Nunca para tablas del dominio.
+- Una persona con rastro en la bitácora no se borra: se desactiva (`usuario.activo = false`). `rol_actual()` devuelve null para una cuenta inactiva, así que toda política le niega el paso.
 - Toda función nueva de Postgres: `revoke execute on function ... from public, anon; grant execute ... to authenticated`. Postgres le da EXECUTE a `public` por defecto y quitárselo a `anon` no basta.
-- El registro de cuentas está apagado en `config.toml`; en el proyecto hospedado hay que dejarlo igual (Authentication → Sign In / Up). Los usuarios los crea administración con el seed o la secret key.
+- El registro de cuentas está apagado en `config.toml`; en el proyecto hospedado hay que dejarlo igual (Authentication → Sign In / Up). Las cuentas las crea administración desde `/usuarios` (HU-24).
 - Las políticas de `avance_seccion` usan `rol_dueno(checkpoint)`, copia SQL del mapa de `checkpoints.ts` verificada por `rlsPorRol.test.ts`. Si cambia el flujo, cambian los dos.
 - Esquema con migraciones: `npx supabase migration new <nombre>` → escribir el SQL → `npx supabase db reset` en local → PR. Nombres descriptivos en snake_case: `crear_orden_e_items`, `rls_avance_seccion`.
 - Tras cambiar el esquema: `npm run db:types` y subir `database.types.ts` en el mismo PR.
@@ -192,3 +195,4 @@ Las decisiones cerradas están en `docs/adr/`. Abierto con el equipo o la PO:
 - Content-Security-Policy: `next.config.ts` pone las cabeceras que no dependen de la aplicación; una CSP exige nonces por petición.
 - Proveedor de LLM.
 - Catálogo de talleres satélite (hoy texto libre en HU-10).
+- HU-24 (administrar cuentas) no está en el backlog de Miro: el número es provisional hasta que se cree el issue.

@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+import { version } from "./package.json";
+
 /**
  * Cabeceras de seguridad para toda respuesta. Son las que no dependen de la
  * aplicación: que nadie meta el sistema en un iframe de otro sitio, que el
@@ -23,6 +25,8 @@ const CABECERAS_DE_SEGURIDAD = [
 ];
 
 const nextConfig: NextConfig = {
+  // La versión de package.json, para el pie del login.
+  env: { NEXT_PUBLIC_VERSION: version },
   async headers() {
     return [{ source: "/(.*)", headers: CABECERAS_DE_SEGURIDAD }];
   },

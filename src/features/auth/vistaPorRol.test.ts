@@ -97,10 +97,11 @@ describe("vistaDeRol · roles con pantalla propia", () => {
     expect(vista.botones[0].ruta).toBe("/ordenes/cierre");
   });
 
-  it("admin puede registrar y ver el tablero, sus dos responsabilidades", () => {
+  it("admin puede ver el tablero, registrar órdenes y crear cuentas", () => {
     const rutas = vistaDeRol("admin").botones.map((b) => b.ruta);
 
     expect(rutas).toContain("/tablero");
     expect(rutas).toContain("/ordenes/nueva");
+    expect(rutas).toContain("/usuarios");
   });
 });
