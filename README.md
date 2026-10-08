@@ -91,7 +91,9 @@ La base repite el control con RLS (`docs/adr/0007-rls-por-rol-y-acceso-por-panta
 
 ## Crear cuentas (HU-24)
 
-Administración entra a `/usuarios`, escribe nombre, correo, rol y una contraseña inicial, y le dice la contraseña a la persona. La cuenta se crea en Supabase Auth con la API de administración y el perfil en `usuario` con la sesión del administrador, así que la política RLS vuelve a comprobar el rol (`docs/adr/0008`). Necesita `SUPABASE_SECRET_KEY` en el servidor; en local la trae `npx supabase status`.
+Administración entra a `/usuarios`, escribe nombre, correo, rol y una contraseña inicial, y le dice la contraseña a la persona. Desde la misma pantalla edita nombre, correo y rol, cambia la contraseña, desactiva o reactiva la cuenta, y la borra si la persona nunca marcó nada (si tiene rastro, la base lo impide y hay que desactivarla). Nadie puede cambiarse el rol, desactivarse ni borrarse a sí mismo.
+
+La cuenta vive en Supabase Auth, que se toca con la API de administración, y el perfil en `usuario`, que se escribe con la sesión del administrador para que RLS vuelva a comprobar el rol (`docs/adr/0008`). Necesita `SUPABASE_SECRET_KEY` en el servidor; en local la trae `npx supabase status`.
 
 ## Marcar un avance
 

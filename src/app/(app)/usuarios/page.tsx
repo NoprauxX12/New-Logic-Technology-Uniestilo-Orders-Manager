@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 /** HU-24 · Pantalla de administración para crear cuentas. Solo enruta. */
 export default async function UsuariosPage() {
-  await exigirAcceso("/usuarios");
+  const quien = await exigirAcceso("/usuarios");
 
   const usuarios = await listarUsuarios();
 
@@ -24,7 +24,8 @@ export default async function UsuariosPage() {
             Personas
           </h1>
           <p className="text-base text-zinc-600">
-            Crea la cuenta de cada persona del taller y dale su rol.
+            Crea la cuenta de cada persona del taller, dale su rol, y edítala,
+            desactívala o bórrala cuando haga falta.
           </p>
         </header>
 
@@ -37,7 +38,7 @@ export default async function UsuariosPage() {
           <h2 className="text-lg font-semibold text-zinc-900">
             Con cuenta ({usuarios.length})
           </h2>
-          <ListaUsuarios usuarios={usuarios} />
+          <ListaUsuarios usuarios={usuarios} quienId={quien.id} />
         </section>
       </main>
     </div>

@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { nuevoUsuarioSchema } from "@/features/usuarios/schemas";
+import {
+  cambiarContrasenaSchema,
+  editarUsuarioSchema,
+  idUsuarioSchema,
+  nuevoUsuarioSchema,
+} from "@/features/usuarios/schemas";
 import { ETIQUETAS_ROL } from "@/features/workflow/checkpoints";
 
 /**
@@ -65,5 +70,53 @@ describe("nuevoUsuarioSchema", () => {
     expect(erroresDe({ ...VALIDO, password: "corto1" }).password).toContain(
       "La contraseña debe tener al menos 8 caracteres",
     );
+  });
+});
+
+const ID = "00000000-0000-0000-0000-0000000000a4";
+
+describe("editarUsuarioSchema", () => {
+  it("acepta la persona con su id, sin contraseña", () => {
+    const resultado = editarUsuarioSchema.safeParse({
+      id: ID,
+      nombre: "Jorge Cardona",
+      email: "Jorge@Uniestilo.test",
+      rol: "corte",
+    });
+
+    expect(resultado.success).toBe(true);
+    expect(resultado.success && resultado.data.email).toBe(
+      "jorge@uniestilo.test",
+    );
+  });
+
+  it("rechaza un id que no es identificador", () => {
+    const resultado = editarUsuarioSchema.safeParse({
+      id: "jorge",
+      nombre: "Jorge",
+      email: "jorge@uniestilo.test",
+      rol: "corte",
+    });
+
+    expect(resultado.success).toBe(false);
+  });
+});
+
+describe("cambiarContrasenaSchema", () => {
+  it("exige la misma longitud mínima que al crear", () => {
+    expect(
+      cambiarContrasenaSchema.safeParse({ id: ID, password: "corto1" }).success,
+    ).toBe(false);
+    expect(
+      cambiarContrasenaSchema.safeParse({ id: ID, password: "Uniestilo2026" })
+        .success,
+    ).toBe(true);
+  });
+});
+
+describe("idUsuarioSchema", () => {
+  it("solo necesita el id de la persona", () => {
+    expect(idUsuarioSchema.safeParse({ id: ID }).success).toBe(true);
+    expect(idUsuarioSchema.safeParse({ id: "" }).success).toBe(false);
   });
 });

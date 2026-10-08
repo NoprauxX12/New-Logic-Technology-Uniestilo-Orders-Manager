@@ -46,6 +46,16 @@ export async function iniciarSesion(
   const { error } = await supabase.auth.signInWithPassword(validacion.data);
 
   if (error) {
+    // HU-24: una cuenta desactivada queda bloqueada en Auth. Decirle a la
+    // persona que revise su contraseña la haría intentar en vano.
+    if (error.code === "user_banned") {
+      return {
+        ok: false,
+        mensaje: "Tu cuenta está desactivada. Habla con administración.",
+        email: escrito.email,
+      };
+    }
+
     // Supabase distingue credenciales inválidas de otros fallos, pero al
     // taller no le sirve saber cuál de las dos fue: los dos mensajes serían
     // "revisa lo que escribiste", así que se juntan en uno.
