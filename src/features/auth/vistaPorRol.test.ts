@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { ETIQUETAS_ROL, type Rol } from "@/features/workflow/checkpoints";
+import {
+  buscarCheckpoint,
+  ETIQUETAS_ROL,
+  type Rol,
+} from "@/features/workflow/checkpoints";
 import { vistaDeRol } from "@/features/auth/vistaPorRol";
 
 /**
@@ -20,9 +24,10 @@ describe("vistaDeRol · cobertura", () => {
     }
   });
 
-  it("todo rol tiene al menos un botón a dónde ir", () => {
+  it("todo rol tiene a dónde ir, o un aviso de por qué todavía no", () => {
     for (const rol of ROLES) {
-      expect(vistaDeRol(rol).botones.length).toBeGreaterThan(0);
+      const vista = vistaDeRol(rol);
+      expect(vista.botones.length > 0 || vista.aviso !== null).toBe(true);
     }
   });
 
@@ -36,26 +41,31 @@ describe("vistaDeRol · cobertura", () => {
 });
 
 describe("vistaDeRol · roles sin pantalla propia", () => {
-  it("diseño ve el tablero mientras HU-04 no exista, con un aviso", () => {
+  it("diseño solo ve un aviso mientras HU-04 no exista: el tablero es de administración (HU-17)", () => {
     const vista = vistaDeRol("diseno");
 
     expect(vista.aviso).not.toBeNull();
-    expect(vista.botones.map((b) => b.ruta)).toContain("/tablero");
-  });
-
-  it("logística ve el tablero mientras HU-09/HU-11 no existan, con un aviso", () => {
-    const vista = vistaDeRol("logistica");
-
-    expect(vista.aviso).not.toBeNull();
-    expect(vista.botones.map((b) => b.ruta)).toContain("/tablero");
+    expect(vista.botones).toEqual([]);
   });
 });
 
 describe("vistaDeRol · roles con pantalla propia", () => {
   it("no llevan aviso: su historia ya está construida", () => {
-    for (const rol of ["admin", "secretaria", "corte", "marcacion"] as const) {
+    for (const rol of [
+      "admin",
+      "secretaria",
+      "corte",
+      "logistica",
+      "marcacion",
+    ] as const) {
       expect(vistaDeRol(rol).aviso).toBeNull();
     }
+  });
+
+  it("logística va a sus órdenes para despachar y recibir lotes", () => {
+    const vista = vistaDeRol("logistica");
+
+    expect(vista.botones[0].ruta).toBe("/ordenes/talleres");
   });
 
   it("corte va a marcar su etapa, con la etiqueta de checkpoints.ts", () => {
@@ -70,6 +80,15 @@ describe("vistaDeRol · roles con pantalla propia", () => {
 
     expect(vista.botones[0].ruta).toBe("/ordenes/marcacion");
     expect(vista.botones[0].etiqueta).toMatch(/llegada a marcación/i);
+  });
+
+  it("marcación también marca la salida a despacho (HU-19), en su propia pantalla", () => {
+    const vista = vistaDeRol("marcacion");
+    const ruta = buscarCheckpoint("lista_despacho").ruta;
+
+    expect(ruta).not.toBeNull();
+    expect(vista.botones.map((b) => b.ruta)).toContain(ruta);
+    expect(vista.botones[1].etiqueta).toMatch(/lista para despachar/i);
   });
 
   it("secretaría va al cierre", () => {

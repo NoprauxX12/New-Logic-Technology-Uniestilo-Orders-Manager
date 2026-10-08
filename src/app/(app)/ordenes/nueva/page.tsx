@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { exigirAcceso } from "@/features/auth/guardia";
 import { FormularioNuevaOrden } from "@/features/ordenes/components/FormularioNuevaOrden";
 
 export const metadata: Metadata = {
@@ -8,13 +9,16 @@ export const metadata: Metadata = {
 
 /**
  * HU-01 · Pantalla de registro. Solo enruta: la lógica vive en la feature.
+ * Es de administración (HU-17); la action vuelve a verificar el rol.
  *
  * El fondo se fija en blanco a propósito. El `globals.css` heredado del
  * andamiaje oscurece el `body` cuando el sistema está en modo oscuro, pero la
  * aplicación no tiene todavía una paleta para ese modo y el texto quedaría
  * ilegible. Qué hacer con el tema oscuro es una decisión de todo el equipo.
  */
-export default function NuevaOrdenPage() {
+export default async function NuevaOrdenPage() {
+  await exigirAcceso("/ordenes/nueva");
+
   return (
     <div className="flex-1 bg-white">
       <main className="mx-auto w-full max-w-3xl px-4 py-8">

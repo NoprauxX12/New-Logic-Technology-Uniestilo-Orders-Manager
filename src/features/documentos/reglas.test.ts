@@ -54,9 +54,24 @@ describe("validarReporte", () => {
       ordenExiste: true,
       marcados: HASTA_LISTA_DESPACHO,
       reporte: "etiquetas",
+      rol: "secretaria",
     });
 
     expect(resultado).toEqual({ permitido: true });
+  });
+
+  it("no deja que otro rol reporte el cierre, y dice a quién le toca", () => {
+    const resultado = validarReporte({
+      ordenExiste: true,
+      marcados: HASTA_LISTA_DESPACHO,
+      reporte: "etiquetas",
+      rol: "corte",
+    });
+
+    expect(resultado.permitido).toBe(false);
+    expect(resultado.permitido === false && resultado.mensaje).toContain(
+      "Secretaría",
+    );
   });
 
   it("no deja reportar si la orden todavía no está lista para despachar", () => {
@@ -64,6 +79,7 @@ describe("validarReporte", () => {
       ordenExiste: true,
       marcados: EN_MARCACION,
       reporte: "etiquetas",
+      rol: "secretaria",
     });
 
     expect(resultado).toMatchObject({ permitido: false });
@@ -74,6 +90,7 @@ describe("validarReporte", () => {
       ordenExiste: true,
       marcados: [...HASTA_LISTA_DESPACHO, "etiquetas"],
       reporte: "etiquetas",
+      rol: "secretaria",
     });
 
     expect(resultado).toMatchObject({ permitido: false });
@@ -84,6 +101,7 @@ describe("validarReporte", () => {
       ordenExiste: false,
       marcados: HASTA_LISTA_DESPACHO,
       reporte: "etiquetas",
+      rol: "secretaria",
     });
 
     expect(resultado).toMatchObject({ permitido: false });
@@ -109,15 +127,30 @@ describe("validarCierre", () => {
     const resultado = validarCierre({
       ordenExiste: true,
       marcados: CON_LOS_TRES_REPORTES,
+      rol: "secretaria",
     });
 
     expect(resultado).toEqual({ permitido: true });
+  });
+
+  it("no deja que otro rol complete la orden", () => {
+    const resultado = validarCierre({
+      ordenExiste: true,
+      marcados: CON_LOS_TRES_REPORTES,
+      rol: "admin",
+    });
+
+    expect(resultado.permitido).toBe(false);
+    expect(resultado.permitido === false && resultado.mensaje).toContain(
+      "Secretaría",
+    );
   });
 
   it("no completa si falta alguno de los tres, y dice cuál", () => {
     const resultado = validarCierre({
       ordenExiste: true,
       marcados: [...HASTA_LISTA_DESPACHO, "etiquetas", "factura_generada"],
+      rol: "secretaria",
     });
 
     expect(resultado.permitido).toBe(false);
@@ -130,6 +163,7 @@ describe("validarCierre", () => {
     const resultado = validarCierre({
       ordenExiste: true,
       marcados: EN_MARCACION,
+      rol: "secretaria",
     });
 
     expect(resultado).toMatchObject({ permitido: false });
@@ -139,6 +173,7 @@ describe("validarCierre", () => {
     const resultado = validarCierre({
       ordenExiste: true,
       marcados: [...CON_LOS_TRES_REPORTES, "cerrada"],
+      rol: "secretaria",
     });
 
     expect(resultado).toMatchObject({ permitido: false });

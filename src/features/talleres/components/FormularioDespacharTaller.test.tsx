@@ -19,9 +19,6 @@ const despacharLote = vi.hoisted(() => vi.fn());
 vi.mock("@/features/talleres/actions", () => ({ despacharLote }));
 
 const ORDEN_ID = "00000000-0000-0000-0000-0000000000f3";
-const LOGISTICA_ID = "00000000-0000-0000-0000-0000000000a5";
-
-const PERSONAL = [{ id: LOGISTICA_ID, nombre: "Luis Betancur" }];
 
 const ESTADO_OK: EstadoFormularioDespacho = {
   ok: true,
@@ -37,9 +34,6 @@ function llenarYEnviar() {
   fireEvent.change(screen.getByLabelText("¿Qué prendas se enviaron?"), {
     target: { value: "250 polos verdes" },
   });
-  fireEvent.change(screen.getByLabelText("¿Quién hace el despacho?"), {
-    target: { value: LOGISTICA_ID },
-  });
 
   fireEvent.click(
     screen.getByRole("button", { name: "Marcar como despachado" }),
@@ -52,20 +46,15 @@ describe("FormularioDespacharTaller", () => {
     despacharLote.mockResolvedValue(ESTADO_OK);
   });
 
-  it("ofrece solo al personal de logística para despachar", () => {
-    render(
-      <FormularioDespacharTaller ordenId={ORDEN_ID} personal={PERSONAL} />,
-    );
+  it("no pide escoger quién despacha: eso sale de la sesión", () => {
+    render(<FormularioDespacharTaller ordenId={ORDEN_ID} />);
 
-    expect(
-      screen.getByRole("option", { name: "Luis Betancur" }),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.queryByLabelText(/quién hace el despacho/i)).toBeNull();
   });
 
   it("manda lo que se escribió, con la orden en un campo oculto", async () => {
-    render(
-      <FormularioDespacharTaller ordenId={ORDEN_ID} personal={PERSONAL} />,
-    );
+    render(<FormularioDespacharTaller ordenId={ORDEN_ID} />);
 
     llenarYEnviar();
 
@@ -78,14 +67,12 @@ describe("FormularioDespacharTaller", () => {
 
     expect(formData.get("taller")).toBe("Taller Marinilla Centro");
     expect(formData.get("descripcionPrendas")).toBe("250 polos verdes");
-    expect(formData.get("enviadoPor")).toBe(LOGISTICA_ID);
+    expect(formData.get("enviadoPor")).toBeNull();
     expect(formData.get("ordenId")).toBe(ORDEN_ID);
   });
 
   it("confirma el despacho cuando la action responde que sí", async () => {
-    render(
-      <FormularioDespacharTaller ordenId={ORDEN_ID} personal={PERSONAL} />,
-    );
+    render(<FormularioDespacharTaller ordenId={ORDEN_ID} />);
 
     llenarYEnviar();
 
@@ -102,9 +89,7 @@ describe("FormularioDespacharTaller", () => {
       valores: { ...ENTRADA_VACIA },
     } satisfies EstadoFormularioDespacho);
 
-    render(
-      <FormularioDespacharTaller ordenId={ORDEN_ID} personal={PERSONAL} />,
-    );
+    render(<FormularioDespacharTaller ordenId={ORDEN_ID} />);
 
     llenarYEnviar();
 
@@ -124,9 +109,7 @@ describe("FormularioDespacharTaller", () => {
       valores: { ...ENTRADA_VACIA },
     } satisfies EstadoFormularioDespacho);
 
-    render(
-      <FormularioDespacharTaller ordenId={ORDEN_ID} personal={PERSONAL} />,
-    );
+    render(<FormularioDespacharTaller ordenId={ORDEN_ID} />);
 
     llenarYEnviar();
 

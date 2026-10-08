@@ -1,114 +1,128 @@
 import "server-only";
 
-import type { CheckpointId } from "@/features/workflow/checkpoints";
+import {
+  buscarCheckpoint,
+  type CheckpointId,
+  type Rol,
+} from "@/features/workflow/checkpoints";
+import {
+  puedeMarcar,
+  type ResultadoMarcado,
+} from "@/features/workflow/transiciones";
 import { createClient } from "@/lib/supabase/server";
 
 /**
  * Lecturas del avance de las órdenes.
  *
- * `obtenerCheckpointsMarcados` es la que usa la action antes de escribir: le
+ * `obtenerSituacionDeOrden` es lo que la action lee antes de escribir: le
  * pregunta al motor con datos frescos de la base y no con lo que venga del
  * navegador, porque una Server Action se puede invocar con un POST directo.
  *
- * `obtenerOrdenesParaCorte` alimenta la pantalla de corte (HU-08). Está
- * pendiente de unificarse con la lectura genérica; ver el issue de refactor.
+ * `obtenerOrdenesParaSeccion` alimenta la pantalla con la que una sección marca
+ * su etapa: la misma consulta sirve para corte (HU-08), marcación (HU-12) y la
+ * que venga después; solo cambia el checkpoint.
  */
 
-/** Los checkpoints que la orden ya tiene marcados, sin orden garantizado. */
-export async function obtenerCheckpointsMarcados(
+/** Lo que el motor necesita saber de una orden para decidir. */
+export type SituacionDeOrden = {
+  marcados: CheckpointId[];
+  /** HU-11: si algún lote ya volvió del taller con su recepción confirmada. */
+  recepcionConfirmada: boolean;
+};
+
+/** La situación de la orden, o `null` si la orden no existe. */
+export async function obtenerSituacionDeOrden(
   ordenId: string,
-): Promise<CheckpointId[]> {
+): Promise<SituacionDeOrden | null> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from("avance_seccion")
-    .select("checkpoint")
-    .eq("orden_id", ordenId);
+    .from("orden")
+    .select(
+      `id,
+       avance_seccion ( checkpoint ),
+       lote_taller ( recibido_completo )`,
+    )
+    .eq("id", ordenId)
+    .maybeSingle();
 
   if (error) {
-    console.error("[HU-19] No se pudieron leer los avances de la orden", error);
-    throw new Error("No se pudieron leer los avances de la orden.");
+    console.error("[workflow] No se pudo leer la orden", error);
+    throw new Error("No se pudo leer la orden.");
   }
 
-  return data.map((fila) => fila.checkpoint);
+  if (!data) return null;
+
+  return {
+    marcados: data.avance_seccion.map((avance) => avance.checkpoint),
+    recepcionConfirmada: data.lote_taller.some(
+      (lote) => lote.recibido_completo !== null,
+    ),
+  };
 }
 
-export type OrdenParaCorte = {
+export type OrdenParaSeccion = {
   id: string;
   numeroOrdenCompra: string;
   razonSocial: string;
   fechaEntrega: string;
-  corteCompletado: boolean;
-  fechaCorte: string | null;
+  /** Si esta sección ya marcó su etapa en la orden. */
+  yaMarcada: boolean;
+  fechaMarcado: string | null;
+  /** Lo que el motor dice de marcar esta etapa, para quien está mirando. */
+  veredicto: ResultadoMarcado;
 };
 
 /**
- * HU-08 · Obtiene las órdenes que verá el área de corte.
+ * Las órdenes como las ve una sección, con el veredicto del motor para cada
+ * una según el rol de quien mira. La action lo vuelve a calcular antes de
+ * escribir: esto solo decide qué se pinta.
  */
-export async function obtenerOrdenesParaCorte(): Promise<OrdenParaCorte[]> {
+export async function obtenerOrdenesParaSeccion(
+  checkpoint: CheckpointId,
+  rol: Rol,
+): Promise<OrdenParaSeccion[]> {
   const supabase = await createClient();
 
-  const { data: ordenes, error: errorOrdenes } = await supabase
+  const { data, error } = await supabase
     .from("orden")
-    .select("id, numero_orden_compra, cliente_id, fecha_entrega")
+    .select(
+      `id,
+       numero_orden_compra,
+       fecha_entrega,
+       cliente ( razon_social ),
+       avance_seccion ( checkpoint, fecha_hora ),
+       lote_taller ( recibido_completo )`,
+    )
     .order("fecha_entrega", { ascending: true });
 
-  if (errorOrdenes) {
-    console.error("No se pudieron consultar las órdenes", errorOrdenes);
+  if (error) {
+    const { hu } = buscarCheckpoint(checkpoint);
+    console.error(`[${hu}] No se pudieron consultar las órdenes`, error);
     throw new Error("No se pudieron consultar las órdenes.");
   }
 
-  if (ordenes.length === 0) {
-    return [];
-  }
-
-  const ordenIds = ordenes.map((orden) => orden.id);
-  const clienteIds = [...new Set(ordenes.map((orden) => orden.cliente_id))];
-
-  const [
-    { data: clientes, error: errorClientes },
-    { data: avances, error: errorAvances },
-  ] = await Promise.all([
-    supabase.from("cliente").select("id, razon_social").in("id", clienteIds),
-    supabase
-      .from("avance_seccion")
-      .select("orden_id, fecha_hora")
-      .in("orden_id", ordenIds)
-      .eq("checkpoint", "corte_completado"),
-  ]);
-
-  if (errorClientes) {
-    console.error(
-      "[HU-08] No se pudieron consultar los clientes",
-      errorClientes,
+  return data.map((orden) => {
+    const marcados = orden.avance_seccion.map((avance) => avance.checkpoint);
+    const propio = orden.avance_seccion.find(
+      (avance) => avance.checkpoint === checkpoint,
     );
-    throw new Error("No se pudieron consultar los clientes.");
-  }
-
-  if (errorAvances) {
-    console.error("No se pudieron consultar los avances", errorAvances);
-    throw new Error("No se pudieron consultar los avances.");
-  }
-
-  const razonSocialPorCliente = new Map(
-    clientes.map((cliente) => [cliente.id, cliente.razon_social]),
-  );
-
-  const fechaCortePorOrden = new Map(
-    avances.map((avance) => [avance.orden_id, avance.fecha_hora]),
-  );
-
-  return ordenes.map((orden) => {
-    const fechaCorte = fechaCortePorOrden.get(orden.id) ?? null;
 
     return {
       id: orden.id,
       numeroOrdenCompra: orden.numero_orden_compra,
-      razonSocial:
-        razonSocialPorCliente.get(orden.cliente_id) ?? "Cliente no disponible",
+      razonSocial: orden.cliente?.razon_social ?? "Cliente sin nombre",
       fechaEntrega: orden.fecha_entrega,
-      corteCompletado: fechaCorte !== null,
-      fechaCorte,
+      yaMarcada: propio !== undefined,
+      fechaMarcado: propio?.fecha_hora ?? null,
+      veredicto: puedeMarcar({
+        checkpoint,
+        marcados,
+        rol,
+        recepcionConfirmada: orden.lote_taller.some(
+          (lote) => lote.recibido_completo !== null,
+        ),
+      }),
     };
   });
 }

@@ -19,12 +19,28 @@ export const metadata: Metadata = {
  * con Vitest (CLAUDE.md, sección de testing). El `page.test.tsx` que existía
  * probaba el `<h1>` de una versión estática; se borra con este cambio.
  */
-export default async function HomePage() {
-  const usuario = await getUsuarioActual();
+type Props = {
+  searchParams: Promise<{ sinAcceso?: string }>;
+};
+
+export default async function HomePage({ searchParams }: Props) {
+  const [usuario, { sinAcceso }] = await Promise.all([
+    getUsuarioActual(),
+    searchParams,
+  ]);
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-6 p-8 text-center">
       <h1 className="text-3xl font-semibold">Uniestilo · Gestor de órdenes</h1>
+
+      {usuario && sinAcceso ? (
+        <p
+          role="alert"
+          className="max-w-md rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-base text-amber-900"
+        >
+          Esa pantalla no es de tu sección. Aquí tienes las tuyas.
+        </p>
+      ) : null}
 
       {usuario ? (
         <PanelDePersona usuario={usuario} />

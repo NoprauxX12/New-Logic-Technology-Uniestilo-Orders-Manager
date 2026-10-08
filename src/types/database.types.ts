@@ -398,12 +398,13 @@ export type Database = {
         Returns: string
       }
       reportar_factura: {
-        Args: {
-          p_numero_factura: string
-          p_orden_id: string
-          p_usuario_id: string
-        }
+        Args: { p_numero_factura: string; p_orden_id: string }
         Returns: string
+      }
+      rol_actual: { Args: never; Returns: Database["public"]["Enums"]["rol"] }
+      rol_dueno: {
+        Args: { p_checkpoint: Database["public"]["Enums"]["checkpoint"] }
+        Returns: Database["public"]["Enums"]["rol"]
       }
     }
     Enums: {

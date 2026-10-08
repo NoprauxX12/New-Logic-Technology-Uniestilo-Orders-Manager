@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 
+import { exigirAcceso } from "@/features/auth/guardia";
 import { ListaOrdenesCierre } from "@/features/documentos/components/ListaOrdenesCierre";
-import {
-  listarOrdenesParaCierre,
-  obtenerUsuariosDeSecretaria,
-} from "@/features/documentos/queries";
+import { listarOrdenesParaCierre } from "@/features/documentos/queries";
 
 export const metadata: Metadata = {
   title: "Cerrar órdenes · Uniestilo",
@@ -19,10 +17,9 @@ export const metadata: Metadata = {
  * de que sale del listado de órdenes en curso.
  */
 export default async function CerrarOrdenesPage() {
-  const [ordenes, personal] = await Promise.all([
-    listarOrdenesParaCierre(),
-    obtenerUsuariosDeSecretaria(),
-  ]);
+  await exigirAcceso("/ordenes/cierre");
+
+  const ordenes = await listarOrdenesParaCierre();
 
   return (
     <div className="flex-1 bg-zinc-50">
@@ -40,7 +37,7 @@ export default async function CerrarOrdenesPage() {
           </p>
         </header>
 
-        <ListaOrdenesCierre ordenes={ordenes} personal={personal} />
+        <ListaOrdenesCierre ordenes={ordenes} />
       </main>
     </div>
   );

@@ -1,4 +1,4 @@
-import { CHECKPOINTS } from "@/features/workflow/checkpoints";
+import { buscarCheckpoint, CHECKPOINTS } from "@/features/workflow/checkpoints";
 import type {
   AvanceSeccion,
   EtapaTablero,
@@ -42,6 +42,26 @@ export function armarEtapas(avances: AvanceSeccion[]): EtapaTablero[] {
       avance,
     };
   });
+}
+
+/**
+ * Cuántas etapas lleva la orden sobre cuántas se pueden marcar hoy. Las que
+ * todavía no tienen pantalla no cuentan como pendientes: si contaran, una orden
+ * que ya terminó todo su recorrido se vería al 67 % y nunca al 100 %.
+ */
+export function contarProgreso(etapas: EtapaTablero[]): {
+  completadas: number;
+  totales: number;
+} {
+  const disponibles = etapas.filter(
+    (etapa) => buscarCheckpoint(etapa.seccion).disponible,
+  );
+
+  return {
+    completadas: disponibles.filter((etapa) => etapa.estado === "completada")
+      .length,
+    totales: disponibles.length,
+  };
 }
 
 export function resumirTablero(ordenes: OrdenEnTablero[]): ResumenTablero {

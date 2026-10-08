@@ -22,11 +22,6 @@ export type OrdenParaCierre = {
   marcados: CheckpointId[];
 };
 
-export type UsuarioDeSecretaria = {
-  id: string;
-  nombre: string;
-};
-
 export async function listarOrdenesParaCierre(): Promise<OrdenParaCierre[]> {
   const supabase = await createClient();
 
@@ -83,27 +78,4 @@ export async function obtenerMarcadosDeLaOrden(
   if (!data) return null;
 
   return data.avance_seccion.map((avance) => avance.checkpoint);
-}
-
-/**
- * Quién puede cerrar. Mientras no exista el login (HU-16), la pantalla ofrece
- * esta lista y quien reporta se escoge a mano; después saldrá de la sesión.
- */
-export async function obtenerUsuariosDeSecretaria(): Promise<
-  UsuarioDeSecretaria[]
-> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("usuario")
-    .select("id, nombre")
-    .eq("rol", "secretaria")
-    .order("nombre");
-
-  if (error) {
-    console.error("[HU-13] No se pudo leer el personal de secretaría", error);
-    return [];
-  }
-
-  return data;
 }

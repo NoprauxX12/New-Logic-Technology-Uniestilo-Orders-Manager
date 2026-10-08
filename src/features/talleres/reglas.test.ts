@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  describirEstadoDeTalleres,
-  lotesEnTaller,
   puedeConfirmarRecepcion,
   puedeDespachar,
 } from "@/features/talleres/reglas";
@@ -31,11 +29,22 @@ const SIN_CORTE: CheckpointId[] = [
 
 describe("puedeDespachar", () => {
   it("deja despachar cuando el corte está completado", () => {
-    expect(puedeDespachar(HASTA_CORTE)).toEqual({ permitido: true });
+    expect(puedeDespachar(HASTA_CORTE, "logistica")).toEqual({
+      permitido: true,
+    });
+  });
+
+  it("no deja que otro rol despache, y dice a quién le toca", () => {
+    const resultado = puedeDespachar(HASTA_CORTE, "corte");
+
+    expect(resultado.permitido).toBe(false);
+    expect(resultado.permitido === false && resultado.mensaje).toContain(
+      "Logística",
+    );
   });
 
   it("no deja despachar si el corte no está completado", () => {
-    const resultado = puedeDespachar(SIN_CORTE);
+    const resultado = puedeDespachar(SIN_CORTE, "logistica");
 
     expect(resultado.permitido).toBe(false);
     expect(resultado.permitido === false && resultado.mensaje).toContain(
@@ -44,67 +53,38 @@ describe("puedeDespachar", () => {
   });
 
   it("no deja despachar una orden recién registrada", () => {
-    expect(puedeDespachar([])).toMatchObject({ permitido: false });
+    expect(puedeDespachar([], "logistica")).toMatchObject({
+      permitido: false,
+    });
   });
 
   it("deja despachar otro lote aunque ya haya salido uno", () => {
     // Regla 6: una orden se reparte entre varios talleres. La regla mira el
     // corte, no cuántos lotes se hayan mandado antes.
-    expect(puedeDespachar(HASTA_CORTE)).toEqual({ permitido: true });
-  });
-});
-
-describe("lotesEnTaller", () => {
-  it("deja fuera los que ya volvieron", () => {
-    const lotes = [
-      { recibido: true },
-      { recibido: false },
-      { recibido: false },
-    ];
-
-    expect(lotesEnTaller(lotes)).toHaveLength(2);
-  });
-});
-
-describe("describirEstadoDeTalleres", () => {
-  it("dice que no ha salido cuando no hay lotes", () => {
-    expect(describirEstadoDeTalleres([])).toBe(
-      "Todavía no ha salido a ningún taller.",
-    );
-  });
-
-  it("dice que está en confección con un lote afuera", () => {
-    expect(describirEstadoDeTalleres([{ recibido: false }])).toBe(
-      "En confección.",
-    );
-  });
-
-  it("cuenta los lotes cuando hay varios", () => {
-    const estado = describirEstadoDeTalleres([
-      { recibido: false },
-      { recibido: true },
-      { recibido: false },
-    ]);
-
-    expect(estado).toContain("2 de 3");
-  });
-
-  it("avisa cuando todo volvió del taller", () => {
-    expect(describirEstadoDeTalleres([{ recibido: true }])).toBe(
-      "Todo el trabajo volvió del taller.",
-    );
+    expect(puedeDespachar(HASTA_CORTE, "logistica")).toEqual({
+      permitido: true,
+    });
   });
 });
 
 describe("puedeConfirmarRecepcion", () => {
   it("deja confirmar un lote que sigue en el taller", () => {
-    expect(puedeConfirmarRecepcion({ recibido: false })).toEqual({
+    expect(puedeConfirmarRecepcion({ recibido: false }, "logistica")).toEqual({
       permitido: true,
     });
   });
 
+  it("no deja que otro rol confirme la recepción", () => {
+    const resultado = puedeConfirmarRecepcion({ recibido: false }, "marcacion");
+
+    expect(resultado.permitido).toBe(false);
+    expect(resultado.permitido === false && resultado.mensaje).toContain(
+      "Logística",
+    );
+  });
+
   it("no deja confirmar dos veces el mismo lote", () => {
-    const resultado = puedeConfirmarRecepcion({ recibido: true });
+    const resultado = puedeConfirmarRecepcion({ recibido: true }, "logistica");
 
     expect(resultado.permitido).toBe(false);
     expect(resultado.permitido === false && resultado.mensaje).toContain(
@@ -115,7 +95,7 @@ describe("puedeConfirmarRecepcion", () => {
   it("no deja confirmar un lote que no pertenece a la orden", () => {
     // Criterio de aceptación: solo se puede confirmar si la orden fue
     // despachada antes. Sin un lote de verdad, no hay qué confirmar.
-    const resultado = puedeConfirmarRecepcion(undefined);
+    const resultado = puedeConfirmarRecepcion(undefined, "logistica");
 
     expect(resultado.permitido).toBe(false);
     expect(resultado.permitido === false && resultado.mensaje).toContain(

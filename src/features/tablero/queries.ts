@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   armarEtapas,
+  contarProgreso,
   derivarSemaforo,
   resumirTablero,
 } from "@/features/tablero/reglas";
@@ -12,12 +13,17 @@ import type {
   OrdenResumen,
   ResumenTablero,
 } from "@/features/tablero/types";
-import type { CheckpointId } from "@/features/workflow/checkpoints";
 import { createClient } from "@/lib/supabase/server";
+import { describirEstadoDeTalleres } from "@/lib/talleres/estadoLotes";
 
 /**
  * Lectura del tablero (HU-14). El estado de cada orden se deriva de
- * `avance_seccion` + fechas; no hay columna `estado` (regla 1).
+ * `avance_seccion`, de los lotes y de las fechas; no hay columna `estado`
+ * (regla 1).
+ *
+ * La forma de las filas la infiere el cliente de Supabase a partir de
+ * `database.types.ts` y del `select`: no se escribe a mano ni se fuerza con un
+ * cast, para que un cambio de esquema se note al compilar.
  */
 
 const SELECCION_ORDEN = `
@@ -27,7 +33,7 @@ const SELECCION_ORDEN = `
   fecha_entrega,
   cliente ( razon_social ),
   item_orden ( descripcion, cantidad ),
-  lote_taller ( taller, fecha_envio ),
+  lote_taller ( taller, fecha_envio, recibido_completo ),
   avance_seccion (
     checkpoint,
     usuario_id,
@@ -35,106 +41,9 @@ const SELECCION_ORDEN = `
     observaciones,
     usuario ( nombre )
   )
-`;
+` as const;
 
-type Relacion<T> = T | T[] | null;
-
-type ClienteFila = { razon_social: string };
-type ItemFila = { descripcion: string; cantidad: number };
-type LoteFila = { taller: string; fecha_envio: string };
-type UsuarioFila = { nombre: string };
-type AvanceFila = {
-  checkpoint: CheckpointId;
-  usuario_id: string;
-  fecha_hora: string;
-  observaciones: string | null;
-  usuario: Relacion<UsuarioFila>;
-};
-
-type OrdenFila = {
-  id: string;
-  numero_orden_compra: string;
-  fecha_ingreso: string;
-  fecha_entrega: string;
-  cliente: Relacion<ClienteFila>;
-  item_orden: ItemFila[] | null;
-  lote_taller: LoteFila[] | null;
-  avance_seccion: AvanceFila[] | null;
-};
-
-function uno<T>(valor: Relacion<T>): T | null {
-  if (valor == null) return null;
-  return Array.isArray(valor) ? (valor[0] ?? null) : valor;
-}
-
-function prendasDe(items: ItemFila[] | null): {
-  prenda: string;
-  cantidad: number;
-} {
-  if (!items || items.length === 0) {
-    return { prenda: "—", cantidad: 0 };
-  }
-
-  return {
-    prenda: items.map((item) => item.descripcion).join(" · "),
-    cantidad: items.reduce((total, item) => total + item.cantidad, 0),
-  };
-}
-
-function tallerDe(lotes: LoteFila[] | null): string | null {
-  if (!lotes || lotes.length === 0) return null;
-
-  const porEnvio = [...lotes].sort((a, b) =>
-    b.fecha_envio.localeCompare(a.fecha_envio),
-  );
-  return [...new Set(porEnvio.map((lote) => lote.taller))].join(", ");
-}
-
-function avancesDe(filas: AvanceFila[] | null): AvanceSeccion[] {
-  if (!filas) return [];
-
-  return [...filas]
-    .sort((a, b) => a.fecha_hora.localeCompare(b.fecha_hora))
-    .map((fila) => ({
-      seccion: fila.checkpoint,
-      usuarioId: fila.usuario_id,
-      usuarioNombre: uno(fila.usuario)?.nombre ?? "Sin nombre",
-      fechaHora: fila.fecha_hora,
-      observacion: fila.observaciones ?? undefined,
-    }));
-}
-
-function resumenDe(fila: OrdenFila): OrdenResumen {
-  const { prenda, cantidad } = prendasDe(fila.item_orden);
-
-  return {
-    id: fila.id,
-    numeroOrdenCompra: fila.numero_orden_compra,
-    razonSocial: uno(fila.cliente)?.razon_social ?? "Sin cliente",
-    prenda,
-    cantidad,
-    fechaRecepcion: fila.fecha_ingreso,
-    fechaEntrega: fila.fecha_entrega,
-    tallerNombre: tallerDe(fila.lote_taller),
-  };
-}
-
-function enriquecer(fila: OrdenFila): OrdenEnTablero {
-  const avances = avancesDe(fila.avance_seccion);
-  const etapas = armarEtapas(avances);
-  const cabecera = resumenDe(fila);
-
-  return {
-    ...cabecera,
-    semaforo: derivarSemaforo(cabecera.fechaEntrega),
-    etapas,
-    etapasCompletadas: etapas.filter((etapa) => etapa.estado === "completada")
-      .length,
-    etapasTotales: etapas.length,
-  };
-}
-
-async function leerOrdenes(ordenId?: string): Promise<OrdenFila[]> {
+async function leerOrdenes(ordenId?: string) {
   const supabase = await createClient();
   let consulta = supabase
     .from("orden")
@@ -151,7 +60,79 @@ async function leerOrdenes(ordenId?: string): Promise<OrdenFila[]> {
     throw new Error(`No se pudieron leer las órdenes: ${error.message}`);
   }
 
-  return (data ?? []) as OrdenFila[];
+  return data;
+}
+
+type OrdenFila = Awaited<ReturnType<typeof leerOrdenes>>[number];
+
+function prendasDe(items: OrdenFila["item_orden"]): {
+  prenda: string;
+  cantidad: number;
+} {
+  if (items.length === 0) {
+    return { prenda: "—", cantidad: 0 };
+  }
+
+  return {
+    prenda: items.map((item) => item.descripcion).join(" · "),
+    cantidad: items.reduce((total, item) => total + item.cantidad, 0),
+  };
+}
+
+function tallerDe(lotes: OrdenFila["lote_taller"]): string | null {
+  if (lotes.length === 0) return null;
+
+  const porEnvio = [...lotes].sort((a, b) =>
+    b.fecha_envio.localeCompare(a.fecha_envio),
+  );
+  return [...new Set(porEnvio.map((lote) => lote.taller))].join(", ");
+}
+
+function avancesDe(filas: OrdenFila["avance_seccion"]): AvanceSeccion[] {
+  return [...filas]
+    .sort((a, b) => a.fecha_hora.localeCompare(b.fecha_hora))
+    .map((fila) => ({
+      seccion: fila.checkpoint,
+      usuarioId: fila.usuario_id,
+      usuarioNombre: fila.usuario?.nombre ?? "Sin nombre",
+      fechaHora: fila.fecha_hora,
+      observacion: fila.observaciones ?? undefined,
+    }));
+}
+
+function resumenDe(fila: OrdenFila): OrdenResumen {
+  const { prenda, cantidad } = prendasDe(fila.item_orden);
+
+  return {
+    id: fila.id,
+    numeroOrdenCompra: fila.numero_orden_compra,
+    razonSocial: fila.cliente?.razon_social ?? "Sin cliente",
+    prenda,
+    cantidad,
+    fechaRecepcion: fila.fecha_ingreso,
+    fechaEntrega: fila.fecha_entrega,
+    tallerNombre: tallerDe(fila.lote_taller),
+    estadoTalleres: describirEstadoDeTalleres(
+      fila.lote_taller.map((lote) => ({
+        recibido: lote.recibido_completo !== null,
+      })),
+    ),
+  };
+}
+
+function enriquecer(fila: OrdenFila): OrdenEnTablero {
+  const avances = avancesDe(fila.avance_seccion);
+  const etapas = armarEtapas(avances);
+  const cabecera = resumenDe(fila);
+  const { completadas, totales } = contarProgreso(etapas);
+
+  return {
+    ...cabecera,
+    semaforo: derivarSemaforo(cabecera.fechaEntrega),
+    etapas,
+    etapasCompletadas: completadas,
+    etapasTotales: totales,
+  };
 }
 
 export async function listarOrdenesTablero(): Promise<OrdenEnTablero[]> {

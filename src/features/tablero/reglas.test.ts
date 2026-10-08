@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { CHECKPOINTS } from "@/features/workflow/checkpoints";
+import {
+  CHECKPOINTS,
+  CHECKPOINTS_DISPONIBLES,
+} from "@/features/workflow/checkpoints";
 import {
   DIAS_EN_RIESGO,
   armarEtapas,
+  contarProgreso,
   derivarSemaforo,
   diasHasta,
   resumirTablero,
@@ -29,6 +33,7 @@ function ordenStub(
     fechaRecepcion: "2026-09-01",
     fechaEntrega: "2026-09-30",
     tallerNombre: null,
+    estadoTalleres: "Todavía no ha salido a ningún taller.",
     etapas: [],
     ...parcial,
   };
@@ -154,5 +159,31 @@ describe("resumirTablero", () => {
       atrasadas: 0,
       enRiesgo: 0,
     });
+  });
+});
+
+describe("contarProgreso", () => {
+  it("cuenta solo las etapas que hoy se pueden marcar, para que una orden terminada llegue al 100 %", () => {
+    const etapas = armarEtapas(
+      CHECKPOINTS_DISPONIBLES.map((checkpoint) => ({
+        seccion: checkpoint.id,
+        usuarioId: "u1",
+        usuarioNombre: "Alguien",
+        fechaHora: "2026-09-01T09:00:00",
+      })),
+    );
+
+    expect(contarProgreso(etapas)).toEqual({
+      completadas: CHECKPOINTS_DISPONIBLES.length,
+      totales: CHECKPOINTS_DISPONIBLES.length,
+    });
+  });
+
+  it("no cuenta como pendiente una etapa que todavía no tiene pantalla", () => {
+    const { completadas, totales } = contarProgreso(armarEtapas([]));
+
+    expect(completadas).toBe(0);
+    expect(totales).toBe(CHECKPOINTS_DISPONIBLES.length);
+    expect(totales).toBeLessThan(CHECKPOINTS.length);
   });
 });

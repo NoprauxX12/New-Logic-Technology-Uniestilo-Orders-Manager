@@ -3,16 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import {
-  obtenerMarcadosDeLaOrden,
-  obtenerUsuariosDeSecretaria,
-} from "@/features/documentos/queries";
+import { obtenerMarcadosDeLaOrden } from "@/features/documentos/queries";
 import { validarCierre, validarReporte } from "@/features/documentos/reglas";
 import {
   cierreSchema,
   facturaSchema,
   reporteSimpleSchema,
 } from "@/features/documentos/schemas";
+import { getUsuarioActual, type UsuarioActual } from "@/lib/auth/usuarioActual";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -22,15 +20,15 @@ import { createClient } from "@/lib/supabase/server";
  * y, cuando están los tres, la marca de que la orden quedó completada. Cada uno
  * es su propia action porque ocurren en momentos distintos.
  *
- * Todas siguen el mismo orden: el esquema revisa lo que llegó, las reglas del
- * cierre le preguntan al motor de workflow si la orden está en el punto que
- * corresponde (regla 2: ninguna action inserta en `avance_seccion` por su
- * cuenta), y la base vuelve a comprobarlo —con el índice único y con el trigger
- * que congela las órdenes completadas—, porque una server action se puede
- * invocar con un POST directo sin pasar por la pantalla.
+ * Todas siguen el mismo orden: el esquema revisa lo que llegó, se identifica a
+ * la persona con sesión (HU-16), las reglas del cierre le preguntan al motor de
+ * workflow si la orden está en el punto que corresponde y si el rol de quien
+ * reporta es el dueño (regla 2), y la base vuelve a comprobarlo con las
+ * políticas RLS (HU-17), el índice único y el trigger que congela las órdenes
+ * completadas, porque una server action se puede invocar con un POST directo.
  *
- * Quién reporta se escoge de una lista mientras no exista el login (HU-16):
- * `avance_seccion.usuario_id` es obligatorio. HU-17 lo reemplaza por la sesión.
+ * Quién reporta nunca viene del formulario: sale de la sesión. Un campo oculto
+ * lo puede cambiar cualquiera, y la bitácora tiene que ser confiable (RNF-05).
  */
 
 export type ResultadoCierre = {
@@ -44,6 +42,8 @@ const DUPLICADO = "23505";
 const ORDEN_COMPLETADA = "UE004";
 /** La orden no existe. */
 const ORDEN_INEXISTENTE = "UE005";
+/** RLS rechazó la fila: el rol o la firma no corresponden. */
+const RLS_RECHAZO = "42501";
 
 function fallo(mensaje: string): ResultadoCierre {
   return { ok: false, mensaje };
@@ -58,15 +58,16 @@ function mensajeConocido(codigo: string | undefined): string | null {
       return "No encontramos esa orden.";
     case DUPLICADO:
       return "Eso ya estaba reportado.";
+    case RLS_RECHAZO:
+      return "El cierre lo reporta la secretaría.";
     default:
       return null;
   }
 }
 
-/** Solo la secretaría reporta el cierre; HU-17 lo hará con la sesión. */
-async function esDeSecretaria(usuarioId: string): Promise<boolean> {
-  const secretarias = await obtenerUsuariosDeSecretaria();
-  return secretarias.some((persona) => persona.id === usuarioId);
+function primerError(error: z.ZodError, porDefecto: string): string {
+  const { formErrors, fieldErrors } = z.flattenError(error);
+  return formErrors[0] ?? Object.values(fieldErrors).flat()[0] ?? porDefecto;
 }
 
 function actualizarPantallas(ordenId: string) {
@@ -75,45 +76,61 @@ function actualizarPantallas(ordenId: string) {
   revalidatePath(`/tablero/${ordenId}`);
 }
 
+type Situacion = {
+  usuario: UsuarioActual;
+  marcados: Awaited<ReturnType<typeof obtenerMarcadosDeLaOrden>>;
+};
+
+/** La persona con sesión y lo que la orden lleva marcado, o el mensaje de por qué no. */
+async function situacionDe(
+  ordenId: string,
+): Promise<Situacion | ResultadoCierre> {
+  const usuario = await getUsuarioActual();
+  if (!usuario) return fallo("Inicia sesión para reportar el cierre.");
+
+  const marcados = await obtenerMarcadosDeLaOrden(ordenId);
+  return { usuario, marcados };
+}
+
+function esFallo(valor: Situacion | ResultadoCierre): valor is ResultadoCierre {
+  return "ok" in valor;
+}
+
 export async function reportarParteDelCierre(
   _estadoPrevio: ResultadoCierre,
   formData: FormData,
 ): Promise<ResultadoCierre> {
   const validacion = reporteSimpleSchema.safeParse({
     ordenId: formData.get("ordenId"),
-    usuarioId: formData.get("usuarioId"),
     reporte: formData.get("reporte"),
   });
 
   if (!validacion.success) {
-    const [primero] = z.flattenError(validacion.error).formErrors;
-    const porCampo = Object.values(
-      z.flattenError(validacion.error).fieldErrors,
-    ).flat();
-
-    return fallo(primero ?? porCampo[0] ?? "No se pudo registrar el reporte.");
+    return fallo(
+      primerError(validacion.error, "No se pudo registrar el reporte."),
+    );
   }
 
-  const { ordenId, usuarioId, reporte } = validacion.data;
+  const { ordenId, reporte } = validacion.data;
 
-  const marcados = await obtenerMarcadosDeLaOrden(ordenId);
+  const situacion = await situacionDe(ordenId);
+  if (esFallo(situacion)) return situacion;
+  const { usuario, marcados } = situacion;
+
   const permiso = validarReporte({
     ordenExiste: marcados !== null,
     marcados: marcados ?? [],
     reporte,
+    rol: usuario.rol,
   });
 
   if (!permiso.permitido) return fallo(permiso.mensaje);
-
-  if (!(await esDeSecretaria(usuarioId))) {
-    return fallo("El cierre lo reporta la secretaría.");
-  }
 
   const supabase = await createClient();
 
   const { error } = await supabase
     .from("avance_seccion")
-    .insert({ orden_id: ordenId, checkpoint: reporte, usuario_id: usuarioId });
+    .insert({ orden_id: ordenId, checkpoint: reporte, usuario_id: usuario.id });
 
   if (error) {
     const conocido = mensajeConocido(error.code);
@@ -134,39 +151,36 @@ export async function reportarFactura(
 ): Promise<ResultadoCierre> {
   const validacion = facturaSchema.safeParse({
     ordenId: formData.get("ordenId"),
-    usuarioId: formData.get("usuarioId"),
     numeroFactura: formData.get("numeroFactura"),
   });
 
   if (!validacion.success) {
-    const porCampo = Object.values(
-      z.flattenError(validacion.error).fieldErrors,
-    ).flat();
-
-    return fallo(porCampo[0] ?? "No se pudo registrar la factura.");
+    return fallo(
+      primerError(validacion.error, "No se pudo registrar la factura."),
+    );
   }
 
-  const { ordenId, usuarioId, numeroFactura } = validacion.data;
+  const { ordenId, numeroFactura } = validacion.data;
 
-  const marcados = await obtenerMarcadosDeLaOrden(ordenId);
+  const situacion = await situacionDe(ordenId);
+  if (esFallo(situacion)) return situacion;
+  const { usuario, marcados } = situacion;
+
   const permiso = validarReporte({
     ordenExiste: marcados !== null,
     marcados: marcados ?? [],
     reporte: "factura_generada",
+    rol: usuario.rol,
   });
 
   if (!permiso.permitido) return fallo(permiso.mensaje);
 
-  if (!(await esDeSecretaria(usuarioId))) {
-    return fallo("El cierre lo reporta la secretaría.");
-  }
-
   const supabase = await createClient();
 
+  // La función toma a la persona de la sesión (`auth.uid()`): no se le manda.
   const { error } = await supabase.rpc("reportar_factura", {
     p_orden_id: ordenId,
     p_numero_factura: numeroFactura,
-    p_usuario_id: usuarioId,
   });
 
   if (error) {
@@ -188,37 +202,34 @@ export async function cerrarOrden(
 ): Promise<ResultadoCierre> {
   const validacion = cierreSchema.safeParse({
     ordenId: formData.get("ordenId"),
-    usuarioId: formData.get("usuarioId"),
   });
 
   if (!validacion.success) {
-    const porCampo = Object.values(
-      z.flattenError(validacion.error).fieldErrors,
-    ).flat();
-
-    return fallo(porCampo[0] ?? "No se pudo completar la orden.");
+    return fallo(
+      primerError(validacion.error, "No se pudo completar la orden."),
+    );
   }
 
-  const { ordenId, usuarioId } = validacion.data;
+  const { ordenId } = validacion.data;
 
-  const marcados = await obtenerMarcadosDeLaOrden(ordenId);
+  const situacion = await situacionDe(ordenId);
+  if (esFallo(situacion)) return situacion;
+  const { usuario, marcados } = situacion;
+
   const permiso = validarCierre({
     ordenExiste: marcados !== null,
     marcados: marcados ?? [],
+    rol: usuario.rol,
   });
 
   if (!permiso.permitido) return fallo(permiso.mensaje);
-
-  if (!(await esDeSecretaria(usuarioId))) {
-    return fallo("El cierre lo reporta la secretaría.");
-  }
 
   const supabase = await createClient();
 
   const { error } = await supabase.from("avance_seccion").insert({
     orden_id: ordenId,
     checkpoint: "cerrada",
-    usuario_id: usuarioId,
+    usuario_id: usuario.id,
   });
 
   if (error) {

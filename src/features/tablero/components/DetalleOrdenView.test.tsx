@@ -33,6 +33,7 @@ function ordenDePrueba(): DetalleOrden {
     fechaRecepcion: "2026-08-20",
     fechaEntrega: "2026-09-21",
     tallerNombre: null,
+    estadoTalleres: "Todavía no ha salido a ningún taller.",
     semaforo: "a_tiempo",
     etapas: ETAPAS_PENDIENTES,
     etapasCompletadas: 0,

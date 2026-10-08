@@ -1,7 +1,10 @@
 import {
   buscarCheckpoint,
+  ETIQUETAS_ROL,
   type CheckpointId,
+  type Rol,
 } from "@/features/workflow/checkpoints";
+import type { LoteEnviado } from "@/lib/talleres/estadoLotes";
 
 /**
  * HU-10 · Reglas del despacho a taller.
@@ -14,21 +17,32 @@ import {
 /** Sin esto marcado, no hay nada que mandar al taller. */
 export const CHECKPOINT_REQUERIDO: CheckpointId = "corte_completado";
 
+/** El único rol que despacha y recibe lotes. */
+export const ROL_DE_TALLERES: Rol = "logistica";
+
 export type ResultadoDespacho =
   { permitido: true } | { permitido: false; mensaje: string };
 
-/** Lo mínimo que hay que saber de un lote para saber si sigue afuera. */
-export type LoteEnviado = { recibido: boolean };
+function rolNoAutorizado(): ResultadoDespacho {
+  return {
+    permitido: false,
+    mensaje: `Los lotes a taller los maneja ${ETIQUETAS_ROL[ROL_DE_TALLERES]}.`,
+  };
+}
 
 /**
- * ¿Se puede mandar un lote de esta orden a un taller?
+ * ¿Puede esta persona mandar un lote de esta orden a un taller?
  *
  * Se puede despachar más de una vez: una orden se reparte entre varios talleres
- * (regla 6). Lo único que se exige es que el corte esté hecho.
+ * (regla 6). Se exige que el corte esté hecho y que quien despacha sea de
+ * logística; el rol sale de la sesión, nunca del formulario.
  */
 export function puedeDespachar(
   marcados: readonly CheckpointId[],
+  rol: Rol,
 ): ResultadoDespacho {
+  if (rol !== ROL_DE_TALLERES) return rolNoAutorizado();
+
   if (marcados.includes(CHECKPOINT_REQUERIDO)) {
     return { permitido: true };
   }
@@ -38,28 +52,6 @@ export function puedeDespachar(
     permitido: false,
     mensaje: `Antes hay que marcar "${etiqueta}".`,
   };
-}
-
-/** Los lotes que todavía están en el taller, sin confirmar su recepción. */
-export function lotesEnTaller<T extends LoteEnviado>(lotes: readonly T[]): T[] {
-  return lotes.filter((lote) => !lote.recibido);
-}
-
-/**
- * Cómo se lee el estado de la orden en cuanto a talleres. El estado no se
- * guarda en ninguna columna (regla 1): se deriva de los lotes.
- */
-export function describirEstadoDeTalleres(
-  lotes: readonly LoteEnviado[],
-): string {
-  if (lotes.length === 0) return "Todavía no ha salido a ningún taller.";
-
-  const afuera = lotesEnTaller(lotes).length;
-
-  if (afuera === 0) return "Todo el trabajo volvió del taller.";
-  if (afuera === 1 && lotes.length === 1) return "En confección.";
-
-  return `En confección · ${afuera} de ${lotes.length} lotes todavía en taller.`;
 }
 
 /**
@@ -72,7 +64,10 @@ export function describirEstadoDeTalleres(
  */
 export function puedeConfirmarRecepcion(
   lote: LoteEnviado | undefined,
+  rol: Rol,
 ): ResultadoDespacho {
+  if (rol !== ROL_DE_TALLERES) return rolNoAutorizado();
+
   if (!lote) {
     return {
       permitido: false,

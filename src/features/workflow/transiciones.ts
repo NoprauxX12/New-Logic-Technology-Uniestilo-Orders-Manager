@@ -11,9 +11,10 @@ import {
  * Reglas del motor de workflow (regla 2 de CLAUDE.md).
  *
  * Ninguna action inserta en `avance_seccion` por su cuenta: primero pregunta
- * aquí. El motor verifica tres cosas —que el checkpoint no esté ya marcado, que
- * sea el siguiente de la secuencia, y que el rol de quien marca sea el dueño de
- * esa sección—.
+ * aquí. El motor verifica cuatro cosas —que el checkpoint no esté ya marcado,
+ * que sea el siguiente de la secuencia, que el rol de quien marca sea el dueño
+ * de esa sección, y que se cumpla el requisito extra que la etapa declare en
+ * `checkpoints.ts`, si tiene uno—.
  *
  * Son funciones puras, sin base de datos ni `server-only`: reciben lo que la
  * orden ya tiene marcado y devuelven un veredicto. Así se pueden probar sin
@@ -27,7 +28,8 @@ export type MotivoRechazo =
   | "ya_marcado"
   | "todavia_no_disponible"
   | "fuera_de_secuencia"
-  | "rol_no_autorizado";
+  | "rol_no_autorizado"
+  | "requisito_pendiente";
 
 export type ResultadoMarcado =
   | { permitido: true }
@@ -66,6 +68,12 @@ type Peticion = {
   marcados: readonly CheckpointId[];
   /** El rol de quien está marcando. */
   rol: Rol;
+  /**
+   * Si logística ya confirmó la recepción de algún lote (HU-11). Solo lo mira
+   * la etapa que declara el requisito `recepcion_de_taller`; si no se informa,
+   * se asume que no.
+   */
+  recepcionConfirmada?: boolean;
 };
 
 /**
@@ -78,8 +86,10 @@ export function puedeMarcar({
   checkpoint,
   marcados,
   rol,
+  recepcionConfirmada = false,
 }: Peticion): ResultadoMarcado {
-  const { etiqueta, rolDueno, disponible } = buscarCheckpoint(checkpoint);
+  const { etiqueta, rolDueno, disponible, requisito } =
+    buscarCheckpoint(checkpoint);
 
   if (marcados.includes(checkpoint)) {
     return {
@@ -114,6 +124,14 @@ export function puedeMarcar({
       permitido: false,
       motivo: "rol_no_autorizado",
       mensaje: `"${etiqueta}" lo marca ${ETIQUETAS_ROL[rolDueno]}.`,
+    };
+  }
+
+  if (requisito === "recepcion_de_taller" && !recepcionConfirmada) {
+    return {
+      permitido: false,
+      motivo: "requisito_pendiente",
+      mensaje: `${ETIQUETAS_ROL.logistica} debe confirmar primero la recepción de las prendas del taller.`,
     };
   }
 

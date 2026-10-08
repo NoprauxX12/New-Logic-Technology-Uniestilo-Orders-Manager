@@ -9,6 +9,9 @@ import { z } from "zod";
  *
  * El `trim()` va antes del `min(1)` a propósito: así un taller escrito con puros
  * espacios cuenta como vacío, que es el criterio de aceptación de la historia.
+ *
+ * No pide quién despacha: eso sale de la sesión (HU-16), no de un campo que
+ * cualquiera podría cambiar para firmar a nombre de otra persona (RNF-05).
  */
 export const despacharLoteSchema = z.object({
   // `guid` y no `uuid`: los identificadores del seed no cumplen la versión ni la
@@ -29,10 +32,6 @@ export const despacharLoteSchema = z.object({
     .trim()
     .min(1, "Escribe qué prendas se enviaron")
     .max(1000, "La descripción de las prendas es muy larga"),
-
-  // Quién despacha. Mientras no exista el login (HU-16) se escoge de una lista
-  // de usuarios de logística; después saldrá de la sesión y este campo se va.
-  enviadoPor: z.guid({ error: "Escoge quién hace el despacho" }),
 });
 
 /** Datos ya validados y sin espacios sobrantes. */

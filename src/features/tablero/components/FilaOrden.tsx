@@ -123,6 +123,7 @@ export function FilaOrden({ orden }: { orden: OrdenEnTablero }) {
           <div>
             <dt className="text-xs text-zinc-500">Taller</dt>
             <dd className="text-zinc-800">{orden.tallerNombre ?? "—"}</dd>
+            <dd className="text-xs text-stone-700">{orden.estadoTalleres}</dd>
           </div>
         </dl>
 

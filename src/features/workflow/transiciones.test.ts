@@ -240,6 +240,8 @@ describe("puedeMarcar", () => {
         checkpoint: checkpoint.id,
         marcados,
         rol: checkpoint.rolDueno,
+        // Logística ya recibió el lote: es el recorrido completo y feliz.
+        recepcionConfirmada: true,
       });
 
       expect(resultado.permitido).toBe(true);
@@ -286,5 +288,87 @@ describe("puedeMarcar · lista para despachar (HU-19)", () => {
     });
 
     expect(resultado.permitido).toBe(true);
+  });
+});
+
+/**
+ * HU-12 tiene un requisito que no es un checkpoint: logística tiene que haber
+ * confirmado la recepción de al menos un lote (HU-11) antes de que marcación
+ * reciba la orden. El motor lo conoce para que siga siendo el único que decide
+ * (regla 2), y `checkpoints.ts` dice qué etapa lo exige (regla 4).
+ */
+describe("puedeMarcar · requisito de recepción del taller (HU-12)", () => {
+  const { rolDueno } = buscarCheckpoint("llegada_marcacion");
+  const previos = primerasDisponibles(DISPONIBLES.indexOf("llegada_marcacion"));
+
+  it("checkpoints.ts declara que la llegada a marcación exige la recepción", () => {
+    expect(buscarCheckpoint("llegada_marcacion").requisito).toBe(
+      "recepcion_de_taller",
+    );
+  });
+
+  it("no deja marcar la llegada mientras logística no confirme la recepción", () => {
+    const resultado = puedeMarcar({
+      checkpoint: "llegada_marcacion",
+      marcados: previos,
+      rol: rolDueno,
+      recepcionConfirmada: false,
+    });
+
+    expect(resultado.permitido).toBe(false);
+    if (resultado.permitido) return;
+    expect(resultado.motivo).toBe("requisito_pendiente");
+    expect(resultado.mensaje).toMatch(/logística.*recepción/i);
+  });
+
+  it("deja marcar la llegada cuando la recepción está confirmada", () => {
+    const resultado = puedeMarcar({
+      checkpoint: "llegada_marcacion",
+      marcados: previos,
+      rol: rolDueno,
+      recepcionConfirmada: true,
+    });
+
+    expect(resultado.permitido).toBe(true);
+  });
+
+  it("si no se dice nada sobre la recepción, la exige igual", () => {
+    const resultado = puedeMarcar({
+      checkpoint: "llegada_marcacion",
+      marcados: previos,
+      rol: rolDueno,
+    });
+
+    expect(resultado.permitido).toBe(false);
+  });
+
+  it("las etapas sin requisito no se fijan en la recepción", () => {
+    const sinRequisito = CHECKPOINTS_DISPONIBLES.find(
+      (c) => !("requisito" in c),
+    );
+    expect(sinRequisito).toBeDefined();
+    if (!sinRequisito) return;
+
+    const resultado = puedeMarcar({
+      checkpoint: sinRequisito.id,
+      marcados: primerasDisponibles(DISPONIBLES.indexOf(sinRequisito.id)),
+      rol: sinRequisito.rolDueno,
+      recepcionConfirmada: false,
+    });
+
+    expect(resultado.permitido).toBe(true);
+  });
+
+  it("avisa primero que falta un paso anterior, y después el requisito", () => {
+    const resultado = puedeMarcar({
+      checkpoint: "llegada_marcacion",
+      marcados: [],
+      rol: rolDueno,
+      recepcionConfirmada: false,
+    });
+
+    expect(resultado.permitido).toBe(false);
+    if (resultado.permitido) return;
+    expect(resultado.motivo).toBe("fuera_de_secuencia");
   });
 });
