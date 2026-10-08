@@ -41,6 +41,8 @@ const REGLAS: readonly Regla[] = [
   conId("/tablero", [ADMIN]),
   // HU-01: registrar órdenes es de administración.
   exacta("/ordenes/nueva", [ADMIN]),
+  // HU-24: crear cuentas es de administración.
+  exacta("/usuarios", [ADMIN]),
   // HU-10 y HU-11: logística despacha y recibe desde el detalle de la orden.
   exacta("/ordenes/talleres", ["logistica", ADMIN]),
   conId("/ordenes", ["logistica", ADMIN]),
