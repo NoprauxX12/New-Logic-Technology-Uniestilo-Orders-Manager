@@ -3,11 +3,16 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* El verde del logo de Uniestilo y su versión oscura para hover. */
+  --marca: #0b8a46;
+  --marca-oscuro: #076a35;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-marca: var(--marca);
+  --color-marca-oscuro: var(--marca-oscuro);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
