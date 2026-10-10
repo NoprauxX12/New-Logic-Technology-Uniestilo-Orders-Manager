@@ -1,0 +1,198 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  detallarOrden,
+  filtrarOrdenes,
+  filtrarPorEstado,
+  normalizar,
+  resumirOrden,
+} from "@/features/asistente/formato";
+import { CHECKPOINTS_DISPONIBLES } from "@/features/workflow/checkpoints";
+import { armarEtapas, contarProgreso } from "@/lib/ordenes/reglas";
+import type {
+  AvanceSeccion,
+  DetalleOrden,
+  OrdenEnTablero,
+} from "@/lib/ordenes/types";
+
+const AHORA = new Date("2026-10-10T12:00:00");
+
+function avance(
+  seccion: AvanceSeccion["seccion"],
+  fechaHora: string,
+  observacion?: string,
+): AvanceSeccion {
+  return {
+    seccion,
+    usuarioId: "u1",
+    usuarioNombre: "Camila Ríos",
+    fechaHora,
+    observacion,
+  };
+}
+
+function ordenStub(
+  parcial: Partial<OrdenEnTablero> & { avances?: AvanceSeccion[] } = {},
+): DetalleOrden {
+  const avances = parcial.avances ?? [];
+  const etapas = armarEtapas(avances);
+  const { completadas, totales } = contarProgreso(etapas);
+  return {
+    id: "f3",
+    numeroOrdenCompra: "OC-5003",
+    razonSocial: "Colegio San José",
+    prenda: "Camisa · Pantalón",
+    cantidad: 120,
+    fechaRecepcion: "2026-09-12",
+    fechaEntrega: "2026-10-16",
+    tallerNombre: null,
+    estadoTalleres: "Todavía no ha salido a ningún taller.",
+    semaforo: "a_tiempo",
+    etapas,
+    etapasCompletadas: completadas,
+    etapasTotales: totales,
+    avances,
+    ...parcial,
+  };
+}
+
+describe("resumirOrden", () => {
+  it("cuenta la orden en lenguaje del taller, con fechas legibles", () => {
+    const resumen = resumirOrden(
+      ordenStub({
+        avances: [avance("corte_completado", "2026-10-09T15:12:00Z")],
+      }),
+      AHORA,
+    );
+
+    expect(resumen).toMatchObject({
+      ordenId: "f3",
+      numeroOrdenCompra: "OC-5003",
+      cliente: "Colegio San José",
+      cantidadTotal: 120,
+      fechaIngreso: "12/09/2026",
+      fechaEntrega: "16/10/2026",
+      diasParaEntrega: 6,
+      semaforo: "a tiempo",
+      etapaActual: "Corte completado",
+      loQueSigue: { etapa: "Llegada a marcación", responsable: "Marcación" },
+      avance: "1 de 7 etapas",
+    });
+  });
+
+  it("dice que no hay etapas marcadas cuando la orden está recién registrada", () => {
+    const resumen = resumirOrden(ordenStub(), AHORA);
+
+    expect(resumen.etapaActual).toMatch(/sin etapas marcadas/);
+    expect(resumen.loQueSigue).toEqual({
+      etapa: "Corte completado",
+      responsable: "Corte",
+    });
+  });
+
+  it("no tiene nada que seguir cuando la orden está cerrada", () => {
+    const todas = CHECKPOINTS_DISPONIBLES.map((cp, i) =>
+      avance(cp.id, `2026-10-0${i + 1}T10:00:00Z`),
+    );
+    const resumen = resumirOrden(ordenStub({ avances: todas }), AHORA);
+
+    expect(resumen.etapaActual).toBe("Orden cerrada");
+    expect(resumen.loQueSigue).toBeNull();
+    expect(resumen.avance).toBe("7 de 7 etapas");
+  });
+});
+
+describe("detallarOrden", () => {
+  it("agrega quién marcó cada etapa, cuándo (hora de Colombia) y qué falta", () => {
+    const detalle = detallarOrden(
+      ordenStub({
+        avances: [
+          avance("corte_completado", "2026-10-09T15:12:00Z", "Faltó un rollo"),
+        ],
+      }),
+      CHECKPOINTS_DISPONIBLES,
+      AHORA,
+    );
+
+    expect(detalle.historial).toEqual([
+      {
+        etapa: "Corte completado",
+        quien: "Camila Ríos",
+        cuando: expect.stringMatching(/9\/10\/2026.*10:12/),
+        observacion: "Faltó un rollo",
+      },
+    ]);
+    expect(detalle.etapasPendientes).toEqual([
+      "Llegada a marcación",
+      "Lista para despachar",
+      "Etiquetas asignadas",
+      "Documentos de despacho",
+      "Factura generada",
+      "Orden cerrada",
+    ]);
+  });
+});
+
+describe("filtrarOrdenes", () => {
+  const ordenes = [
+    ordenStub(),
+    ordenStub({
+      id: "f5",
+      numeroOrdenCompra: "OC-5005",
+      razonSocial: "Dotaciones Ríos",
+    }),
+  ];
+
+  it("encuentra por parte del número, sin importar mayúsculas ni el prefijo", () => {
+    expect(filtrarOrdenes(ordenes, "5003").map((o) => o.id)).toEqual(["f3"]);
+    expect(filtrarOrdenes(ordenes, "oc-5005").map((o) => o.id)).toEqual(["f5"]);
+  });
+
+  it("encuentra por el cliente sin tildes", () => {
+    expect(filtrarOrdenes(ordenes, "san jose").map((o) => o.id)).toEqual([
+      "f3",
+    ]);
+    expect(filtrarOrdenes(ordenes, "RIOS").map((o) => o.id)).toEqual(["f5"]);
+  });
+
+  it("no devuelve nada con un texto vacío", () => {
+    expect(filtrarOrdenes(ordenes, "   ")).toEqual([]);
+  });
+});
+
+describe("filtrarPorEstado", () => {
+  const sinEmpezar = ordenStub({ id: "a" });
+  const enProduccion = ordenStub({
+    id: "b",
+    semaforo: "atrasada",
+    avances: [avance("corte_completado", "2026-10-01T10:00:00Z")],
+  });
+  const terminada = ordenStub({
+    id: "c",
+    semaforo: "en_riesgo",
+    avances: CHECKPOINTS_DISPONIBLES.map((cp, i) =>
+      avance(cp.id, `2026-10-0${i + 1}T10:00:00Z`),
+    ),
+  });
+  const ordenes = [sinEmpezar, enProduccion, terminada];
+  const ids = (lista: OrdenEnTablero[]) => lista.map((o) => o.id);
+
+  it("separa por avance", () => {
+    expect(ids(filtrarPorEstado(ordenes, "todas"))).toEqual(["a", "b", "c"]);
+    expect(ids(filtrarPorEstado(ordenes, "sin_empezar"))).toEqual(["a"]);
+    expect(ids(filtrarPorEstado(ordenes, "en_produccion"))).toEqual(["b"]);
+    expect(ids(filtrarPorEstado(ordenes, "terminadas"))).toEqual(["c"]);
+  });
+
+  it("separa por semáforo", () => {
+    expect(ids(filtrarPorEstado(ordenes, "atrasadas"))).toEqual(["b"]);
+    expect(ids(filtrarPorEstado(ordenes, "en_riesgo"))).toEqual(["c"]);
+  });
+});
+
+describe("normalizar", () => {
+  it("quita tildes, virgulillas, mayúsculas y espacios de sobra", () => {
+    // La ñ también pierde su virgulilla: así "nandu" encuentra a "Ñandú".
+    expect(normalizar("  Confección Ñandú ")).toBe("confeccion nandu");
+  });
+});
