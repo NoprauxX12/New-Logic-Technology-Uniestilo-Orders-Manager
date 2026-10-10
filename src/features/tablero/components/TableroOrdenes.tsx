@@ -1,7 +1,7 @@
 import { EstadoVacioTablero } from "@/features/tablero/components/EstadoVacioTablero";
 import { FilaOrden } from "@/features/tablero/components/FilaOrden";
 import { ResumenMetricas } from "@/features/tablero/components/ResumenMetricas";
-import type { OrdenEnTablero, ResumenTablero } from "@/features/tablero/types";
+import type { OrdenEnTablero, ResumenTablero } from "@/lib/ordenes/types";
 
 type Props = {
   ordenes: OrdenEnTablero[];

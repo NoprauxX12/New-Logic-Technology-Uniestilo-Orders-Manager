@@ -5,21 +5,25 @@ import {
   contarProgreso,
   derivarSemaforo,
   resumirTablero,
-} from "@/features/tablero/reglas";
+} from "@/lib/ordenes/reglas";
 import type {
   AvanceSeccion,
   DetalleOrden,
   OrdenEnTablero,
   OrdenResumen,
   ResumenTablero,
-} from "@/features/tablero/types";
+} from "@/lib/ordenes/types";
 import { createClient } from "@/lib/supabase/server";
 import { describirEstadoDeTalleres } from "@/lib/talleres/estadoLotes";
 
 /**
- * Lectura del tablero (HU-14). El estado de cada orden se deriva de
- * `avance_seccion`, de los lotes y de las fechas; no hay columna `estado`
- * (regla 1).
+ * El estado de una orden, leído de la base y derivado (HU-14, HU-15). Se
+ * deriva de `avance_seccion`, de los lotes y de las fechas; no hay columna
+ * `estado` (regla 1).
+ *
+ * Vive en `lib/` y no en la feature `tablero` porque lo necesitan dos
+ * features: el tablero lo pinta y el asistente (HU-15) lo cuenta. Una feature
+ * no importa de otra (ADR 0003).
  *
  * La forma de las filas la infiere el cliente de Supabase a partir de
  * `database.types.ts` y del `select`: no se escribe a mano ni se fuerza con un
