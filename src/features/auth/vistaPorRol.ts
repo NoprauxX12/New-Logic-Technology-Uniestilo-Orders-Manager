@@ -53,6 +53,10 @@ const VISTAS: Record<Rol, VistaDeRol> = {
   logistica: {
     botones: [
       { etiqueta: "Despachar y recibir lotes", ruta: "/ordenes/talleres" },
+      {
+        etiqueta: `Marcar ${buscarCheckpoint("recogido_bordado").etiqueta.toLowerCase()}`,
+        ruta: "/ordenes/recogido-bordado",
+      },
     ],
     aviso: null,
   },

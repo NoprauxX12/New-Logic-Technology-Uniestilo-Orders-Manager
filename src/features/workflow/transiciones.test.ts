@@ -372,3 +372,29 @@ describe("puedeMarcar · requisito de recepción del taller (HU-12)", () => {
     expect(resultado.motivo).toBe("fuera_de_secuencia");
   });
 });
+
+describe("HU-09 · recogido y bordado", () => {
+  it("permite a logística marcar después del corte", () => {
+    expect(
+      puedeMarcar({
+        checkpoint: "recogido_bordado",
+        marcados: ["corte_completado"],
+        rol: "logistica",
+      }),
+    ).toEqual({ permitido: true });
+  });
+
+  it("impide pasar a marcación sin recogido y bordado", () => {
+    expect(
+      puedeMarcar({
+        checkpoint: "llegada_marcacion",
+        marcados: ["corte_completado"],
+        rol: "marcacion",
+        recepcionConfirmada: true,
+      }),
+    ).toMatchObject({
+      permitido: false,
+      motivo: "fuera_de_secuencia",
+    });
+  });
+});
