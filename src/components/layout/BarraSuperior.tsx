@@ -20,7 +20,7 @@ export function BarraSuperior({ usuario }: { usuario: UsuarioActual }) {
           className="flex min-h-11 items-center gap-3 text-base font-semibold text-stone-700 hover:text-stone-900"
         >
           <Image
-            src="/logo-uniestilo.png"
+            src="/logo-uniestilo.svg"
             alt="Uniestilo"
             width={44}
             height={45}

@@ -36,7 +36,7 @@ export default async function LoginPage({ searchParams }: Props) {
         <header className="flex flex-col items-center gap-4 text-center">
           <div className="flex size-28 items-center justify-center rounded-3xl bg-white shadow-md ring-1 ring-zinc-200">
             <Image
-              src="/logo-uniestilo.png"
+              src="/logo-uniestilo.svg"
               alt="Logo de Uniestilo"
               width={88}
               height={90}
