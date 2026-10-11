@@ -29,6 +29,7 @@ const VISTAS: Record<Rol, VistaDeRol> = {
     botones: [
       { etiqueta: "Ver el tablero", ruta: "/tablero" },
       { etiqueta: "Registrar una orden", ruta: "/ordenes/nueva" },
+      { etiqueta: "Crear cuentas", ruta: "/usuarios" },
     ],
     aviso: null,
   },

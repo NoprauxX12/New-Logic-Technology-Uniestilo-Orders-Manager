@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 /**
  * Campo de texto con su etiqueta y su error debajo.
  *
@@ -31,6 +33,8 @@ type Props = {
   valorInicial?: string;
   /** Para que el navegador y el gestor de contraseñas sepan qué es el campo. */
   autocompletar?: string;
+  /** Un ícono decorativo a la izquierda, dentro del campo (login). */
+  icono?: ReactNode;
 };
 
 export function CampoTexto({
@@ -44,6 +48,7 @@ export function CampoTexto({
   errores,
   valorInicial,
   autocompletar,
+  icono,
 }: Props) {
   const idCampo = identificador ?? nombre;
   const idError = `${idCampo}-error`;
@@ -62,26 +67,37 @@ export function CampoTexto({
         </p>
       ) : null}
 
-      <input
-        id={idCampo}
-        name={nombre}
-        type={tipo}
-        inputMode={numerico ? "numeric" : undefined}
-        placeholder={marcador}
-        defaultValue={valorInicial}
-        autoComplete={autocompletar}
-        aria-invalid={tieneError}
-        aria-describedby={
-          [ayuda ? idAyuda : null, tieneError ? idError : null]
-            .filter(Boolean)
-            .join(" ") || undefined
-        }
-        className={[
-          "min-h-12 rounded-lg border bg-white px-3 text-base text-zinc-900",
-          "focus:ring-2 focus:ring-stone-500 focus:outline-none",
-          tieneError ? "border-red-600" : "border-zinc-300",
-        ].join(" ")}
-      />
+      <div className="relative">
+        {icono ? (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-zinc-400"
+          >
+            {icono}
+          </span>
+        ) : null}
+        <input
+          id={idCampo}
+          name={nombre}
+          type={tipo}
+          inputMode={numerico ? "numeric" : undefined}
+          placeholder={marcador}
+          defaultValue={valorInicial}
+          autoComplete={autocompletar}
+          aria-invalid={tieneError}
+          aria-describedby={
+            [ayuda ? idAyuda : null, tieneError ? idError : null]
+              .filter(Boolean)
+              .join(" ") || undefined
+          }
+          className={[
+            "min-h-12 w-full rounded-lg border bg-white text-base text-zinc-900",
+            icono ? "pr-3 pl-10" : "px-3",
+            "focus:ring-2 focus:ring-stone-500 focus:outline-none",
+            tieneError ? "border-red-600" : "border-zinc-300",
+          ].join(" ")}
+        />
+      </div>
 
       {tieneError ? (
         <p

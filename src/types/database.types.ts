@@ -354,6 +354,7 @@ export type Database = {
       }
       usuario: {
         Row: {
+          activo: boolean
           creado_en: string
           email: string
           id: string
@@ -361,6 +362,7 @@ export type Database = {
           rol: Database["public"]["Enums"]["rol"]
         }
         Insert: {
+          activo?: boolean
           creado_en?: string
           email: string
           id: string
@@ -368,6 +370,7 @@ export type Database = {
           rol: Database["public"]["Enums"]["rol"]
         }
         Update: {
+          activo?: boolean
           creado_en?: string
           email?: string
           id?: string
