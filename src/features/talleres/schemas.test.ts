@@ -1,0 +1,119 @@
+import { describe, expect, it } from "vitest";
+import { z } from "zod";
+
+import {
+  confirmarRecepcionSchema,
+  despacharLoteSchema,
+} from "@/features/talleres/schemas";
+
+const ORDEN_ID = "00000000-0000-0000-0000-0000000000f3";
+const LOTE_ID = "00000000-0000-0000-0000-000000000abc";
+
+const DESPACHO_VALIDO = {
+  ordenId: ORDEN_ID,
+  taller: "Taller Marinilla Centro",
+  descripcionPrendas: "250 polos verdes talla S y M",
+};
+
+type ErroresPorCampo = Record<string, string[] | undefined>;
+
+function erroresDe(entrada: unknown): ErroresPorCampo {
+  const resultado = despacharLoteSchema.safeParse(entrada);
+  if (resultado.success) return {};
+  return z.flattenError(resultado.error).fieldErrors as ErroresPorCampo;
+}
+
+describe("despacharLoteSchema", () => {
+  it("acepta un despacho completo", () => {
+    expect(despacharLoteSchema.safeParse(DESPACHO_VALIDO).success).toBe(true);
+  });
+
+  it("no deja despachar sin taller", () => {
+    const errores = erroresDe({ ...DESPACHO_VALIDO, taller: "" });
+
+    expect(errores.taller).toContain("Escribe a qué taller se envió el lote");
+  });
+
+  it("tampoco deja despachar con un taller de puros espacios", () => {
+    const errores = erroresDe({ ...DESPACHO_VALIDO, taller: "    " });
+
+    expect(errores.taller).toContain("Escribe a qué taller se envió el lote");
+  });
+
+  it("quita los espacios sobrantes de lo que se escribió", () => {
+    const resultado = despacharLoteSchema.safeParse({
+      ...DESPACHO_VALIDO,
+      taller: "  Taller Marinilla Centro  ",
+    });
+
+    expect(resultado.success && resultado.data.taller).toBe(
+      "Taller Marinilla Centro",
+    );
+  });
+
+  it("pide la descripción de las prendas", () => {
+    const errores = erroresDe({ ...DESPACHO_VALIDO, descripcionPrendas: "" });
+
+    expect(errores.descripcionPrendas).toContain(
+      "Escribe qué prendas se enviaron",
+    );
+  });
+
+  it("ignora un enviadoPor que llegue en el formulario: quien despacha sale de la sesión", () => {
+    const resultado = despacharLoteSchema.safeParse({
+      ...DESPACHO_VALIDO,
+      enviadoPor: "00000000-0000-0000-0000-0000000000a1",
+    });
+
+    expect(resultado.success).toBe(true);
+    expect(resultado.success && "enviadoPor" in resultado.data).toBe(false);
+  });
+
+  it("rechaza una orden que no es un identificador válido", () => {
+    const errores = erroresDe({ ...DESPACHO_VALIDO, ordenId: "la-primera" });
+
+    expect(errores.ordenId).toContain(
+      "No se sabe a qué orden pertenece este despacho",
+    );
+  });
+});
+
+describe("confirmarRecepcionSchema", () => {
+  it("acepta una recepción completa, sin observaciones", () => {
+    const resultado = confirmarRecepcionSchema.safeParse({
+      loteId: LOTE_ID,
+      completo: "si",
+    });
+
+    expect(resultado.success).toBe(true);
+    expect(resultado.success && resultado.data.completo).toBe(true);
+  });
+
+  it("convierte 'no' en false, no en un texto", () => {
+    const resultado = confirmarRecepcionSchema.safeParse({
+      loteId: LOTE_ID,
+      completo: "no",
+      observaciones: "Faltaron 3 camisas talla M",
+    });
+
+    expect(resultado.success && resultado.data.completo).toBe(false);
+  });
+
+  it("pide marcar si llegó completo o no", () => {
+    const resultado = confirmarRecepcionSchema.safeParse({
+      loteId: LOTE_ID,
+      completo: "",
+    });
+
+    expect(resultado.success).toBe(false);
+  });
+
+  it("rechaza un lote que no es un identificador válido", () => {
+    const resultado = confirmarRecepcionSchema.safeParse({
+      loteId: "",
+      completo: "si",
+    });
+
+    expect(resultado.success).toBe(false);
+  });
+});

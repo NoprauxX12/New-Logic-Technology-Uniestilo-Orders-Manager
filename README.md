@@ -1,36 +1,139 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Uniestilo · Gestor de órdenes de producción
 
-## Getting Started
+Plataforma web para registrar y seguir las órdenes de producción de **Uniestilo S.A.S.** (confección, Marinilla, Antioquia): cada área marca su parte del proceso y el administrador ve el avance de todas las órdenes en un tablero en tiempo real. Reemplaza los cuadernos y el WhatsApp.
 
-First, run the development server:
+Proyecto Integrador 2 · Universidad EAFIT · 2026-2 · Equipo **New Logic Technology**.
+
+## Equipo
+
+| Integrante             | Rol                                    |
+| ---------------------- | -------------------------------------- |
+| Juan José Díaz         | Ingeniero de Datos & Backend           |
+| Jerónimo Campuzano     | Scrum Master & Ingeniero IA            |
+| Leidy D. Roldán        | Ingeniera Frontend & Testing           |
+| Juan José Escobar      | Ingeniero de Infraestructura & Backend |
+| Juan Sebastián Lizcano | Ingeniero Backend & Frontend           |
+
+## Stack
+
+Next.js 16 · React 19 · TypeScript · Tailwind CSS 4 · Supabase (Postgres + RLS, Auth, Storage, Realtime) · Vercel.
+
+## Empezar
+
+Requisitos: Node 22 (`nvm use` lee `.nvmrc`), npm y Docker (solo para Supabase local).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm ci
+cp .env.example .env.local   # completar con las llaves del proyecto de Supabase
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Base de datos local con la CLI de Supabase (recomendado para no tocar datos reales):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npx supabase start           # Postgres, Auth y Studio en Docker
+npx supabase db reset        # aplica migraciones y seed
+npm run db:types             # regenera src/types/database.types.ts
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`npx supabase init` ya no hace falta: la configuración está versionada en
+`supabase/config.toml` y volver a inicializarla la dejaría distinta a la del
+resto del equipo. El `start` imprime las llaves que van en `.env.local`.
 
-## Learn More
+Para mirar las tablas y correr consultas está **Supabase Studio**, el panel web
+que levanta el `start`: http://127.0.0.1:54323
 
-To learn more about Next.js, take a look at the following resources:
+## Datos de prueba
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`npx supabase db reset` aplica las migraciones y carga `supabase/seed.sql`. Todo lo que trae es inventado —clientes, personas y órdenes— sobre el proceso real de Uniestilo. Los correos usan el dominio `.test`, reservado para pruebas.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Hay una persona por rol, con su cuenta de autenticación ya creada y la contraseña `uniestilo123` igual para todas (solo en local). Con eso se entra por `/login`: ver [Iniciar sesión](#iniciar-sesión).
 
-## Deploy on Vercel
+| Rol          | Id en `usuario`                        | Correo                      | Marca                                      |
+| ------------ | -------------------------------------- | --------------------------- | ------------------------------------------ |
+| `admin`      | `00000000-0000-0000-0000-0000000000a1` | `admin@uniestilo.test`      | Registra órdenes y ve el tablero completo  |
+| `secretaria` | `00000000-0000-0000-0000-0000000000a2` | `secretaria@uniestilo.test` | Cotización, programación, tela y cierre    |
+| `diseno`     | `00000000-0000-0000-0000-0000000000a3` | `diseno@uniestilo.test`     | Ficha técnica                              |
+| `corte`      | `00000000-0000-0000-0000-0000000000a4` | `corte@uniestilo.test`      | Corte completado                           |
+| `logistica`  | `00000000-0000-0000-0000-0000000000a5` | `logistica@uniestilo.test`  | Recogido y bordado, lotes a taller         |
+| `marcacion`  | `00000000-0000-0000-0000-0000000000a6` | `marcacion@uniestilo.test`  | Llegada a marcación y lista para despachar |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Y hay siete órdenes, cada una parada en un punto distinto del flujo, para que nadie tenga que hacerle clic a medio proceso solo para llegar a su pantalla:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Orden     | Avances | Le sigue             | Sirve para                                     |
+| --------- | ------- | -------------------- | ---------------------------------------------- |
+| `OC-5001` | 0       | Cotización aprobada  | El comienzo del flujo (HU-02)                  |
+| `OC-5002` | 4       | Corte completado     | HU-08                                          |
+| `OC-5003` | 5       | Recogido y bordado   | HU-09, y tiene un lote todavía en el taller    |
+| `OC-5004` | 6       | Llegada a marcación  | HU-12, y tiene un lote recibido incompleto     |
+| `OC-5005` | 7       | Lista para despachar | HU-19. Va atrasada: sirve para el semáforo     |
+| `OC-5006` | 8       | Orden cerrada        | HU-13                                          |
+| `OC-5007` | 9       | —                    | Flujo completo, para el tablero y el histórico |
+
+HU-10 despacha un lote nuevo desde cualquier orden que ya tenga el corte hecho (`OC-5003` en adelante); HU-11 confirma los lotes que el seed dejó abiertos.
+
+## Iniciar sesión
+
+Login real contra Supabase Auth (HU-16), en `/login`, con las seis cuentas del seed. Al entrar, `/` muestra a quién le toca qué y un botón a su pantalla:
+
+| Rol          | Botón                                                | Ruta                                      |
+| ------------ | ---------------------------------------------------- | ----------------------------------------- |
+| `admin`      | Ver el tablero / Registrar una orden / Crear cuentas | `/tablero`, `/ordenes/nueva`, `/usuarios` |
+| `secretaria` | Cerrar órdenes                                       | `/ordenes/cierre`                         |
+| `corte`      | Marcar corte completado                              | `/ordenes/corte`                          |
+| `marcacion`  | Marcar llegada a marcación                           | `/ordenes/marcacion`                      |
+| `logistica`  | Despachar y recibir lotes                            | `/ordenes/talleres`                       |
+| `diseno`     | Solo un aviso: su pantalla (HU-04) no existe aún     | —                                         |
+
+Sin sesión, el proxy manda a `/login` a cualquier ruta que no sea `/` o `/login`. Con sesión, cada pantalla exige el rol que le toca (HU-17): el mapa está en `src/features/auth/accesoPorRuta.ts` y lo aplica `exigirAcceso()` al principio de cada página. Administración entra a todo; quien abre una pantalla ajena vuelve a `/` con un aviso.
+
+La base repite el control con RLS (`docs/adr/0007-rls-por-rol-y-acceso-por-pantalla.md`): solo se lee con sesión, solo escribe el rol dueño y siempre a su propio nombre. `anon` no tiene permisos y el registro de cuentas está apagado. El rol de cada persona viaja además como claim `user_role` en su JWT (ADR 0006), todavía sin usar.
+
+## Crear cuentas (HU-24)
+
+Administración entra a `/usuarios`, escribe nombre, correo, rol y una contraseña inicial, y le dice la contraseña a la persona. Desde la misma pantalla edita nombre, correo y rol, cambia la contraseña, desactiva o reactiva la cuenta, y la borra si la persona nunca marcó nada (si tiene rastro, la base lo impide y hay que desactivarla). Nadie puede cambiarse el rol, desactivarse ni borrarse a sí mismo.
+
+La cuenta vive en Supabase Auth, que se toca con la API de administración, y el perfil en `usuario`, que se escribe con la sesión del administrador para que RLS vuelva a comprobar el rol (`docs/adr/0008`). Necesita `SUPABASE_SECRET_KEY` en el servidor; en local la trae `npx supabase status`.
+
+## Marcar un avance
+
+La secuencia de checkpoints y el rol dueño de cada uno viven en un solo archivo: `src/features/workflow/checkpoints.ts`. **Ninguna action inserta en `avance_seccion` por su cuenta** (regla 2 de `CLAUDE.md`): primero le pregunta al motor.
+
+```ts
+import { puedeMarcar } from "@/features/workflow/transiciones";
+
+const veredicto = puedeMarcar({
+  checkpoint: "corte_completado",
+  marcados,
+  rol,
+});
+if (!veredicto.permitido) return { ok: false, mensaje: veredicto.mensaje };
+```
+
+`marcados` son los checkpoints que la orden ya tiene; `rol` es el de quien marca. El motor verifica que no esté ya marcado, que sea el siguiente de la secuencia y que el rol sea el dueño, y devuelve el mensaje listo para mostrar. La base respalda lo primero por su cuenta con un índice único sobre `(orden_id, checkpoint)`.
+
+Quien marca sale de `getUsuarioActual()` (`src/lib/auth/usuarioActual.ts`), no de un UUID escrito en cada action: `avance_seccion.usuario_id` es obligatorio, y desde HU-16 esa función lee la sesión real en vez de una cookie sin verificar. Si el rol de quien inició sesión no es el dueño del checkpoint, el botón sale deshabilitado con el motivo.
+
+En vez de escribir en `avance_seccion` por su cuenta, una historia de marcado cablea la acción genérica que ya existe, pasándole su propio checkpoint:
+
+```tsx
+<AccionMarcarAvance ordenId={orden.id} checkpoint="corte_completado" veredicto={...} />
+```
+
+## Comandos
+
+| Comando            | Qué hace                                                      |
+| ------------------ | ------------------------------------------------------------- |
+| `npm run dev`      | Servidor de desarrollo                                        |
+| `npm run build`    | Build de producción                                           |
+| `npm run check`    | Formato + lint + tipos + tests. Correrlo antes de abrir un PR |
+| `npm run lint:fix` | Arregla lo que ESLint pueda arreglar solo                     |
+| `npm run format`   | Formatea todo con Prettier                                    |
+| `npm test`         | Tests en modo watch                                           |
+
+## Documentación
+
+- [`CLAUDE.md`](CLAUDE.md): estándares de código, estructura del proyecto y reglas del dominio. Lectura obligatoria.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md): ramas, commits, PRs y releases.
+- [`docs/adr/`](docs/adr/): decisiones de arquitectura.
+- Backlog: https://github.com/users/NoprauxX12/projects/7/views/3

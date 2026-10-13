@@ -1,0 +1,62 @@
+import { z } from "zod";
+
+/**
+ * HU-10 · Validación del despacho de un lote a un taller satélite.
+ *
+ * Lo usan el formulario y la server action, para que las reglas se escriban una
+ * sola vez. Los mensajes se los lee alguien de logística: dicen qué hacer, no
+ * qué falló.
+ *
+ * El `trim()` va antes del `min(1)` a propósito: así un taller escrito con puros
+ * espacios cuenta como vacío, que es el criterio de aceptación de la historia.
+ *
+ * No pide quién despacha: eso sale de la sesión (HU-16), no de un campo que
+ * cualquiera podría cambiar para firmar a nombre de otra persona (RNF-05).
+ */
+export const despacharLoteSchema = z.object({
+  // `guid` y no `uuid`: los identificadores del seed no cumplen la versión ni la
+  // variante que exige la RFC 4122 —son legibles a propósito, como
+  // `…-0000000000f3`—, y `z.uuid()` los rechaza. Lo que hace falta aquí es que
+  // sea un identificador con la forma correcta, no que sea un UUID canónico.
+  ordenId: z.guid({ error: "No se sabe a qué orden pertenece este despacho" }),
+
+  // Texto libre: el catálogo de talleres satélite sigue pendiente en CLAUDE.md.
+  taller: z
+    .string()
+    .trim()
+    .min(1, "Escribe a qué taller se envió el lote")
+    .max(200, "El nombre del taller es muy largo"),
+
+  descripcionPrendas: z
+    .string()
+    .trim()
+    .min(1, "Escribe qué prendas se enviaron")
+    .max(1000, "La descripción de las prendas es muy larga"),
+});
+
+/** Datos ya validados y sin espacios sobrantes. */
+export type DespachoLote = z.infer<typeof despacharLoteSchema>;
+
+/**
+ * HU-11 · Validación de la recepción de un lote.
+ *
+ * `completo` llega del formulario como texto ("si"/"no"), no como booleano:
+ * así es como viaja un radio en un FormData. Se convierte aquí y no en la
+ * action, para que sea parte de lo que ya se validó.
+ */
+export const confirmarRecepcionSchema = z.object({
+  loteId: z.guid({ error: "No se sabe de qué lote se trata" }),
+
+  completo: z
+    .enum(["si", "no"], "Marca si llegó completo o no")
+    .transform((valor) => valor === "si"),
+
+  observaciones: z
+    .string()
+    .trim()
+    .max(1000, "Las observaciones son muy largas")
+    .optional(),
+});
+
+/** Datos ya validados: `completo` sale como booleano. */
+export type RecepcionLote = z.infer<typeof confirmarRecepcionSchema>;
