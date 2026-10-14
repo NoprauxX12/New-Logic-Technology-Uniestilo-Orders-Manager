@@ -1,21 +1,32 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 
 import { preguntarAlAsistente } from "@/features/asistente/actions";
+import { TextoAsistente } from "@/features/asistente/components/TextoAsistente";
+import { useDictado } from "@/features/asistente/useDictado";
 import type { MensajeChat } from "@/lib/ai";
 
 /**
  * HU-15 · El asistente de administración: un botón flotante abajo a la derecha
- * y un panel lateral que se abre encima de cualquier pantalla con sesión.
+ * y un panel lateral que entra deslizándose desde la derecha, encima de
+ * cualquier pantalla con sesión.
  *
  * La conversación vive aquí, en el navegador: se manda completa en cada
- * pregunta y la action recorta lo que no cabe en el contexto configurado. Al
- * recargar la página se pierde, a propósito: no hay historial persistente.
+ * pregunta y la capa de IA recorta lo que no cabe en el contexto configurado.
+ * Al recargar la página se pierde, a propósito: no hay historial persistente.
+ * Cerrar el panel no la borra: el componente sigue montado.
  *
  * Pensado para gente poco digital (RNF-08/09/10): una sola acción (preguntar),
- * botones grandes, preguntas de ejemplo para arrancar, y en celular el panel
- * ocupa toda la pantalla.
+ * botones grandes, dictado por voz, preguntas de ejemplo para arrancar, y en
+ * celular el panel ocupa toda la pantalla.
  */
 
 const SUGERENCIAS = [
@@ -27,13 +38,61 @@ const SUGERENCIAS = [
 const BIENVENIDA =
   "Pregúntame por el estado de una orden, por su número o por el cliente. Solo consulto: no hago cambios.";
 
+/** Lo que dura el panel entrando o saliendo. Igual que `duration-300`. */
+const DURACION_TRANSICION_MS = 300;
+
 export function AsistenteFlotante() {
-  const [abierto, setAbierto] = useState(false);
+  // `montado` es si el panel está en el DOM; `visible` es si está en su sitio
+  // o fuera de la pantalla. Al cerrar, primero se desliza y luego se desmonta.
+  const [montado, setMontado] = useState(false);
+  const [visible, setVisible] = useState(false);
   const [mensajes, setMensajes] = useState<MensajeChat[]>([]);
   const [pregunta, setPregunta] = useState("");
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const finDeLaLista = useRef<HTMLDivElement>(null);
+  const campo = useRef<HTMLInputElement>(null);
+  const temporizadorCierre = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const dictado = useDictado({
+    alTexto: (texto) => setPregunta(texto),
+    alFallo: (mensaje) => setError(mensaje),
+  });
+
+  const cerrar = useCallback(() => {
+    setVisible(false);
+    temporizadorCierre.current = setTimeout(() => {
+      setMontado(false);
+      temporizadorCierre.current = null;
+    }, DURACION_TRANSICION_MS);
+  }, []);
+
+  function abrir() {
+    if (temporizadorCierre.current) {
+      clearTimeout(temporizadorCierre.current);
+      temporizadorCierre.current = null;
+    }
+    setMontado(true);
+    setVisible(true);
+  }
+
+  useEffect(
+    () => () => {
+      if (temporizadorCierre.current) clearTimeout(temporizadorCierre.current);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!visible) return;
+    campo.current?.focus();
+
+    function alTeclear(evento: KeyboardEvent) {
+      if (evento.key === "Escape") cerrar();
+    }
+    window.addEventListener("keydown", alTeclear);
+    return () => window.removeEventListener("keydown", alTeclear);
+  }, [visible, cerrar]);
 
   useEffect(() => {
     finDeLaLista.current?.scrollIntoView({ block: "end" });
@@ -74,11 +133,11 @@ export function AsistenteFlotante() {
     void enviar(pregunta);
   }
 
-  if (!abierto) {
+  if (!montado) {
     return (
       <button
         type="button"
-        onClick={() => setAbierto(true)}
+        onClick={abrir}
         className="bg-marca hover:bg-marca-oscuro focus:ring-marca fixed right-4 bottom-4 z-40 flex min-h-14 items-center gap-2 rounded-full px-5 text-base font-semibold text-white shadow-lg focus:ring-2 focus:ring-offset-2 focus:outline-none"
       >
         <IconoChat />
@@ -92,7 +151,16 @@ export function AsistenteFlotante() {
       role="dialog"
       aria-modal="true"
       aria-labelledby="asistente-titulo"
-      className="fixed inset-0 z-50 flex flex-col bg-white shadow-2xl sm:inset-y-0 sm:right-0 sm:left-auto sm:w-[26rem] sm:border-l sm:border-zinc-200"
+      className={[
+        "fixed inset-0 z-50 flex flex-col bg-white shadow-2xl sm:inset-y-0 sm:right-0 sm:left-auto sm:w-[26rem] sm:border-l sm:border-zinc-200",
+        "transition-transform duration-300 ease-out motion-reduce:transition-none",
+        // `starting:` es @starting-style: el primer cuadro tras montarse arranca
+        // fuera de la pantalla y la transición lo trae. Al cerrar, `visible`
+        // en false lo manda de vuelta y el temporizador lo desmonta después.
+        visible
+          ? "translate-x-0 starting:translate-x-full"
+          : "translate-x-full",
+      ].join(" ")}
     >
       <header className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3">
         <h2
@@ -104,7 +172,7 @@ export function AsistenteFlotante() {
         </h2>
         <button
           type="button"
-          onClick={() => setAbierto(false)}
+          onClick={cerrar}
           className="min-h-11 rounded-lg border border-zinc-300 px-3 text-sm font-medium text-zinc-800 hover:bg-zinc-100"
         >
           Cerrar
@@ -116,7 +184,11 @@ export function AsistenteFlotante() {
           <Burbuja rol="asistente">{BIENVENIDA}</Burbuja>
           {mensajes.map((mensaje, indice) => (
             <Burbuja key={indice} rol={mensaje.rol}>
-              {mensaje.contenido}
+              {mensaje.rol === "asistente" ? (
+                <TextoAsistente texto={mensaje.contenido} alNavegar={cerrar} />
+              ) : (
+                mensaje.contenido
+              )}
             </Burbuja>
           ))}
           {cargando ? (
@@ -162,14 +234,36 @@ export function AsistenteFlotante() {
           Tu pregunta
         </label>
         <input
+          ref={campo}
           id="asistente-pregunta"
           value={pregunta}
           onChange={(evento) => setPregunta(evento.target.value)}
-          placeholder="¿En qué va la orden…?"
+          placeholder={
+            dictado.escuchando ? "Escuchando…" : "¿En qué va la orden…?"
+          }
           autoComplete="off"
           disabled={cargando}
-          className="focus:ring-marca min-h-12 flex-1 rounded-lg border border-zinc-300 px-3 text-base text-zinc-900 focus:ring-2 focus:outline-none disabled:bg-zinc-50"
+          className="focus:ring-marca min-h-12 min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 text-base text-zinc-900 focus:ring-2 focus:outline-none disabled:bg-zinc-50"
         />
+        {dictado.soportado ? (
+          <button
+            type="button"
+            onClick={dictado.alternar}
+            disabled={cargando}
+            aria-pressed={dictado.escuchando}
+            aria-label={
+              dictado.escuchando ? "Parar el dictado" : "Dictar la pregunta"
+            }
+            className={[
+              "flex min-h-12 min-w-12 items-center justify-center rounded-lg border disabled:opacity-50",
+              dictado.escuchando
+                ? "animate-pulse border-red-600 bg-red-50 text-red-700"
+                : "border-zinc-300 text-zinc-700 hover:bg-zinc-50",
+            ].join(" ")}
+          >
+            <IconoMicrofono />
+          </button>
+        ) : null}
         <button
           type="submit"
           disabled={cargando || pregunta.trim() === ""}
@@ -187,15 +281,15 @@ function Burbuja({
   children,
 }: {
   rol: MensajeChat["rol"];
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const esPersona = rol === "usuario";
   return (
     <li
       className={[
-        "max-w-[90%] rounded-2xl px-4 py-2 text-base whitespace-pre-wrap",
+        "max-w-[90%] rounded-2xl px-4 py-2 text-base",
         esPersona
-          ? "bg-marca self-end text-white"
+          ? "bg-marca self-end whitespace-pre-wrap text-white"
           : "self-start bg-zinc-100 text-zinc-900",
       ].join(" ")}
     >
@@ -217,6 +311,25 @@ function IconoChat() {
       strokeLinejoin="round"
     >
       <path d="M21 12a8 8 0 0 1-8 8H7l-4 3V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8z" />
+    </svg>
+  );
+}
+
+function IconoMicrofono() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="9" y="3" width="6" height="12" rx="3" />
+      <path d="M5 11a7 7 0 0 0 14 0" />
+      <path d="M12 18v3" />
     </svg>
   );
 }
