@@ -36,6 +36,7 @@ export type Database = {
     Tables: {
       alerta: {
         Row: {
+          creada_por: string | null
           destinatario_id: string
           detalle: string
           estado: Database["public"]["Enums"]["estado_alerta"]
@@ -46,6 +47,7 @@ export type Database = {
           tipo: Database["public"]["Enums"]["tipo_alerta"]
         }
         Insert: {
+          creada_por?: string | null
           destinatario_id: string
           detalle: string
           estado?: Database["public"]["Enums"]["estado_alerta"]
@@ -56,6 +58,7 @@ export type Database = {
           tipo: Database["public"]["Enums"]["tipo_alerta"]
         }
         Update: {
+          creada_por?: string | null
           destinatario_id?: string
           detalle?: string
           estado?: Database["public"]["Enums"]["estado_alerta"]
@@ -66,6 +69,13 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["tipo_alerta"]
         }
         Relationships: [
+          {
+            foreignKeyName: "alerta_creada_por_fkey"
+            columns: ["creada_por"]
+            isOneToOne: false
+            referencedRelation: "usuario"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "alerta_destinatario_id_fkey"
             columns: ["destinatario_id"]
