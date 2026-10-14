@@ -55,6 +55,8 @@ export type OrdenParaModelo = {
   loQueSigue: { etapa: string; responsable: string } | null;
   avance: string;
   talleres: string;
+  /** La pantalla de la orden en el tablero, para el "Consúltala aquí". */
+  enlace: string;
 };
 
 export type HistorialEtapa = {
@@ -122,7 +124,19 @@ export function resumirOrden(
     loQueSigue: describirLoQueSigue(orden),
     avance: `${orden.etapasCompletadas} de ${orden.etapasTotales} etapas`,
     talleres: orden.estadoTalleres,
+    enlace: enlaceDeOrden(orden.id),
   };
+}
+
+export function enlaceDeOrden(ordenId: string): string {
+  return `/tablero/${ordenId}`;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Si el texto tiene forma de id de orden (uuid) y no de número o cliente. */
+export function pareceUuid(texto: string): boolean {
+  return UUID.test(texto.trim());
 }
 
 export function detallarOrden(
@@ -155,7 +169,15 @@ export function detallarOrden(
  * comparar lo que escribe la persona con lo que hay en la base.
  */
 export function normalizar(texto: string): string {
-  return texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+  return (
+    texto
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      // Los modelos escriben "OC‑5003" con guion no separable; en la base es "-".
+      .replace(/[\u2010-\u2015\u2212]/g, "-")
+      .toLowerCase()
+      .trim()
+  );
 }
 
 /**

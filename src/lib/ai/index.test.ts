@@ -1,9 +1,11 @@
+import { APICallError } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import type { ConfigIA } from "@/lib/ai/config";
 import {
+  FalloDelModelo,
   herramienta,
   recortarContexto,
   responderConHerramientas,
@@ -24,6 +26,7 @@ const CONFIG: ConfigIA = {
   apiKey: "gsk_prueba",
   modelo: "prueba",
   maxMensajesContexto: 2,
+  maxCaracteresContexto: 1000,
   maxTokensRespuesta: 100,
   temperatura: 0,
   maxPasosHerramientas: 2,
@@ -65,13 +68,47 @@ function respuestaHerramienta(nombre: string, input: object) {
   };
 }
 
+function m(contenido: string) {
+  return { contenido };
+}
+
 describe("recortarContexto", () => {
   it("se queda con los últimos mensajes", () => {
-    expect(recortarContexto([1, 2, 3, 4], 2)).toEqual([3, 4]);
+    expect(
+      recortarContexto([m("1"), m("2"), m("3"), m("4")], {
+        maxMensajes: 2,
+        maxCaracteres: 1000,
+      }),
+    ).toEqual([m("3"), m("4")]);
   });
 
   it("no toca una conversación que cabe", () => {
-    expect(recortarContexto([1, 2], 5)).toEqual([1, 2]);
+    expect(
+      recortarContexto([m("1"), m("2")], {
+        maxMensajes: 5,
+        maxCaracteres: 1000,
+      }),
+    ).toEqual([m("1"), m("2")]);
+  });
+
+  it("corta por caracteres aunque quepan más mensajes", () => {
+    const mensajes = [
+      m("a".repeat(500)),
+      m("b".repeat(300)),
+      m("c".repeat(300)),
+    ];
+
+    expect(
+      recortarContexto(mensajes, { maxMensajes: 10, maxCaracteres: 650 }),
+    ).toEqual([m("b".repeat(300)), m("c".repeat(300))]);
+  });
+
+  it("siempre manda la pregunta actual aunque se pase del presupuesto", () => {
+    const mensajes = [m("corto"), m("x".repeat(900))];
+
+    expect(
+      recortarContexto(mensajes, { maxMensajes: 10, maxCaracteres: 100 }),
+    ).toEqual([m("x".repeat(900))]);
   });
 });
 
@@ -153,5 +190,66 @@ describe("responderConHerramientas", () => {
       maxOutputTokens: 100,
       temperature: 0,
     });
+  });
+
+  it("clasifica el límite por minuto del proveedor como 'ocupado'", async () => {
+    const modelo = new MockLanguageModelV4({
+      doGenerate: async () => {
+        throw new APICallError({
+          message: "Rate limit reached",
+          url: "https://api.groq.com/openai/v1/chat/completions",
+          requestBodyValues: {},
+          statusCode: 429,
+          isRetryable: true,
+        });
+      },
+    });
+
+    const intento = responderConHerramientas({
+      sistema: "Sistema",
+      mensajes: [{ rol: "usuario", contenido: "hola" }],
+      herramientas: {},
+      modelo,
+      config: CONFIG,
+    });
+
+    await expect(intento).rejects.toBeInstanceOf(FalloDelModelo);
+    await expect(intento).rejects.toMatchObject({ tipo: "ocupado" });
+  });
+
+  it("clasifica una espera abortada como 'tiempo'", async () => {
+    const modelo = new MockLanguageModelV4({
+      doGenerate: async () => {
+        throw new DOMException("Delay was aborted", "AbortError");
+      },
+    });
+
+    await expect(
+      responderConHerramientas({
+        sistema: "Sistema",
+        mensajes: [{ rol: "usuario", contenido: "hola" }],
+        herramientas: {},
+        modelo,
+        config: CONFIG,
+      }),
+    ).rejects.toMatchObject({ tipo: "tiempo" });
+  });
+
+  it("cualquier otro fallo es del proveedor", async () => {
+    const modelo = new MockLanguageModelV4({
+      doGenerate: async () => {
+        throw new Error("se cayó");
+      },
+    });
+
+    await expect(
+      responderConHerramientas({
+        sistema: "Sistema",
+        mensajes: [{ rol: "usuario", contenido: "hola" }],
+        herramientas: {},
+        modelo,
+        config: CONFIG,
+      }),
+    ).rejects.toMatchObject({ tipo: "proveedor" });
   });
 });

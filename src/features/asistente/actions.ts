@@ -5,9 +5,11 @@ import { instruccionesDelSistema } from "@/features/asistente/prompt";
 import { puedeUsarAsistente } from "@/features/asistente/reglas";
 import { conversacionSchema } from "@/features/asistente/schemas";
 import {
+  FalloDelModelo,
   leerConfigIA,
   responderConHerramientas,
   type MensajeChat,
+  type TipoFalloModelo,
 } from "@/lib/ai";
 import { getUsuarioActual } from "@/lib/auth/usuarioActual";
 
@@ -29,8 +31,14 @@ export type RespuestaAsistente =
 const SIN_ACCESO = "El asistente es solo para administración.";
 const NO_CONFIGURADO =
   "El asistente no está configurado. Pídele a quien administra el sistema que complete las variables de IA.";
-const FALLO =
-  "El asistente no pudo responder en este momento. Intenta de nuevo en un momento.";
+const MENSAJE_POR_FALLO: Record<TipoFalloModelo, string> = {
+  ocupado:
+    "El asistente está ocupado: el proveedor de IA puso un límite por minuto. Espera un momento y vuelve a preguntar.",
+  tiempo:
+    "El asistente tardó demasiado en responder. Intenta con una pregunta más corta.",
+  proveedor:
+    "El asistente no pudo responder en este momento. Intenta de nuevo en un momento.",
+};
 const SIN_TEXTO =
   "No encontré qué responder. Prueba con el número de la orden o el nombre del cliente.";
 
@@ -68,7 +76,8 @@ export async function preguntarAlAsistente(
     if (!respuesta.texto) return { ok: false, mensaje: SIN_TEXTO };
     return { ok: true, texto: respuesta.texto };
   } catch (error) {
-    console.error("[asistente] El modelo no respondió", error);
-    return { ok: false, mensaje: FALLO };
+    const tipo = error instanceof FalloDelModelo ? error.tipo : "proveedor";
+    console.error(`[asistente] El modelo no respondió (${tipo})`, error);
+    return { ok: false, mensaje: MENSAJE_POR_FALLO[tipo] };
   }
 }

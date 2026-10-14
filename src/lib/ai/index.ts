@@ -1,7 +1,9 @@
 import "server-only";
 
 import {
+  APICallError,
   generateText,
+  RetryError,
   stepCountIs,
   type LanguageModel,
   type ModelMessage,
@@ -48,12 +50,54 @@ export type RespuestaModelo = {
   consultas: number;
 };
 
-/** Los últimos `maximo` mensajes: lo que cabe en el contexto configurado. */
-export function recortarContexto<T>(
+/**
+ * Por qué no hubo respuesta, ya clasificado para que quien llama elija el
+ * mensaje: `ocupado` es el límite por minuto del proveedor (HTTP 429),
+ * `tiempo` es que se pasó de `IA_TIEMPO_MAXIMO_MS`, y `proveedor` todo lo
+ * demás (llave inválida, caída, red).
+ */
+export type TipoFalloModelo = "ocupado" | "tiempo" | "proveedor";
+
+export class FalloDelModelo extends Error {
+  readonly tipo: TipoFalloModelo;
+
+  constructor(tipo: TipoFalloModelo, causa: unknown) {
+    super(`El modelo no respondió (${tipo})`, { cause: causa });
+    this.name = "FalloDelModelo";
+    this.tipo = tipo;
+  }
+}
+
+export type LimitesContexto = {
+  maxMensajes: number;
+  maxCaracteres: number;
+};
+
+/**
+ * Los últimos mensajes que caben en el contexto: como mucho `maxMensajes` y
+ * como mucho `maxCaracteres` sumados. La pregunta actual (el último) va
+ * siempre, aunque ella sola se pase del presupuesto.
+ */
+export function recortarContexto<T extends { contenido: string }>(
   mensajes: readonly T[],
-  maximo: number,
+  limites: LimitesContexto,
 ): T[] {
-  return mensajes.slice(Math.max(0, mensajes.length - maximo));
+  const resultado: T[] = [];
+  let caracteres = 0;
+
+  for (let indice = mensajes.length - 1; indice >= 0; indice -= 1) {
+    const mensaje = mensajes[indice];
+    const cabe =
+      resultado.length < limites.maxMensajes &&
+      caracteres + mensaje.contenido.length <= limites.maxCaracteres;
+
+    if (!cabe && resultado.length > 0) break;
+
+    resultado.unshift(mensaje);
+    caracteres += mensaje.contenido.length;
+  }
+
+  return resultado;
 }
 
 function aMensajesDelModelo(mensajes: readonly MensajeChat[]): ModelMessage[] {
@@ -63,13 +107,47 @@ function aMensajesDelModelo(mensajes: readonly MensajeChat[]): ModelMessage[] {
   }));
 }
 
+function nombreDe(error: unknown): string | null {
+  if (typeof error !== "object" || error === null) return null;
+  const nombre = (error as { name?: unknown }).name;
+  return typeof nombre === "string" ? nombre : null;
+}
+
+function clasificarFallo(error: unknown): TipoFalloModelo {
+  const errores = RetryError.isInstance(error)
+    ? [error, ...error.errors]
+    : [error];
+
+  if (
+    errores.some(
+      (candidato) =>
+        APICallError.isInstance(candidato) && candidato.statusCode === 429,
+    )
+  ) {
+    return "ocupado";
+  }
+
+  if (
+    errores.some((candidato) =>
+      ["AbortError", "TimeoutError"].includes(nombreDe(candidato) ?? ""),
+    )
+  ) {
+    return "tiempo";
+  }
+
+  return "proveedor";
+}
+
 /**
  * Le hace una pregunta al modelo dándole herramientas de solo lectura. El
  * modelo decide cuáles llamar (hasta `maxPasosHerramientas` rondas) y redacta
  * la respuesta final con lo que obtuvo.
  *
- * Lanza si la configuración falta o si el proveedor falla: quien llama decide
- * el mensaje para la persona.
+ * Lanza `Error` si la configuración falta y `FalloDelModelo` si el proveedor
+ * no respondió. No reintenta por su cuenta: el proveedor pide esperar más de
+ * lo que dura `IA_TIEMPO_MAXIMO_MS` cuando limita por minuto, y un reintento
+ * solo convertiría un "ocupado" claro en un "tardó demasiado" confuso. La
+ * persona vuelve a preguntar.
  */
 export async function responderConHerramientas(
   peticion: PeticionAsistente,
@@ -77,28 +155,36 @@ export async function responderConHerramientas(
   const config = peticion.config ?? exigirConfig();
   const modelo = peticion.modelo ?? crearModelo(config);
 
-  const resultado = await generateText({
-    model: modelo,
-    system: peticion.sistema,
-    messages: aMensajesDelModelo(
-      recortarContexto(peticion.mensajes, config.maxMensajesContexto),
-    ),
-    tools: peticion.herramientas,
-    // Una ronda más que las consultas permitidas, para que la última sea la
-    // respuesta en texto y no se quede a medias tras la última herramienta.
-    stopWhen: stepCountIs(config.maxPasosHerramientas + 1),
-    maxOutputTokens: config.maxTokensRespuesta,
-    temperature: config.temperatura,
-    timeout: { totalMs: config.tiempoMaximoMs },
-  });
+  try {
+    const resultado = await generateText({
+      model: modelo,
+      system: peticion.sistema,
+      messages: aMensajesDelModelo(
+        recortarContexto(peticion.mensajes, {
+          maxMensajes: config.maxMensajesContexto,
+          maxCaracteres: config.maxCaracteresContexto,
+        }),
+      ),
+      tools: peticion.herramientas,
+      // Una ronda más que las consultas permitidas, para que la última sea la
+      // respuesta en texto y no se quede a medias tras la última herramienta.
+      stopWhen: stepCountIs(config.maxPasosHerramientas + 1),
+      maxOutputTokens: config.maxTokensRespuesta,
+      temperature: config.temperatura,
+      timeout: { totalMs: config.tiempoMaximoMs },
+      maxRetries: 0,
+    });
 
-  return {
-    texto: resultado.text.trim(),
-    consultas: resultado.steps.reduce(
-      (total, paso) => total + paso.toolCalls.length,
-      0,
-    ),
-  };
+    return {
+      texto: resultado.text.trim(),
+      consultas: resultado.steps.reduce(
+        (total, paso) => total + paso.toolCalls.length,
+        0,
+      ),
+    };
+  } catch (error) {
+    throw new FalloDelModelo(clasificarFallo(error), error);
+  }
 }
 
 function exigirConfig(): ConfigIA {

@@ -12,6 +12,7 @@ const COMPLETA = {
   IA_API_KEY: "gsk_prueba",
   IA_MODELO: "llama-3.3-70b-versatile",
   IA_MAX_MENSAJES_CONTEXTO: "10",
+  IA_MAX_CARACTERES_CONTEXTO: "2500",
   IA_MAX_TOKENS_RESPUESTA: "300",
   IA_TEMPERATURA: "0.1",
   IA_MAX_PASOS_HERRAMIENTAS: "3",
@@ -29,6 +30,7 @@ describe("leerConfigIA", () => {
         apiKey: "gsk_prueba",
         modelo: "llama-3.3-70b-versatile",
         maxMensajesContexto: 10,
+        maxCaracteresContexto: 2500,
         maxTokensRespuesta: 300,
         temperatura: 0.1,
         maxPasosHerramientas: 3,
@@ -44,7 +46,8 @@ describe("leerConfigIA", () => {
     if (!resultado.ok) return;
     expect(resultado.config.proveedor).toBe("groq");
     expect(resultado.config.modelo).toBe("llama-3.3-70b-versatile");
-    expect(resultado.config.maxMensajesContexto).toBe(20);
+    expect(resultado.config.maxMensajesContexto).toBe(12);
+    expect(resultado.config.maxCaracteresContexto).toBe(4000);
     expect(resultado.config.maxTokensRespuesta).toBe(600);
     expect(resultado.config.temperatura).toBe(0.2);
     expect(resultado.config.maxPasosHerramientas).toBe(4);

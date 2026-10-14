@@ -5,6 +5,7 @@ import {
   filtrarOrdenes,
   filtrarPorEstado,
   normalizar,
+  pareceUuid,
   resumirOrden,
 } from "@/features/asistente/formato";
 import { CHECKPOINTS_DISPONIBLES } from "@/features/workflow/checkpoints";
@@ -77,6 +78,7 @@ describe("resumirOrden", () => {
       etapaActual: "Corte completado",
       loQueSigue: { etapa: "Llegada a marcación", responsable: "Marcación" },
       avance: "1 de 7 etapas",
+      enlace: "/tablero/f3",
     });
   });
 
@@ -158,6 +160,12 @@ describe("filtrarOrdenes", () => {
   it("no devuelve nada con un texto vacío", () => {
     expect(filtrarOrdenes(ordenes, "   ")).toEqual([]);
   });
+
+  it("entiende el guion no separable que escriben los modelos", () => {
+    expect(filtrarOrdenes(ordenes, "OC\u20115003").map((o) => o.id)).toEqual([
+      "f3",
+    ]);
+  });
 });
 
 describe("filtrarPorEstado", () => {
@@ -194,5 +202,14 @@ describe("normalizar", () => {
   it("quita tildes, virgulillas, mayúsculas y espacios de sobra", () => {
     // La ñ también pierde su virgulilla: así "nandu" encuentra a "Ñandú".
     expect(normalizar("  Confección Ñandú ")).toBe("confeccion nandu");
+  });
+});
+
+describe("pareceUuid", () => {
+  it("distingue un id de orden de un número o un cliente", () => {
+    expect(pareceUuid("00000000-0000-0000-0000-0000000000f3")).toBe(true);
+    expect(pareceUuid("2f1c9d2e-7b4a-4c1d-9e3f-0a1b2c3d4e5f")).toBe(true);
+    expect(pareceUuid("OC-5003")).toBe(false);
+    expect(pareceUuid("Clínica del Norte")).toBe(false);
   });
 });

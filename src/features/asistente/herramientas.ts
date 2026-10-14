@@ -7,6 +7,7 @@ import {
   filtrarOrdenes,
   filtrarPorEstado,
   FILTROS_ORDENES,
+  pareceUuid,
   resumirOrden,
 } from "@/features/asistente/formato";
 import { CHECKPOINTS_DISPONIBLES } from "@/features/workflow/checkpoints";
@@ -25,6 +26,12 @@ import {
  *
  * Leen con el cliente de Supabase de la sesión de quien pregunta, así que las
  * políticas RLS aplican igual que en el tablero (RNF-04).
+ *
+ * Los esquemas son deliberadamente laxos (`z.string()` y no `z.uuid()`): el
+ * proveedor valida los argumentos contra el JSON Schema antes de llamarnos y
+ * un patrón estricto convierte un id que no sea RFC 4122 —como los del seed—
+ * en un error 400 que tumba toda la respuesta. Lo que no cuadre se resuelve
+ * aquí y se le explica al modelo en la salida.
  */
 
 const MAX_RESULTADOS_BUSQUEDA = 5;
@@ -34,7 +41,7 @@ export function crearHerramientas(ahora = new Date()): Herramientas {
   return {
     buscarOrdenes: herramienta({
       description:
-        "Busca órdenes por su número de orden de compra (por ejemplo OC-5003 o solo 5003) o por el nombre del cliente. Úsala primero cuando la persona nombre una orden o un cliente; devuelve el ordenId que necesita estadoDeOrden.",
+        "Busca órdenes por su número de orden de compra (por ejemplo OC-5003 o solo 5003) o por el nombre del cliente. Devuelve un resumen de cada coincidencia con su enlace.",
       inputSchema: z.object({
         texto: z
           .string()
@@ -60,25 +67,61 @@ export function crearHerramientas(ahora = new Date()): Herramientas {
 
     estadoDeOrden: herramienta({
       description:
-        "Devuelve el estado completo de una orden: en qué etapa va, quién marcó cada etapa y cuándo, qué falta y a quién le toca, lotes en taller y fecha de entrega. Necesita el ordenId que devuelve buscarOrdenes.",
+        "Devuelve el estado completo de una orden: en qué etapa va, quién marcó cada etapa y cuándo, qué falta y a quién le toca, lotes en taller, fecha de entrega y el enlace para consultarla. Recibe el número de orden de compra (OC-5003 o 5003), el nombre del cliente, o el ordenId que devolvió buscarOrdenes.",
       inputSchema: z.object({
-        ordenId: z.uuid().describe("El id de la orden (uuid)"),
+        orden: z
+          .string()
+          .min(1)
+          .describe(
+            "Número de orden de compra, nombre del cliente u ordenId de la orden",
+          ),
       }),
-      execute: async ({ ordenId }) => {
-        const detalle = await obtenerDetalleOrden(ordenId);
-        if (!detalle) {
-          return { encontrada: false, nota: "No existe una orden con ese id." };
+      execute: async ({ orden }) => {
+        if (pareceUuid(orden)) {
+          const detalle = await obtenerDetalleOrden(orden.trim());
+          return detalle
+            ? {
+                encontrada: true,
+                orden: detallarOrden(detalle, CHECKPOINTS_DISPONIBLES, ahora),
+              }
+            : { encontrada: false, nota: "No existe una orden con ese id." };
         }
-        return {
-          encontrada: true,
-          orden: detallarOrden(detalle, CHECKPOINTS_DISPONIBLES, ahora),
-        };
+
+        const coincidencias = filtrarOrdenes(
+          await listarOrdenesTablero(),
+          orden,
+        );
+
+        if (coincidencias.length === 0) {
+          return {
+            encontrada: false,
+            nota: "No hay ninguna orden con ese número ni de ese cliente.",
+          };
+        }
+
+        if (coincidencias.length > 1) {
+          return {
+            encontrada: false,
+            nota: "Hay varias órdenes que coinciden; pregunta cuál quiere.",
+            ordenes: coincidencias
+              .slice(0, MAX_RESULTADOS_BUSQUEDA)
+              .map((candidata) => resumirOrden(candidata, ahora)),
+          };
+        }
+
+        const detalle = await obtenerDetalleOrden(coincidencias[0].id);
+        return detalle
+          ? {
+              encontrada: true,
+              orden: detallarOrden(detalle, CHECKPOINTS_DISPONIBLES, ahora),
+            }
+          : { encontrada: false, nota: "La orden ya no está disponible." };
       },
     }),
 
     resumenOrdenes: herramienta({
       description:
-        "Cuenta y lista las órdenes según un filtro: todas, atrasadas, en riesgo de entrega, en producción, sin empezar o terminadas. Úsala para preguntas como cuántas órdenes hay o cuáles están atrasadas.",
+        "Cuenta y lista las órdenes según un filtro: todas, atrasadas, en riesgo de entrega, en producción, sin empezar o terminadas. Úsala para preguntas como cuántas órdenes hay, cuáles están atrasadas o cuáles se entregan pronto.",
       inputSchema: z.object({
         filtro: z.enum(FILTROS_ORDENES).default("todas"),
       }),

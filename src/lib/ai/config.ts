@@ -21,6 +21,12 @@ export type ConfigIA = {
   modelo: string;
   /** Cuántos mensajes previos de la conversación se mandan al modelo. */
   maxMensajesContexto: number;
+  /**
+   * Cuántos caracteres de conversación previa se mandan como máximo. Es el
+   * freno real del contexto: los proveedores limitan tokens por minuto y una
+   * conversación larga con respuestas extensas se los come en dos preguntas.
+   */
+  maxCaracteresContexto: number;
   maxTokensRespuesta: number;
   temperatura: number;
   /** Cuántas consultas puede encadenar el modelo antes de responder. */
@@ -35,7 +41,8 @@ const schema = z.object({
   IA_PROVEEDOR: z.enum(PROVEEDORES).default("groq"),
   IA_API_KEY: z.string().trim().min(1),
   IA_MODELO: z.string().trim().min(1).default("llama-3.3-70b-versatile"),
-  IA_MAX_MENSAJES_CONTEXTO: entero(1, 200).default(20),
+  IA_MAX_MENSAJES_CONTEXTO: entero(1, 200).default(12),
+  IA_MAX_CARACTERES_CONTEXTO: entero(500, 100_000).default(4000),
   IA_MAX_TOKENS_RESPUESTA: entero(50, 8000).default(600),
   IA_TEMPERATURA: z.coerce.number().min(0).max(2).default(0.2),
   IA_MAX_PASOS_HERRAMIENTAS: entero(1, 10).default(4),
@@ -75,6 +82,7 @@ export function leerConfigIA(
       apiKey: v.IA_API_KEY,
       modelo: v.IA_MODELO,
       maxMensajesContexto: v.IA_MAX_MENSAJES_CONTEXTO,
+      maxCaracteresContexto: v.IA_MAX_CARACTERES_CONTEXTO,
       maxTokensRespuesta: v.IA_MAX_TOKENS_RESPUESTA,
       temperatura: v.IA_TEMPERATURA,
       maxPasosHerramientas: v.IA_MAX_PASOS_HERRAMIENTAS,
