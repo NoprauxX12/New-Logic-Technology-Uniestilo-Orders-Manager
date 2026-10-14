@@ -198,8 +198,11 @@ export type Database = {
           descripcion: string
           id: string
           observaciones: string | null
+          observaciones_tela: string | null
           orden_id: string
           tallas: string
+          tipo_tela: string | null
+          unidad_tela: string | null
           valor: number
         }
         Insert: {
@@ -209,8 +212,11 @@ export type Database = {
           descripcion: string
           id?: string
           observaciones?: string | null
+          observaciones_tela?: string | null
           orden_id: string
           tallas: string
+          tipo_tela?: string | null
+          unidad_tela?: string | null
           valor: number
         }
         Update: {
@@ -220,8 +226,11 @@ export type Database = {
           descripcion?: string
           id?: string
           observaciones?: string | null
+          observaciones_tela?: string | null
           orden_id?: string
           tallas?: string
+          tipo_tela?: string | null
+          unidad_tela?: string | null
           valor?: number
         }
         Relationships: [
@@ -386,6 +395,10 @@ export type Database = {
     Functions: {
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       nit_normalizado: { Args: { p_nit: string }; Returns: string }
+      programar_tela: {
+        Args: { p_items: Json; p_orden_id: string }
+        Returns: undefined
+      }
       registrar_orden: {
         Args: {
           p_contacto_celular: string
