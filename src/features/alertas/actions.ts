@@ -16,8 +16,12 @@ import {
 import {
   destinatarioDeAlertaTela,
   puedeAvisarFaltaDeTela,
+  puedeMarcarLlegadaDeTela,
 } from "@/features/alertas/reglas";
-import { avisarFaltaDeTelaSchema } from "@/features/alertas/schemas";
+import {
+  avisarFaltaDeTelaSchema,
+  marcarLlegadaDeTelaSchema,
+} from "@/features/alertas/schemas";
 import { getUsuarioActual } from "@/lib/auth/usuarioActual";
 import { createClient } from "@/lib/supabase/server";
 
@@ -158,5 +162,119 @@ export async function avisarFaltaDeTela(
     mensaje: `Aviso enviado a administración por la orden ${situacion.numeroOrdenCompra}.`,
     errores: {},
     valores: ENTRADA_AVISO_VACIA,
+  };
+}
+
+/**
+ * HU-22 · Marcar que llegó la tela de una orden, lo que la libera a corte.
+ *
+ * Mismo orden que el aviso: esquema, sesión, reglas, y la base respalda. La
+ * hora y quién la recibió los pone el trigger de la base aunque aquí se manden:
+ * la action los envía solo para que la fila pase la política de RLS.
+ *
+ * Marcar la llegada no marca ningún checkpoint. Lo que cambia es que la orden
+ * deja de estar esperando tela, y el motor de workflow vuelve a dejar marcar el
+ * corte (requisito `tela_en_empresa` en `checkpoints.ts`).
+ */
+
+/** Lo que la action le devuelve al botón. */
+export type EstadoLlegadaTela = {
+  ok: boolean;
+  mensaje: string;
+};
+
+/** El trigger de HU-22: la llegada ya estaba registrada. */
+const LLEGADA_YA_REGISTRADA = "UE007";
+
+export async function marcarLlegadaDeTela(
+  _estadoPrevio: EstadoLlegadaTela,
+  formData: FormData,
+): Promise<EstadoLlegadaTela> {
+  const validacion = marcarLlegadaDeTelaSchema.safeParse({
+    ordenId: leerOrdenId(formData),
+  });
+
+  if (!validacion.success) {
+    return {
+      ok: false,
+      mensaje: "No se pudo identificar la orden. Vuelve a abrir la pantalla.",
+    };
+  }
+
+  const { ordenId } = validacion.data;
+
+  const usuario = await getUsuarioActual();
+
+  if (!usuario) {
+    return {
+      ok: false,
+      mensaje: "Inicia sesión para marcar que llegó la tela.",
+    };
+  }
+
+  const situacion = await obtenerSituacionParaAviso(ordenId);
+
+  if (!situacion) return { ok: false, mensaje: "No encontramos esa orden." };
+
+  const permiso = puedeMarcarLlegadaDeTela({
+    esperandoTela: situacion.tieneAlertaAbierta,
+    rol: usuario.rol,
+  });
+
+  if (!permiso.permitido) return { ok: false, mensaje: permiso.mensaje };
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("alerta")
+    .update({
+      tela_llegada_en: new Date().toISOString(),
+      tela_recibida_por: usuario.id,
+    })
+    .eq("orden_id", ordenId)
+    .eq("tipo", "falta_tela")
+    .is("tela_llegada_en", null)
+    .select("id");
+
+  if (error) {
+    if (error.code === RLS_RECHAZO) {
+      return {
+        ok: false,
+        mensaje: "La llegada de la tela la marca Secretaría.",
+      };
+    }
+
+    if (error.code === LLEGADA_YA_REGISTRADA) {
+      revalidatePath("/ordenes/telas");
+      return {
+        ok: false,
+        mensaje: "La llegada de esta tela ya estaba marcada.",
+      };
+    }
+
+    console.error("[HU-22] No se pudo marcar la llegada de la tela", error);
+    return {
+      ok: false,
+      mensaje: "No se pudo marcar la llegada. Vuelve a intentarlo.",
+    };
+  }
+
+  // Ninguna fila cambió: otra persona la marcó entre la lectura y la escritura.
+  if (data.length === 0) {
+    revalidatePath("/ordenes/telas");
+    return {
+      ok: false,
+      mensaje: "Otra persona ya marcó que llegó la tela de esta orden.",
+    };
+  }
+
+  // La orden queda libre para corte: su pantalla y el tablero tienen que verlo.
+  revalidatePath("/ordenes/telas");
+  revalidatePath("/ordenes/corte");
+  revalidatePath("/tablero");
+
+  return {
+    ok: true,
+    mensaje: `Tela recibida. La orden ${situacion.numeroOrdenCompra} ya puede pasar a corte.`,
   };
 }

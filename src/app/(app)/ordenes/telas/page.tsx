@@ -8,7 +8,10 @@ export const metadata: Metadata = {
   title: "Telas · Uniestilo",
 };
 
-/** HU-06 · Pantalla de secretaría para avisar que falta tela. Solo enruta. */
+/**
+ * HU-06 y HU-22 · Pantalla de secretaría para validar telas: avisar cuando
+ * falta y marcar cuando llega. Solo enruta.
+ */
 export default async function OrdenesTelasPage() {
   const usuario = await exigirAcceso("/ordenes/telas");
 
@@ -23,8 +26,8 @@ export default async function OrdenesTelasPage() {
             Validar telas
           </h1>
           <p className="text-base text-zinc-600">
-            Si para alguna orden falta tela, avísale a administración para que
-            haga el pedido.
+            Si para alguna orden falta tela, avísale a administración. Cuando la
+            tela llegue, márcalo para que la orden pase a corte.
           </p>
         </header>
 

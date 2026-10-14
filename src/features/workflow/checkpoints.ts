@@ -32,11 +32,15 @@ export type Checkpoint = {
   ruta: string | null;
   /**
    * Una condición que no es un checkpoint pero que debe cumplirse antes de
-   * marcar este. Hoy solo existe una: la llegada a marcación (HU-12) exige que
-   * logística haya confirmado la recepción de un lote (HU-11). El motor la
-   * verifica con lo que la action lee de la base.
+   * marcar este. El motor la verifica con lo que la action lee de la base.
+   *
+   * - `recepcion_de_taller`: la llegada a marcación (HU-12) exige que logística
+   *   haya confirmado la recepción de un lote (HU-11).
+   * - `tela_en_empresa`: el corte (HU-08) exige que la orden no esté esperando
+   *   tela. Una alerta de falta de tela (HU-06) frena la orden hasta que
+   *   secretaría marca que la tela llegó (HU-22).
    */
-  requisito?: "recepcion_de_taller";
+  requisito?: "recepcion_de_taller" | "tela_en_empresa";
   /**
    * Si el sistema ya permite marcarlo.
    *
@@ -100,6 +104,7 @@ export const CHECKPOINTS = [
     etiqueta: "Corte completado",
     rolDueno: "corte",
     hu: "HU-08",
+    requisito: "tela_en_empresa",
     disponible: true,
     ruta: "/ordenes/corte",
   },

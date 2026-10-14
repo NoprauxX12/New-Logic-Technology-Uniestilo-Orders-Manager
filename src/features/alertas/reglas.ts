@@ -29,7 +29,7 @@ export type ResultadoAlerta =
 type Situacion = {
   /** Lo que la orden ya tiene marcado. */
   marcados: readonly CheckpointId[];
-  /** Si ya hay una alerta de tela pendiente para esta orden. */
+  /** Si ya hay una alerta de tela cuya tela no ha llegado (HU-22). */
   tieneAlertaAbierta: boolean;
   /** El rol de quien quiere avisar. Sale de la sesión, nunca del formulario. */
   rol: Rol;
@@ -71,7 +71,38 @@ export function puedeAvisarFaltaDeTela({
     return {
       permitido: false,
       mensaje:
-        "Ya se avisó que falta tela en esta orden. Administración lo tiene pendiente.",
+        "Ya se avisó que falta tela en esta orden. Cuando llegue, márcalo aquí.",
+    };
+  }
+
+  return { permitido: true };
+}
+
+/**
+ * HU-22 · ¿Puede esta persona marcar que llegó la tela de esta orden?
+ *
+ * Lo marca secretaría, que es quien recibe la tela y quien avisó que faltaba.
+ * Solo tiene sentido si hay una alerta de tela sin llegada: sin aviso previo
+ * no hay nada que liberar.
+ */
+export function puedeMarcarLlegadaDeTela({
+  esperandoTela,
+  rol,
+}: {
+  esperandoTela: boolean;
+  rol: Rol;
+}): ResultadoAlerta {
+  if (rol !== ROL_QUE_AVISA_TELA) {
+    return {
+      permitido: false,
+      mensaje: `La llegada de la tela la marca ${ETIQUETAS_ROL[ROL_QUE_AVISA_TELA]}.`,
+    };
+  }
+
+  if (!esperandoTela) {
+    return {
+      permitido: false,
+      mensaje: "Esta orden no está esperando tela.",
     };
   }
 

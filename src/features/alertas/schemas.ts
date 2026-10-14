@@ -24,3 +24,11 @@ export const avisarFaltaDeTelaSchema = z.object({
 
 /** Datos ya validados y sin espacios sobrantes. */
 export type AvisoFaltaDeTela = z.infer<typeof avisarFaltaDeTelaSchema>;
+
+/**
+ * HU-22 · Marcar que llegó la tela. Solo viaja la orden: quién la recibió sale
+ * de la sesión y la hora la pone la base.
+ */
+export const marcarLlegadaDeTelaSchema = z.object({
+  ordenId: z.guid({ error: "No se sabe de qué orden llegó la tela" }),
+});

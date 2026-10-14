@@ -1,14 +1,20 @@
+import { BotonLlegadaTela } from "@/features/alertas/components/BotonLlegadaTela";
 import { FormularioAvisoTela } from "@/features/alertas/components/FormularioAvisoTela";
 import type { OrdenParaTelas } from "@/features/alertas/queries";
 import { formatearFecha } from "@/lib/utils/fechas";
 
 /**
- * HU-06 · Las órdenes en las que secretaría valida la tela.
+ * HU-06 y HU-22 · Las órdenes en las que secretaría valida la tela.
  *
- * Cada tarjeta muestra una de tres cosas, según lo que digan las reglas:
- * el aviso que ya se envió, el formulario para avisar, o por qué esta persona
- * no puede avisar. Nunca las dos primeras a la vez, para que no se avise dos
- * veces por la misma orden.
+ * Cada tarjeta está en uno de dos estados, según lo que digan las reglas:
+ *
+ * - esperando tela: el aviso que se envió, y el botón para marcar que llegó
+ *   (HU-22). No se ofrece avisar otra vez: ya se avisó.
+ * - sin espera: el formulario para avisar (HU-06), con la fecha en que llegó la
+ *   tela del último aviso si la hubo, que es la confirmación de HU-22.
+ *
+ * Si quien mira no puede hacer algo (administración entra, pero no avisa ni
+ * recibe), se le dice por qué en vez del formulario o el botón.
  */
 
 type Props = {
@@ -20,6 +26,64 @@ function formatearMomento(momentoIso: string): string {
     dateStyle: "short",
     timeStyle: "short",
   });
+}
+
+function Motivo({ mensaje }: { mensaje: string }) {
+  return (
+    <p className="rounded-lg border border-zinc-300 bg-zinc-50 px-4 py-3 text-base text-zinc-700">
+      {mensaje}
+    </p>
+  );
+}
+
+function TarjetaEsperandoTela({ orden }: { orden: OrdenParaTelas }) {
+  const aviso = orden.avisoAbierto;
+  if (!aviso) return null;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+        <p className="text-base font-medium text-amber-900">
+          Esperando tela · no puede pasar a corte
+        </p>
+        <p className="text-base text-amber-900">{aviso.detalle}</p>
+        <p className="mt-1 text-sm text-amber-800">
+          Avisado el {formatearMomento(aviso.fechaCreacion)}.{" "}
+          {aviso.atendido
+            ? "Administración ya hizo el pedido."
+            : "Administración todavía no lo ha atendido."}
+        </p>
+      </div>
+
+      {orden.veredictoLlegada.permitido ? (
+        <BotonLlegadaTela ordenId={orden.id} />
+      ) : (
+        <Motivo mensaje={orden.veredictoLlegada.mensaje} />
+      )}
+    </div>
+  );
+}
+
+function TarjetaSinEspera({ orden }: { orden: OrdenParaTelas }) {
+  return (
+    <div className="flex flex-col gap-3">
+      {orden.ultimaLlegada ? (
+        <p
+          role="status"
+          className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-base font-medium text-emerald-900"
+        >
+          La tela llegó el {formatearMomento(orden.ultimaLlegada)}. La orden
+          puede pasar a corte.
+        </p>
+      ) : null}
+
+      {orden.veredictoAviso.permitido ? (
+        <FormularioAvisoTela ordenId={orden.id} />
+      ) : (
+        <Motivo mensaje={orden.veredictoAviso.mensaje} />
+      )}
+    </div>
+  );
 }
 
 export function ListaOrdenesTelas({ ordenes }: Props) {
@@ -55,26 +119,10 @@ export function ListaOrdenesTelas({ ordenes }: Props) {
             </p>
           </header>
 
-          {orden.avisoPendiente ? (
-            <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
-              <p className="text-base font-medium text-amber-900">
-                Se avisó que falta tela
-              </p>
-              <p className="text-base text-amber-900">
-                {orden.avisoPendiente.detalle}
-              </p>
-              <p className="mt-1 text-sm text-amber-800">
-                Enviado el{" "}
-                {formatearMomento(orden.avisoPendiente.fechaCreacion)}.
-                Administración lo tiene pendiente.
-              </p>
-            </div>
-          ) : orden.veredicto.permitido ? (
-            <FormularioAvisoTela ordenId={orden.id} />
+          {orden.avisoAbierto ? (
+            <TarjetaEsperandoTela orden={orden} />
           ) : (
-            <p className="rounded-lg border border-zinc-300 bg-zinc-50 px-4 py-3 text-base text-zinc-700">
-              {orden.veredicto.mensaje}
-            </p>
+            <TarjetaSinEspera orden={orden} />
           )}
         </li>
       ))}

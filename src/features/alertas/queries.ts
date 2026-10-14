@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   puedeAvisarFaltaDeTela,
+  puedeMarcarLlegadaDeTela,
   type Administrador,
   type ResultadoAlerta,
 } from "@/features/alertas/reglas";
@@ -9,18 +10,24 @@ import type { CheckpointId, Rol } from "@/features/workflow/checkpoints";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * HU-06 · Lecturas de la pantalla de telas.
+ * HU-06 y HU-22 · Lecturas de la pantalla de telas.
  *
  * La pantalla muestra las órdenes que todavía no pasan por corte, que es donde
- * tiene sentido validar la tela. Una orden con un aviso pendiente lo muestra en
- * vez del formulario: el estado sale de las filas de `alerta`, no de una
- * columna de la orden (regla 1).
+ * tiene sentido validar la tela. Cada orden está en uno de dos estados, y los
+ * dos salen de las filas de `alerta`, no de una columna de la orden (regla 1):
+ *
+ * - esperando tela: tiene una alerta de tela sin llegada. Se muestra el aviso
+ *   y el botón para marcar que llegó (HU-22).
+ * - sin espera: se muestra el formulario para avisar (HU-06), y si la tela de
+ *   un aviso anterior ya llegó, cuándo.
  */
 
-/** Un aviso de tela que sigue pendiente. */
-export type AvisoPendiente = {
+/** Un aviso de tela cuya tela todavía no ha llegado. */
+export type AvisoAbierto = {
   detalle: string;
   fechaCreacion: string;
+  /** Si administración ya lo atendió (hizo el pedido). La tela puede no haber llegado. */
+  atendido: boolean;
 };
 
 export type OrdenParaTelas = {
@@ -28,9 +35,13 @@ export type OrdenParaTelas = {
   numeroOrdenCompra: string;
   razonSocial: string;
   fechaEntrega: string;
-  avisoPendiente: AvisoPendiente | null;
-  /** Lo que las reglas dicen de avisar en esta orden, para quien mira. */
-  veredicto: ResultadoAlerta;
+  avisoAbierto: AvisoAbierto | null;
+  /** Cuándo llegó la tela del aviso más reciente, si ya llegó. */
+  ultimaLlegada: string | null;
+  /** HU-06: lo que las reglas dicen de avisar en esta orden, para quien mira. */
+  veredictoAviso: ResultadoAlerta;
+  /** HU-22: lo que las reglas dicen de marcar que llegó la tela. */
+  veredictoLlegada: ResultadoAlerta;
 };
 
 type AlertaFila = {
@@ -38,19 +49,36 @@ type AlertaFila = {
   estado: string;
   detalle: string;
   fecha_creacion: string;
+  tela_llegada_en: string | null;
 };
 
-/** El aviso de tela pendiente de la orden, si lo hay. */
-function avisoPendienteDe(
-  alertas: readonly AlertaFila[],
-): AvisoPendiente | null {
-  const pendiente = alertas.find(
-    (alerta) => alerta.tipo === "falta_tela" && alerta.estado === "pendiente",
+function deTela(alertas: readonly AlertaFila[]): AlertaFila[] {
+  return alertas.filter((alerta) => alerta.tipo === "falta_tela");
+}
+
+/** El aviso de tela abierto de la orden, si lo hay: la tela no ha llegado. */
+function avisoAbiertoDe(alertas: readonly AlertaFila[]): AvisoAbierto | null {
+  const abierta = deTela(alertas).find(
+    (alerta) => alerta.tela_llegada_en === null,
   );
 
-  return pendiente
-    ? { detalle: pendiente.detalle, fechaCreacion: pendiente.fecha_creacion }
+  return abierta
+    ? {
+        detalle: abierta.detalle,
+        fechaCreacion: abierta.fecha_creacion,
+        atendido: abierta.estado === "atendida",
+      }
     : null;
+}
+
+/** La llegada de tela más reciente de la orden, si alguna vez llegó. */
+function ultimaLlegadaDe(alertas: readonly AlertaFila[]): string | null {
+  const llegadas = deTela(alertas)
+    .map((alerta) => alerta.tela_llegada_en)
+    .filter((fecha): fecha is string => fecha !== null)
+    .sort();
+
+  return llegadas[llegadas.length - 1] ?? null;
 }
 
 export async function listarOrdenesParaTelas(
@@ -66,7 +94,7 @@ export async function listarOrdenesParaTelas(
        fecha_entrega,
        cliente ( razon_social ),
        avance_seccion ( checkpoint ),
-       alerta ( tipo, estado, detalle, fecha_creacion )`,
+       alerta ( tipo, estado, detalle, fecha_creacion, tela_llegada_en )`,
     )
     .order("fecha_entrega", { ascending: true });
 
@@ -83,7 +111,8 @@ export async function listarOrdenesParaTelas(
       return [];
     }
 
-    const avisoPendiente = avisoPendienteDe(orden.alerta);
+    const avisoAbierto = avisoAbiertoDe(orden.alerta);
+    const esperandoTela = avisoAbierto !== null;
 
     return [
       {
@@ -91,21 +120,24 @@ export async function listarOrdenesParaTelas(
         numeroOrdenCompra: orden.numero_orden_compra,
         razonSocial: orden.cliente?.razon_social ?? "Cliente sin nombre",
         fechaEntrega: orden.fecha_entrega,
-        avisoPendiente,
-        veredicto: puedeAvisarFaltaDeTela({
+        avisoAbierto,
+        ultimaLlegada: ultimaLlegadaDe(orden.alerta),
+        veredictoAviso: puedeAvisarFaltaDeTela({
           marcados,
-          tieneAlertaAbierta: avisoPendiente !== null,
+          tieneAlertaAbierta: esperandoTela,
           rol,
         }),
+        veredictoLlegada: puedeMarcarLlegadaDeTela({ esperandoTela, rol }),
       },
     ];
   });
 }
 
-/** Lo que la action necesita saber de la orden antes de escribir. */
+/** Lo que las actions necesitan saber de la orden antes de escribir. */
 export type SituacionParaAviso = {
   numeroOrdenCompra: string;
   marcados: CheckpointId[];
+  /** Si tiene una alerta de tela cuya tela no ha llegado. */
   tieneAlertaAbierta: boolean;
 };
 
@@ -120,7 +152,7 @@ export async function obtenerSituacionParaAviso(
     .select(
       `numero_orden_compra,
        avance_seccion ( checkpoint ),
-       alerta ( tipo, estado, detalle, fecha_creacion )`,
+       alerta ( tipo, estado, detalle, fecha_creacion, tela_llegada_en )`,
     )
     .eq("id", ordenId)
     .maybeSingle();
@@ -135,7 +167,7 @@ export async function obtenerSituacionParaAviso(
   return {
     numeroOrdenCompra: data.numero_orden_compra,
     marcados: data.avance_seccion.map((avance) => avance.checkpoint),
-    tieneAlertaAbierta: avisoPendienteDe(data.alerta) !== null,
+    tieneAlertaAbierta: avisoAbiertoDe(data.alerta) !== null,
   };
 }
 

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   destinatarioDeAlertaTela,
   puedeAvisarFaltaDeTela,
+  puedeMarcarLlegadaDeTela,
 } from "@/features/alertas/reglas";
 import {
   ETIQUETAS_ROL,
@@ -143,5 +144,35 @@ describe("destinatarioDeAlertaTela", () => {
     destinatarioDeAlertaTela(administradores);
 
     expect(administradores.map((admin) => admin.id)).toEqual(["b", "a"]);
+  });
+});
+
+describe("puedeMarcarLlegadaDeTela (HU-22)", () => {
+  it("deja a secretaría marcar la llegada cuando la orden espera tela", () => {
+    expect(
+      puedeMarcarLlegadaDeTela({ esperandoTela: true, rol: "secretaria" }),
+    ).toEqual({ permitido: true });
+  });
+
+  it("no hay llegada que marcar si la orden no espera tela", () => {
+    const resultado = puedeMarcarLlegadaDeTela({
+      esperandoTela: false,
+      rol: "secretaria",
+    });
+
+    expect(resultado.permitido === false && resultado.mensaje).toBe(
+      "Esta orden no está esperando tela.",
+    );
+  });
+
+  it("solo secretaría la marca, ni siquiera administración ni corte", () => {
+    for (const rol of ROLES.filter((r) => r !== "secretaria")) {
+      const resultado = puedeMarcarLlegadaDeTela({ esperandoTela: true, rol });
+
+      expect(resultado.permitido).toBe(false);
+      expect(resultado.permitido === false && resultado.mensaje).toContain(
+        "Secretaría",
+      );
+    }
   });
 });

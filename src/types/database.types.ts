@@ -44,6 +44,8 @@ export type Database = {
           fecha_creacion: string
           id: string
           orden_id: string
+          tela_llegada_en: string | null
+          tela_recibida_por: string | null
           tipo: Database["public"]["Enums"]["tipo_alerta"]
         }
         Insert: {
@@ -55,6 +57,8 @@ export type Database = {
           fecha_creacion?: string
           id?: string
           orden_id: string
+          tela_llegada_en?: string | null
+          tela_recibida_por?: string | null
           tipo: Database["public"]["Enums"]["tipo_alerta"]
         }
         Update: {
@@ -66,6 +70,8 @@ export type Database = {
           fecha_creacion?: string
           id?: string
           orden_id?: string
+          tela_llegada_en?: string | null
+          tela_recibida_por?: string | null
           tipo?: Database["public"]["Enums"]["tipo_alerta"]
         }
         Relationships: [
@@ -88,6 +94,13 @@ export type Database = {
             columns: ["orden_id"]
             isOneToOne: false
             referencedRelation: "orden"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerta_tela_recibida_por_fkey"
+            columns: ["tela_recibida_por"]
+            isOneToOne: false
+            referencedRelation: "usuario"
             referencedColumns: ["id"]
           },
         ]
@@ -396,6 +409,8 @@ export type Database = {
     Functions: {
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       nit_normalizado: { Args: { p_nit: string }; Returns: string }
+      orden_espera_tela: { Args: { p_orden_id: string }; Returns: boolean }
+      ordenes_esperando_tela: { Args: never; Returns: string[] }
       registrar_orden: {
         Args: {
           p_contacto_celular: string
