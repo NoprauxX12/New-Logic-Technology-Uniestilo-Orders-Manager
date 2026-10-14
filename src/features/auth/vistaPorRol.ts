@@ -34,7 +34,11 @@ const VISTAS: Record<Rol, VistaDeRol> = {
     aviso: null,
   },
   secretaria: {
-    botones: [{ etiqueta: "Cerrar órdenes", ruta: "/ordenes/cierre" }],
+    botones: [
+      { etiqueta: "Cerrar órdenes", ruta: "/ordenes/cierre" },
+      // HU-06: avisar a administración que falta tela.
+      { etiqueta: "Validar telas", ruta: "/ordenes/telas" },
+    ],
     aviso: null,
   },
   diseno: {

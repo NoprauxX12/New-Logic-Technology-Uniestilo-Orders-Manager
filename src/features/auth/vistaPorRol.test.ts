@@ -97,6 +97,12 @@ describe("vistaDeRol · roles con pantalla propia", () => {
     expect(vista.botones[0].ruta).toBe("/ordenes/cierre");
   });
 
+  it("secretaría también valida telas y avisa cuando falta (HU-06)", () => {
+    const rutas = vistaDeRol("secretaria").botones.map((b) => b.ruta);
+
+    expect(rutas).toContain("/ordenes/telas");
+  });
+
   it("admin puede ver el tablero, registrar órdenes y crear cuentas", () => {
     const rutas = vistaDeRol("admin").botones.map((b) => b.ruta);
 

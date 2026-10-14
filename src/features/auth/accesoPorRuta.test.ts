@@ -63,6 +63,14 @@ describe("puedeEntrar · lo de cada sección", () => {
     expect(puedeEntrar("secretaria", "/tablero")).toBe(false);
   });
 
+  it("solo secretaría y administración entran a validar telas (HU-06)", () => {
+    for (const rol of ROLES) {
+      expect(puedeEntrar(rol, "/ordenes/telas")).toBe(
+        rol === "secretaria" || rol === "admin",
+      );
+    }
+  });
+
   it("logística entra a sus órdenes y al detalle de una orden", () => {
     expect(puedeEntrar("logistica", "/ordenes/talleres")).toBe(true);
     expect(puedeEntrar("logistica", ORDEN)).toBe(true);
