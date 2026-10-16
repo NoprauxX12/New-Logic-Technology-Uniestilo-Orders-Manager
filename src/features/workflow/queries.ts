@@ -28,6 +28,8 @@ export type SituacionDeOrden = {
   marcados: CheckpointId[];
   /** HU-11: si algún lote ya volvió del taller con su recepción confirmada. */
   recepcionConfirmada: boolean;
+  /** HU-22: si la orden tiene una alerta de tela cuya tela no ha llegado. */
+  esperandoTela: boolean;
 };
 
 /** La situación de la orden, o `null` si la orden no existe. */
@@ -36,18 +38,25 @@ export async function obtenerSituacionDeOrden(
 ): Promise<SituacionDeOrden | null> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("orden")
-    .select(
-      `id,
-       avance_seccion ( checkpoint ),
-       lote_taller ( recibido_completo )`,
-    )
-    .eq("id", ordenId)
-    .maybeSingle();
+  // `alerta` no se lee directo: corte no tiene permiso para verla, y la
+  // consulta devolvería cero filas sin dar error. La función de la base solo
+  // responde sí o no, y sí puede mirar (ver la migración de HU-22).
+  const [{ data, error }, { data: esperandoTela, error: errorTela }] =
+    await Promise.all([
+      supabase
+        .from("orden")
+        .select(
+          `id,
+           avance_seccion ( checkpoint ),
+           lote_taller ( recibido_completo )`,
+        )
+        .eq("id", ordenId)
+        .maybeSingle(),
+      supabase.rpc("orden_espera_tela", { p_orden_id: ordenId }),
+    ]);
 
-  if (error) {
-    console.error("[workflow] No se pudo leer la orden", error);
+  if (error || errorTela) {
+    console.error("[workflow] No se pudo leer la orden", error ?? errorTela);
     throw new Error("No se pudo leer la orden.");
   }
 
@@ -58,6 +67,7 @@ export async function obtenerSituacionDeOrden(
     recepcionConfirmada: data.lote_taller.some(
       (lote) => lote.recibido_completo !== null,
     ),
+    esperandoTela: esperandoTela === true,
   };
 }
 
@@ -84,23 +94,33 @@ export async function obtenerOrdenesParaSeccion(
 ): Promise<OrdenParaSeccion[]> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("orden")
-    .select(
-      `id,
-       numero_orden_compra,
-       fecha_entrega,
-       cliente ( razon_social ),
-       avance_seccion ( checkpoint, fecha_hora ),
-       lote_taller ( recibido_completo )`,
-    )
-    .order("fecha_entrega", { ascending: true });
+  const [{ data, error }, { data: esperando, error: errorTela }] =
+    await Promise.all([
+      supabase
+        .from("orden")
+        .select(
+          `id,
+           numero_orden_compra,
+           fecha_entrega,
+           cliente ( razon_social ),
+           avance_seccion ( checkpoint, fecha_hora ),
+           lote_taller ( recibido_completo )`,
+        )
+        .order("fecha_entrega", { ascending: true }),
+      // Una sola llamada para toda la lista, no una por tarjeta (HU-22).
+      supabase.rpc("ordenes_esperando_tela"),
+    ]);
 
-  if (error) {
+  if (error || errorTela) {
     const { hu } = buscarCheckpoint(checkpoint);
-    console.error(`[${hu}] No se pudieron consultar las órdenes`, error);
+    console.error(
+      `[${hu}] No se pudieron consultar las órdenes`,
+      error ?? errorTela,
+    );
     throw new Error("No se pudieron consultar las órdenes.");
   }
+
+  const esperandoTela = new Set(esperando ?? []);
 
   return data.map((orden) => {
     const marcados = orden.avance_seccion.map((avance) => avance.checkpoint);
@@ -122,6 +142,7 @@ export async function obtenerOrdenesParaSeccion(
         recepcionConfirmada: orden.lote_taller.some(
           (lote) => lote.recibido_completo !== null,
         ),
+        esperandoTela: esperandoTela.has(orden.id),
       }),
     };
   });
