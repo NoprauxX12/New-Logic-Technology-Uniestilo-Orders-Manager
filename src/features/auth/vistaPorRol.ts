@@ -33,7 +33,10 @@ const VISTAS: Record<Rol, VistaDeRol> = {
     aviso: null,
   },
   secretaria: {
-    botones: [{ etiqueta: "Cerrar órdenes", ruta: "/ordenes/cierre" }],
+    botones: [
+      { etiqueta: "Programar a diseño", ruta: "/ordenes/programacion" },
+      { etiqueta: "Cerrar órdenes", ruta: "/ordenes/cierre" },
+    ],
     aviso: null,
   },
   diseno: {

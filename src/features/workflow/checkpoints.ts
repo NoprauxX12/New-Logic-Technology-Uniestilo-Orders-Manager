@@ -40,9 +40,9 @@ export type Checkpoint = {
   /**
    * Si el sistema ya permite marcarlo.
    *
-   * El flujo del taller tiene nueve etapas, pero el Sprint 1 solo construye
-   * cuatro: las otras cinco son de historias del Sprint 2 y 3 y todavía no
-   * tienen pantalla. Sin esta marca, una orden recién registrada se quedaría
+   * El flujo del taller tiene nueve etapas y hoy hay cinco construidas: las
+   * otras cuatro son de historias de otros sprints y todavía no tienen
+   * pantalla. Sin esta marca, una orden recién registrada se quedaría
    * trancada para siempre en la primera etapa, porque el motor exigiría marcar
    * algo que nadie puede marcar.
    *
@@ -76,8 +76,8 @@ export const CHECKPOINTS = [
     etiqueta: "Programada a diseño",
     rolDueno: "secretaria",
     hu: "HU-03",
-    disponible: false,
-    ruta: null,
+    disponible: true,
+    ruta: "/ordenes/programacion",
   },
   {
     id: "ficha_adjunta",

@@ -57,9 +57,18 @@ describe("puedeEntrar · lo de cada sección", () => {
     expect(puedeEntrar("marcacion", "/ordenes/corte")).toBe(false);
   });
 
-  it("secretaría entra al cierre", () => {
+  it("secretaría entra a la programación y al cierre", () => {
+    expect(puedeEntrar("secretaria", "/ordenes/programacion")).toBe(true);
     expect(puedeEntrar("secretaria", "/ordenes/cierre")).toBe(true);
     expect(puedeEntrar("secretaria", "/tablero")).toBe(false);
+  });
+
+  it("la programación no la abre ninguna otra sección", () => {
+    for (const rol of ROLES) {
+      expect(puedeEntrar(rol, "/ordenes/programacion")).toBe(
+        rol === "secretaria" || rol === "admin",
+      );
+    }
   });
 
   it("logística entra a sus órdenes y al detalle de una orden", () => {

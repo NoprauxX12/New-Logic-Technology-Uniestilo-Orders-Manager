@@ -308,6 +308,7 @@ export type Database = {
           numero_orden_programacion: string | null
           observaciones: string | null
           orden_original_id: string | null
+          posicion_programacion: number | null
         }
         Insert: {
           cliente_id: string
@@ -321,6 +322,7 @@ export type Database = {
           numero_orden_programacion?: string | null
           observaciones?: string | null
           orden_original_id?: string | null
+          posicion_programacion?: number | null
         }
         Update: {
           cliente_id?: string
@@ -334,6 +336,7 @@ export type Database = {
           numero_orden_programacion?: string | null
           observaciones?: string | null
           orden_original_id?: string | null
+          posicion_programacion?: number | null
         }
         Relationships: [
           {
@@ -383,6 +386,10 @@ export type Database = {
     Functions: {
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       nit_normalizado: { Args: { p_nit: string }; Returns: string }
+      programar_ordenes_a_diseno: {
+        Args: { p_programaciones: Json }
+        Returns: number
+      }
       registrar_orden: {
         Args: {
           p_contacto_celular: string
