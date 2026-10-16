@@ -62,10 +62,13 @@ describe("vistaDeRol · roles con pantalla propia", () => {
     }
   });
 
-  it("logística va a sus órdenes para despachar y recibir lotes", () => {
+  it("logística marca el recogido y bordado y después despacha y recibe lotes", () => {
     const vista = vistaDeRol("logistica");
 
-    expect(vista.botones[0].ruta).toBe("/ordenes/talleres");
+    expect(vista.botones.map((boton) => boton.ruta)).toEqual([
+      "/ordenes/recogido-bordado",
+      "/ordenes/talleres",
+    ]);
   });
 
   it("corte va a marcar su etapa, con la etiqueta de checkpoints.ts", () => {
@@ -98,10 +101,17 @@ describe("vistaDeRol · roles con pantalla propia", () => {
     expect(rutas).toContain("/ordenes/cierre");
   });
 
-  it("admin puede registrar y ver el tablero, sus dos responsabilidades", () => {
+  it("secretaría también valida telas y avisa cuando falta (HU-06)", () => {
+    const rutas = vistaDeRol("secretaria").botones.map((b) => b.ruta);
+
+    expect(rutas).toContain("/ordenes/telas");
+  });
+
+  it("admin puede ver el tablero, registrar órdenes y crear cuentas", () => {
     const rutas = vistaDeRol("admin").botones.map((b) => b.ruta);
 
     expect(rutas).toContain("/tablero");
     expect(rutas).toContain("/ordenes/nueva");
+    expect(rutas).toContain("/usuarios");
   });
 });

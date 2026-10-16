@@ -13,7 +13,7 @@ import {
  *
  * Quién puede marcar la etapa y en qué momento de la secuencia no se decide
  * aquí: eso es del motor de workflow (regla 2). Esto solo añade lo que el motor
- * no sabe, que es si la lista que se armó tiene sentido.
+ * no sabe, que es si la hoja que se armó tiene sentido.
  */
 
 /** La etapa que esta historia marca. */
@@ -22,22 +22,21 @@ export const CHECKPOINT_PROGRAMACION: CheckpointId = "programada_diseno";
 /** El rol dueño de la programación, según `checkpoints.ts`. */
 export const ROL_DE_PROGRAMACION: Rol = "secretaria";
 
-/** Una orden agregada a la hoja, con el número que secretaría le escribió. */
-export type OrdenProgramada = {
-  ordenId: string;
-  numeroOrdenProgramacion: string;
-};
-
-export type ResultadoLista =
-  { valida: true } | { valida: false; mensaje: string };
-
 /**
- * El número de programación comparado sin distinguir mayúsculas ni espacios de
- * más, igual que el índice único de la base. "pr-104" y " PR-104 " son el mismo.
+ * Cuántas órdenes caben en una hoja de programación.
+ *
+ * La hoja de papel del taller llega a nueve (PROGRAMACION #24), así que esto no
+ * es el tamaño de una tanda: es una barrera contra un error de dedo, para que
+ * nadie mande cincuenta órdenes de un clic. La historia habla de cinco o seis
+ * porque es lo que suele caber, no porque sea un límite.
+ *
+ * Si la PO pide otro número, se cambia aquí y en ningún otro lado: la pantalla,
+ * la validación y los mensajes salen de esta constante.
  */
-export function numeroNormalizado(valor: string): string {
-  return valor.trim().toUpperCase();
-}
+export const MAXIMO_POR_HOJA = 20;
+
+export type ResultadoHoja =
+  { valida: true } | { valida: false; mensaje: string };
 
 /**
  * ¿Se puede programar esta orden?
@@ -53,58 +52,62 @@ export function puedeProgramar(
 }
 
 /**
- * ¿Tiene sentido la lista que se armó?
+ * ¿Tiene sentido la hoja que se armó?
  *
- * No hay un tope de órdenes: la secretaria agrega las que haga falta, tres u
- * ocho, y en rondas distintas. Lo que sí se verifica es que no haya una orden
- * dos veces, que ninguna quede sin número y que dos órdenes no lleven el mismo.
- *
- * El orden del arreglo ES el orden de trabajo, así que no se reordena nada aquí.
+ * El orden del arreglo ES el orden de trabajo, así que no se reordena nada
+ * aquí: solo se verifica que haya al menos una orden, que ninguna esté dos
+ * veces y que no se pase del tope.
  */
-export function validarLista(
-  seleccion: readonly OrdenProgramada[],
-): ResultadoLista {
-  if (seleccion.length === 0) {
+export function validarHoja(ordenes: readonly string[]): ResultadoHoja {
+  if (ordenes.length === 0) {
     return {
       valida: false,
       mensaje: "Agrega al menos una orden a la programación.",
     };
   }
 
-  const ordenesVistas = new Set<string>();
-  const numerosVistos = new Set<string>();
+  if (ordenes.length > MAXIMO_POR_HOJA) {
+    return {
+      valida: false,
+      mensaje: `En una programación caben hasta ${MAXIMO_POR_HOJA} órdenes. Deja el resto para la siguiente.`,
+    };
+  }
 
-  for (const fila of seleccion) {
-    if (ordenesVistas.has(fila.ordenId)) {
-      return {
-        valida: false,
-        mensaje: "Una de las órdenes está dos veces en la lista.",
-      };
-    }
-    ordenesVistas.add(fila.ordenId);
-
-    const numero = numeroNormalizado(fila.numeroOrdenProgramacion);
-
-    if (numero === "") {
-      return {
-        valida: false,
-        mensaje: "Falta el número de programación de una de las órdenes.",
-      };
-    }
-
-    if (numerosVistos.has(numero)) {
-      return {
-        valida: false,
-        mensaje: `El número de programación ${numero} está repetido en la lista.`,
-      };
-    }
-    numerosVistos.add(numero);
+  if (new Set(ordenes).size !== ordenes.length) {
+    return {
+      valida: false,
+      mensaje: "Una de las órdenes está dos veces en la programación.",
+    };
   }
 
   return { valida: true };
 }
 
-/** Cuántas prendas suma una orden, para mostrarla antes de agregarla. */
+/**
+ * La lista con la orden de `posicion` movida un puesto arriba o abajo.
+ *
+ * Es lo que hacen las flechas de la pantalla: la secretaria no escribe turnos
+ * ni arrastra nada, toca una flecha y la orden cambia de puesto con su vecina.
+ * Si el movimiento se sale de la lista, devuelve la misma lista sin tocar, para
+ * que el componente no tenga que preguntar si el botón iba deshabilitado.
+ */
+export function moverEnLista(
+  ordenes: readonly string[],
+  posicion: number,
+  direccion: "arriba" | "abajo",
+): string[] {
+  const destino = direccion === "arriba" ? posicion - 1 : posicion + 1;
+
+  if (posicion < 0 || posicion >= ordenes.length) return [...ordenes];
+  if (destino < 0 || destino >= ordenes.length) return [...ordenes];
+
+  const movida = [...ordenes];
+  [movida[posicion], movida[destino]] = [movida[destino], movida[posicion]];
+
+  return movida;
+}
+
+/** Cuántas prendas suma un conjunto de referencias. */
 export function totalDePrendas(
   referencias: readonly { cantidad: number }[],
 ): number {

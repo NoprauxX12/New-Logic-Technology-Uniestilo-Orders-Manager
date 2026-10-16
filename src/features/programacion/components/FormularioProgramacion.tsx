@@ -7,21 +7,23 @@ import {
   programarOrdenes,
 } from "@/features/programacion/actions";
 import type { OrdenPorProgramar } from "@/features/programacion/queries";
+import { MAXIMO_POR_HOJA, moverEnLista } from "@/features/programacion/reglas";
 import { formatearFecha } from "@/lib/utils/fechas";
 
 /**
  * HU-03 · Armar la hoja de programación.
  *
- * La secretaria toca las órdenes en el orden en que deben trabajarse y la
- * posición es el orden en que las toca: la primera queda en 1, la segunda en 2.
- * No hay que arrastrar nada ni escribir números de posición (RNF-08/09/10).
+ * La secretaria toca las órdenes que van en la hoja y después las acomoda con
+ * las flechas, que mueven una orden un puesto arriba o abajo. Nada de arrastrar
+ * ni de escribir turnos: un toque por movimiento, botones grandes y todo
+ * funciona con el dedo y con teclado (RNF-08/09/10).
  *
- * No hay tope: agrega las que haga falta, y lo que no entre hoy lo programa en
- * otra ronda, que quedará después de esta.
+ * El turno no lo escribe nadie: es la posición en la lista. Y el número de la
+ * hoja lo asigna el sistema al guardar.
  *
- * Los `ordenId` van en campos ocultos en el orden de la lista, y el navegador
- * los manda en ese mismo orden; así `leerFormularioProgramacion` reconstruye la
- * secuencia sin que la pantalla tenga que numerarla a mano.
+ * Los `ordenId` viajan en campos ocultos en el orden de la lista, y el
+ * navegador los manda en ese mismo orden; así `leerFormularioProgramacion`
+ * reconstruye la secuencia sin numerarla a mano.
  */
 
 type Props = {
@@ -34,21 +36,27 @@ export function FormularioProgramacion({ ordenes }: Props) {
     ESTADO_INICIAL,
   );
 
-  /** Los ids en el orden en que se tocaron: eso es el orden de trabajo. */
-  const [seleccion, setSeleccion] = useState<string[]>([]);
+  /** Los ids en el orden en que deben trabajarse. */
+  const [hoja, setHoja] = useState<string[]>([]);
 
   const porId = new Map(ordenes.map((orden) => [orden.id, orden]));
-  const agregadas = seleccion.flatMap((id) => {
+  const agregadas = hoja.flatMap((id) => {
     const orden = porId.get(id);
     return orden ? [orden] : [];
   });
 
+  const llena = hoja.length >= MAXIMO_POR_HOJA;
+
   function alternar(ordenId: string) {
-    setSeleccion((actual) =>
+    setHoja((actual) =>
       actual.includes(ordenId)
         ? actual.filter((id) => id !== ordenId)
         : [...actual, ordenId],
     );
+  }
+
+  function mover(posicion: number, direccion: "arriba" | "abajo") {
+    setHoja((actual) => moverEnLista(actual, posicion, direccion));
   }
 
   if (ordenes.length === 0) {
@@ -71,13 +79,12 @@ export function FormularioProgramacion({ ordenes }: Props) {
           Órdenes sin programar
         </h2>
         <p className="text-sm text-zinc-600">
-          Las más antiguas primero. Tócalas en el orden en que deben trabajarse.
+          Las más antiguas primero. Toca las que van en esta programación.
         </p>
 
         <ul className="flex flex-col gap-3">
           {ordenes.map((orden) => {
-            const posicion = seleccion.indexOf(orden.id);
-            const agregada = posicion >= 0;
+            const agregada = hoja.includes(orden.id);
 
             return (
               <li key={orden.id}>
@@ -85,23 +92,25 @@ export function FormularioProgramacion({ ordenes }: Props) {
                   type="button"
                   onClick={() => alternar(orden.id)}
                   aria-pressed={agregada}
+                  disabled={!agregada && llena}
                   className={[
                     "flex w-full items-center gap-3 rounded-xl border p-4 text-left",
                     agregada
                       ? "border-stone-700 bg-stone-50"
                       : "border-zinc-200 bg-white hover:bg-zinc-50",
+                    "disabled:cursor-not-allowed disabled:opacity-50",
                   ].join(" ")}
                 >
                   <span
                     aria-hidden
                     className={[
-                      "flex size-9 flex-none items-center justify-center rounded-full text-base font-semibold",
+                      "flex size-9 flex-none items-center justify-center rounded-full text-xl",
                       agregada
                         ? "bg-stone-700 text-white"
-                        : "border border-zinc-300 text-transparent",
+                        : "border border-zinc-300 text-zinc-400",
                     ].join(" ")}
                   >
-                    {agregada ? posicion + 1 : "0"}
+                    {agregada ? "✓" : "+"}
                   </span>
 
                   <span className="flex flex-col gap-0.5">
@@ -119,7 +128,7 @@ export function FormularioProgramacion({ ordenes }: Props) {
                     </span>
                     <span className="sr-only">
                       {agregada
-                        ? `Agregada en la posición ${posicion + 1}. Toca para quitarla.`
+                        ? "Está en la programación. Toca para quitarla."
                         : "Toca para agregarla a la programación."}
                     </span>
                   </span>
@@ -130,73 +139,104 @@ export function FormularioProgramacion({ ordenes }: Props) {
         </ul>
       </section>
 
-      <section className="flex flex-col gap-4 rounded-xl bg-zinc-100 p-5 lg:w-80">
+      <section className="flex flex-col gap-4 rounded-xl bg-zinc-100 p-5 lg:w-96">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-semibold text-zinc-900">Tu hoja</h2>
+          <h2 className="text-lg font-semibold text-zinc-900">
+            Esta programación
+          </h2>
           <p className="text-sm text-zinc-600">
-            {agregadas.length} {agregadas.length === 1 ? "orden" : "órdenes"}
+            {agregadas.length} de {MAXIMO_POR_HOJA}
           </p>
         </div>
 
         {agregadas.length === 0 ? (
           <p className="text-sm text-zinc-700">
-            Todavía no has agregado ninguna orden. Toca las de la izquierda en
-            el orden en que diseño debe trabajarlas.
+            Todavía no has agregado ninguna orden. Toca las de la izquierda y
+            después acomódalas con las flechas.
           </p>
         ) : (
-          <ol className="flex flex-col gap-4">
-            {agregadas.map((orden, indice) => {
-              const errores = estado.errores[orden.id];
-              const idCampo = `numero-${orden.id}`;
-              const idError = `${idCampo}-error`;
-              const escrito = estado.valores.programaciones.find(
-                (fila) => fila.ordenId === orden.id,
-              );
+          <>
+            <p className="text-sm text-zinc-700">
+              Diseño las va a ver en este orden. Usa las flechas para
+              acomodarlas.
+            </p>
 
-              return (
-                <li key={orden.id} className="flex flex-col gap-1">
-                  <input type="hidden" name="ordenId" value={orden.id} />
+            <ol className="flex flex-col gap-2">
+              {agregadas.map((orden, indice) => {
+                const errores = estado.errores[orden.id];
 
-                  <label
-                    htmlFor={idCampo}
-                    className="text-sm font-medium text-zinc-900"
-                  >
-                    {indice + 1} · {orden.razonSocial}
-                  </label>
-
-                  <input
-                    id={idCampo}
-                    name="numeroOrdenProgramacion"
-                    type="text"
-                    defaultValue={escrito?.numeroOrdenProgramacion}
-                    placeholder="# de programación"
-                    aria-invalid={Boolean(errores?.length)}
-                    aria-describedby={errores?.length ? idError : undefined}
+                return (
+                  <li
+                    key={orden.id}
                     className={[
-                      "min-h-12 rounded-lg border bg-white px-3 text-base text-zinc-900",
-                      "focus:ring-2 focus:ring-stone-500 focus:outline-none",
-                      errores?.length ? "border-red-600" : "border-zinc-300",
+                      "flex items-center gap-2 rounded-lg border bg-white p-2",
+                      errores?.length ? "border-red-600" : "border-zinc-200",
                     ].join(" ")}
-                  />
+                  >
+                    <input type="hidden" name="ordenId" value={orden.id} />
 
-                  {errores?.length ? (
-                    <p
-                      id={idError}
-                      role="alert"
-                      className="text-sm font-medium text-red-700"
+                    <span
+                      aria-hidden
+                      className="flex size-8 flex-none items-center justify-center rounded-full bg-stone-700 text-sm font-semibold text-white"
                     >
-                      {errores[0]}
-                    </p>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ol>
+                      {indice + 1}
+                    </span>
+
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-sm font-medium text-zinc-900">
+                        {orden.razonSocial}
+                      </span>
+                      <span className="text-xs text-zinc-600">
+                        {orden.numeroOrdenCompra} · {orden.totalPrendas} prendas
+                      </span>
+                      {errores?.length ? (
+                        <span
+                          role="alert"
+                          className="text-xs font-medium text-red-700"
+                        >
+                          {errores[0]}
+                        </span>
+                      ) : null}
+                    </span>
+
+                    <span className="flex flex-none gap-1">
+                      <button
+                        type="button"
+                        onClick={() => mover(indice, "arriba")}
+                        disabled={indice === 0}
+                        aria-label={`Subir ${orden.razonSocial}`}
+                        className="size-11 rounded-lg border border-zinc-300 bg-white text-lg text-zinc-800 hover:bg-zinc-50 disabled:opacity-30"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => mover(indice, "abajo")}
+                        disabled={indice === agregadas.length - 1}
+                        aria-label={`Bajar ${orden.razonSocial}`}
+                        className="size-11 rounded-lg border border-zinc-300 bg-white text-lg text-zinc-800 hover:bg-zinc-50 disabled:opacity-30"
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => alternar(orden.id)}
+                        aria-label={`Quitar ${orden.razonSocial} de la programación`}
+                        className="size-11 rounded-lg border border-zinc-300 bg-white text-lg text-zinc-800 hover:bg-zinc-50"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          </>
         )}
 
-        {estado.errores.lista?.length ? (
-          <p role="alert" className="text-sm font-medium text-red-700">
-            {estado.errores.lista[0]}
+        {llena ? (
+          <p className="text-sm text-zinc-700">
+            Llegaste al tope de {MAXIMO_POR_HOJA}. Guarda esta y sigue con otra.
           </p>
         ) : null}
 

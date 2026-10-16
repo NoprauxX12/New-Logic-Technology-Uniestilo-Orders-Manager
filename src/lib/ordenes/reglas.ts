@@ -5,9 +5,13 @@ import type {
   OrdenEnTablero,
   ResumenTablero,
   SemaforoOrden,
-} from "@/features/tablero/types";
+} from "@/lib/ordenes/types";
 
-/** Reglas puras del tablero (HU-14). Sin I/O ni "server-only": fáciles de testear. */
+/**
+ * Reglas puras para derivar el estado de una orden (HU-14, HU-15). Sin I/O ni
+ * "server-only": fáciles de testear. En `lib/` porque las comparten el tablero
+ * y el asistente.
+ */
 
 const MS_DIA = 24 * 60 * 60 * 1000;
 export const DIAS_EN_RIESGO = 3;

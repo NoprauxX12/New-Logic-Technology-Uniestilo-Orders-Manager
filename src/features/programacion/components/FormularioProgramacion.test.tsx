@@ -7,13 +7,13 @@ import { ENTRADA_VACIA } from "@/features/programacion/formulario";
 import type { OrdenPorProgramar } from "@/features/programacion/queries";
 
 /**
- * HU-03 · El formulario con el que se arma la hoja.
+ * HU-03 · El formulario con el que se arma la programación.
  *
  * La action de verdad importa `server-only` y el cliente de Supabase, que no se
  * pueden cargar en jsdom, así que se reemplaza por una función falsa. Lo que se
- * prueba es el comportamiento de la pantalla: que la posición sea el orden en
- * que se tocan las órdenes, que no haya tope, y que mande un par
- * `ordenId` + número por cada orden agregada.
+ * prueba es el comportamiento de la pantalla: que las flechas acomoden la hoja,
+ * que se pueda quitar una orden sin desarmar el resto, y que lo que se manda
+ * sea la lista en el orden que quedó.
  */
 
 const programarOrdenes = vi.hoisted(() => vi.fn());
@@ -24,16 +24,20 @@ vi.mock("@/features/programacion/actions", () => ({
     ok: false,
     mensaje: "",
     errores: {},
-    valores: { programaciones: [] },
+    valores: { ordenes: [] },
   },
 }));
 
 const ESTADO_OK: EstadoProgramacion = {
   ok: true,
-  mensaje: "Listo: 2 órdenes quedaron programadas a diseño.",
+  mensaje: "Listo: la programación #3 quedó con 2 órdenes.",
   errores: {},
   valores: ENTRADA_VACIA,
 };
+
+const COLEGIO = "00000000-0000-0000-0000-0000000000f1";
+const FERRETERIA = "00000000-0000-0000-0000-0000000000f8";
+const CLINICA = "00000000-0000-0000-0000-0000000000f9";
 
 function orden(
   id: string,
@@ -53,22 +57,30 @@ function orden(
 }
 
 const ORDENES: OrdenPorProgramar[] = [
-  orden("00000000-0000-0000-0000-0000000000f1", "Colegio San Ignacio", [
+  orden(COLEGIO, "Colegio San Ignacio", [
     { id: "i1", descripcion: "Camisas blancas", cantidad: 120 },
     { id: "i2", descripcion: "Pantalones grises", cantidad: 120 },
   ]),
-  orden("00000000-0000-0000-0000-0000000000f8", "Ferretería La 33", [
+  orden(FERRETERIA, "Ferretería La 33", [
     { id: "i3", descripcion: "Camisa tipo polo", cantidad: 60 },
   ]),
-  orden("00000000-0000-0000-0000-0000000000f9", "Clínica del Norte", [
+  orden(CLINICA, "Clínica del Norte", [
     { id: "i4", descripcion: "Bata antifluido", cantidad: 40 },
   ]),
 ];
 
-function agregar(razonSocial: string) {
+/** Toca la tarjeta de la izquierda: agrega o quita. */
+function alternar(razonSocial: string) {
   fireEvent.click(
-    screen.getByRole("button", { name: new RegExp(razonSocial) }),
+    screen.getByRole("button", { name: new RegExp(`${razonSocial} ·`) }),
   );
+}
+
+/** Los nombres de las órdenes de la hoja, en el orden en que están. */
+function ordenDeLaHoja(): string[] {
+  return screen
+    .getAllByRole("button", { name: /^Subir / })
+    .map((boton) => boton.getAttribute("aria-label")!.replace("Subir ", ""));
 }
 
 describe("FormularioProgramacion", () => {
@@ -81,11 +93,11 @@ describe("FormularioProgramacion", () => {
     render(<FormularioProgramacion ordenes={ORDENES} />);
 
     expect(
-      screen.getByRole("button", { name: /Colegio San Ignacio/ }),
+      screen.getByRole("button", { name: /Colegio San Ignacio ·/ }),
     ).toHaveTextContent("2 referencias · 240 prendas");
   });
 
-  it("no se puede guardar una hoja vacía", () => {
+  it("no se puede guardar una programación vacía", () => {
     render(<FormularioProgramacion ordenes={ORDENES} />);
 
     expect(
@@ -93,110 +105,128 @@ describe("FormularioProgramacion", () => {
     ).toBeDisabled();
   });
 
-  it("la posición es el orden en que se tocan, no el de la lista", () => {
+  it("las órdenes quedan en el orden en que se agregan", () => {
     render(<FormularioProgramacion ordenes={ORDENES} />);
 
-    agregar("Clínica del Norte");
-    agregar("Colegio San Ignacio");
+    alternar("Clínica del Norte");
+    alternar("Colegio San Ignacio");
 
-    expect(screen.getByLabelText("1 · Clínica del Norte")).toBeInTheDocument();
-    expect(
-      screen.getByLabelText("2 · Colegio San Ignacio"),
-    ).toBeInTheDocument();
-  });
-
-  it("al quitar una orden, las siguientes se renumeran", () => {
-    render(<FormularioProgramacion ordenes={ORDENES} />);
-
-    agregar("Colegio San Ignacio");
-    agregar("Ferretería La 33");
-    agregar("Clínica del Norte");
-    agregar("Ferretería La 33");
-
-    expect(
-      screen.getByLabelText("1 · Colegio San Ignacio"),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText("2 · Clínica del Norte")).toBeInTheDocument();
-    expect(screen.queryByLabelText(/Ferretería La 33/)).toBeNull();
-  });
-
-  it("deja agregar todas las que haya: cinco o seis no es un tope", () => {
-    render(<FormularioProgramacion ordenes={ORDENES} />);
-
-    for (const razonSocial of [
-      "Colegio San Ignacio",
-      "Ferretería La 33",
+    expect(ordenDeLaHoja()).toEqual([
       "Clínica del Norte",
-    ]) {
-      agregar(razonSocial);
-    }
-
-    expect(screen.getByText("3 órdenes")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Programar a diseño" }),
-    ).toBeEnabled();
+      "Colegio San Ignacio",
+    ]);
   });
 
-  it("manda un par de orden y número por cada orden agregada", async () => {
+  it("la flecha de subir acomoda la hoja sin desarmarla", () => {
     render(<FormularioProgramacion ordenes={ORDENES} />);
 
-    agregar("Colegio San Ignacio");
-    agregar("Ferretería La 33");
+    alternar("Colegio San Ignacio");
+    alternar("Ferretería La 33");
+    alternar("Clínica del Norte");
 
-    fireEvent.change(screen.getByLabelText("1 · Colegio San Ignacio"), {
-      target: { value: "PR-104" },
-    });
-    fireEvent.change(screen.getByLabelText("2 · Ferretería La 33"), {
-      target: { value: "PR-105" },
-    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Subir Clínica del Norte" }),
+    );
 
+    expect(ordenDeLaHoja()).toEqual([
+      "Colegio San Ignacio",
+      "Clínica del Norte",
+      "Ferretería La 33",
+    ]);
+  });
+
+  it("dos toques llevan la última al primer puesto", () => {
+    render(<FormularioProgramacion ordenes={ORDENES} />);
+
+    alternar("Colegio San Ignacio");
+    alternar("Ferretería La 33");
+    alternar("Clínica del Norte");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Subir Clínica del Norte" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Subir Clínica del Norte" }),
+    );
+
+    expect(ordenDeLaHoja()[0]).toBe("Clínica del Norte");
+  });
+
+  it("la primera no se puede subir y la última no se puede bajar", () => {
+    render(<FormularioProgramacion ordenes={ORDENES} />);
+
+    alternar("Colegio San Ignacio");
+    alternar("Ferretería La 33");
+
+    expect(
+      screen.getByRole("button", { name: "Subir Colegio San Ignacio" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Bajar Ferretería La 33" }),
+    ).toBeDisabled();
+  });
+
+  it("quitar una orden no desacomoda las demás", () => {
+    render(<FormularioProgramacion ordenes={ORDENES} />);
+
+    alternar("Colegio San Ignacio");
+    alternar("Ferretería La 33");
+    alternar("Clínica del Norte");
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Quitar Ferretería La 33 de la programación",
+      }),
+    );
+
+    expect(ordenDeLaHoja()).toEqual([
+      "Colegio San Ignacio",
+      "Clínica del Norte",
+    ]);
+  });
+
+  it("manda las órdenes en el orden en que quedó la hoja", async () => {
+    render(<FormularioProgramacion ordenes={ORDENES} />);
+
+    alternar("Colegio San Ignacio");
+    alternar("Ferretería La 33");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Subir Ferretería La 33" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Programar a diseño" }));
 
     await waitFor(() => expect(programarOrdenes).toHaveBeenCalled());
 
     const formData = programarOrdenes.mock.calls[0][1] as FormData;
 
-    expect(formData.getAll("ordenId")).toEqual([
-      "00000000-0000-0000-0000-0000000000f1",
-      "00000000-0000-0000-0000-0000000000f8",
-    ]);
-    expect(formData.getAll("numeroOrdenProgramacion")).toEqual([
-      "PR-104",
-      "PR-105",
-    ]);
+    expect(formData.getAll("ordenId")).toEqual([FERRETERIA, COLEGIO]);
+  });
+
+  it("no pide escribir ningún número: los pone el sistema", () => {
+    render(<FormularioProgramacion ordenes={ORDENES} />);
+
+    alternar("Colegio San Ignacio");
+
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.queryByRole("spinbutton")).toBeNull();
   });
 
   it("pinta el error de la action junto a la orden que lo causó", async () => {
     programarOrdenes.mockResolvedValue({
       ok: false,
-      mensaje: "Cambia los números de programación que ya están usados.",
-      errores: {
-        "00000000-0000-0000-0000-0000000000f1": [
-          "Ese número de programación ya está usado.",
-        ],
-      },
-      valores: {
-        programaciones: [
-          {
-            ordenId: "00000000-0000-0000-0000-0000000000f1",
-            numeroOrdenProgramacion: "PR-104",
-          },
-        ],
-      },
+      mensaje: "Algunas órdenes de la hoja no se pueden programar todavía.",
+      errores: { [COLEGIO]: ["Esta orden ya no existe."] },
+      valores: { ordenes: [COLEGIO] },
     } satisfies EstadoProgramacion);
 
     render(<FormularioProgramacion ordenes={ORDENES} />);
 
-    agregar("Colegio San Ignacio");
+    alternar("Colegio San Ignacio");
     fireEvent.click(screen.getByRole("button", { name: "Programar a diseño" }));
 
     expect(
-      await screen.findByText("Ese número de programación ya está usado."),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Cambia los números de programación que ya están usados.",
-      ),
+      await screen.findByText("Esta orden ya no existe."),
     ).toBeInTheDocument();
   });
 

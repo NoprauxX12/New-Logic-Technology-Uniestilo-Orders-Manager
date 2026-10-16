@@ -22,6 +22,42 @@ const ESTADO_INICIAL: EstadoIniciarSesion = {
   email: "",
 };
 
+function IconoPersona() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" />
+    </svg>
+  );
+}
+
+function IconoCandado() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
+  );
+}
+
 type Props = {
   /** Adónde volver tras entrar. */
   next: string;
@@ -50,24 +86,27 @@ export function FormularioLogin({ next }: Props) {
         nombre="email"
         etiqueta="Correo"
         tipo="email"
-        marcador="tucorreo@uniestilo.test"
+        marcador="tucorreo@uniestilo.com"
         autocompletar="username"
         valorInicial={estado.email}
+        icono={<IconoPersona />}
       />
 
       <CampoTexto
         nombre="password"
         etiqueta="Contraseña"
         tipo="password"
+        marcador="••••••••"
         autocompletar="current-password"
+        icono={<IconoCandado />}
       />
 
       <button
         type="submit"
         disabled={enviando}
-        className="min-h-14 rounded-lg bg-stone-700 px-6 text-lg font-semibold text-white hover:bg-stone-800 disabled:bg-zinc-400"
+        className="bg-marca hover:bg-marca-oscuro mt-2 min-h-14 rounded-xl px-6 text-lg font-semibold text-white shadow-sm disabled:bg-zinc-400"
       >
-        {enviando ? "Entrando…" : "Entrar"}
+        {enviando ? "Entrando…" : "Ingresar al sistema"}
       </button>
     </form>
   );

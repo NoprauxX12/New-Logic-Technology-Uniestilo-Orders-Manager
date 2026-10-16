@@ -20,7 +20,7 @@ ERP a la medida para **Uniestilo S.A.S.**, empresa de confección en Marinilla (
 | Estilos    | Tailwind CSS 4                                           | Sin `tailwind.config`; el tema vive en `src/app/globals.css`                                                                                        |
 | Backend    | Supabase: Postgres + RLS, Auth, Storage, Realtime        | Sin servidor propio. Toda mutación pasa por Server Actions                                                                                          |
 | Despliegue | Vercel                                                   | `main` → producción; `develop` y cada PR → preview                                                                                                  |
-| IA         | Proveedor por decidir                                    | Todo detrás de `src/lib/ai/`; el SDK del proveedor no sale de ahí (RNF-12)                                                                          |
+| IA         | Groq vía Vercel AI SDK (`ai` + `@ai-sdk/groq`)           | Todo detrás de `src/lib/ai/`; el SDK del proveedor no sale de `proveedor.ts` (RNF-12). Variables `IA_*` en `.env.example` (`docs/adr/0009`)         |
 
 Node 22 (`.nvmrc`) y npm. No usar pnpm, yarn ni bun: un solo lockfile.
 
@@ -55,21 +55,25 @@ src/
   features/               Un módulo por área del dominio. Cada uno es dueño de sus
                           server actions, consultas, validaciones y componentes.
     ordenes/              HU-01, HU-02, HU-05
-    programacion/         Programación a diseño: HU-03
+    programacion/         Hoja de programación a diseño: HU-03 (docs/adr/0010)
     workflow/             Motor de checkpoints: HU-08, HU-09, HU-12, HU-19, HU-13 (RNF-05)
     talleres/             Lotes a taller satélite: HU-10, HU-11
     tablero/              HU-14 + suscripción Realtime
     auth/                 Sesión y acceso por rol (accesoPorRuta.ts, guardia.ts): HU-16, HU-17
     alertas/              HU-06, HU-07, HU-20 (post-MVP)
+    asistente/            Asistente de solo lectura para administración: HU-15 (docs/adr/0009)
     documentos/           Etiquetas y documentos de despacho: HU-13
+    usuarios/             Cuentas de las personas (crear, editar, desactivar, borrar), solo admin: HU-24 (docs/adr/0008)
   components/
     ui/                   Primitivos reutilizables sin dominio (Button, Input, Badge…)
     layout/               AppShell, navegación por rol
   lib/
-    supabase/             client.ts (navegador), server.ts (servidor), session.ts (proxy)
+    supabase/             client.ts (navegador), server.ts (servidor), session.ts (proxy),
+                          admin.ts (secret key, solo para Supabase Auth)
     auth/                 getUsuarioActual(): la única respuesta a "quién está actuando"
     talleres/             Estado derivado de los lotes; lo usan talleres y tablero
-    ai/                   Interfaz propia sobre el LLM (post-MVP)
+    ordenes/              Estado derivado de una orden (avances, semáforo, etapas); lo usan tablero y asistente
+    ai/                   Interfaz propia sobre el LLM: config, proveedor y responderConHerramientas()
     utils/                Helpers puros: fechas, moneda, cn()
   types/                  database.types.ts (generado) y tipos de dominio
   proxy.ts                Refresca la sesión en cada petición; redirección a login en HU-16
@@ -123,13 +127,13 @@ Salen del diseño de arquitectura y de los RNF. Un PR que las rompa no se mezcla
 7. **Un lote a taller es entidad propia** (`lote_taller`), no un checkpoint: una orden se reparte en varios lotes y HU-11 confronta lo recibido contra lo enviado.
 8. **Las alertas son persistentes** (`alerta` con destinatario y estado), no notificaciones efímeras (HU-07).
 9. **Facturación fuera de alcance.** El sistema no emite facturas: en el cierre (HU-13) solo registra que se emitió y captura el número.
-10. **La IA solo informa, no decide ni muta** (HU-15, HU-21). Acceso de solo lectura a los datos.
+10. **La IA solo informa, no decide ni muta** (HU-15, HU-21). El modelo solo accede a los datos por las herramientas tipadas de `src/features/asistente/herramientas.ts`, todas de lectura; nunca genera SQL ni recibe un cliente de base (`docs/adr/0009`).
 
 Roles (enum `rol`) y lo que marca cada uno:
 
 | Rol          | Marca                                                                              |
 | ------------ | ---------------------------------------------------------------------------------- |
-| `admin`      | Registra órdenes, ve todo el tablero, resuelve alertas, usa el asistente           |
+| `admin`      | Registra órdenes, crea las cuentas (HU-24), ve todo el tablero, resuelve alertas   |
 | `secretaria` | Cotización, programación a diseño y de tela, validación de insumos, cierre (HU-13) |
 | `diseno`     | Ficha técnica (HU-04)                                                              |
 | `corte`      | Corte completado (HU-08)                                                           |
@@ -154,9 +158,10 @@ HU-19 (lista para despachar) la marca "terminación"; ver pendientes al final.
 ## Supabase
 
 - Un solo cliente por contexto: `createClient()` de `@/lib/supabase/server` en Server Components, actions y route handlers; `@/lib/supabase/client` solo dentro de `"use client"`. No se instancian clientes de `@supabase/supabase-js` en ningún otro lado.
-- `SUPABASE_SECRET_KEY` salta RLS: jamás en código que llegue al navegador ni en `NEXT_PUBLIC_*`. Solo para scripts de seed o administración en servidor.
+- `SUPABASE_SECRET_KEY` salta RLS: jamás en código que llegue al navegador ni en `NEXT_PUBLIC_*`. Dentro de la aplicación solo la usa `@/lib/supabase/admin`, y solo para la API de Supabase Auth (cuentas, HU-24). Nunca para tablas del dominio.
+- Una persona con rastro en la bitácora no se borra: se desactiva (`usuario.activo = false`). `rol_actual()` devuelve null para una cuenta inactiva, así que toda política le niega el paso.
 - Toda función nueva de Postgres: `revoke execute on function ... from public, anon; grant execute ... to authenticated`. Postgres le da EXECUTE a `public` por defecto y quitárselo a `anon` no basta.
-- El registro de cuentas está apagado en `config.toml`; en el proyecto hospedado hay que dejarlo igual (Authentication → Sign In / Up). Los usuarios los crea administración con el seed o la secret key.
+- El registro de cuentas está apagado en `config.toml`; en el proyecto hospedado hay que dejarlo igual (Authentication → Sign In / Up). Las cuentas las crea administración desde `/usuarios` (HU-24).
 - Las políticas de `avance_seccion` usan `rol_dueno(checkpoint)`, copia SQL del mapa de `checkpoints.ts` verificada por `rlsPorRol.test.ts`. Si cambia el flujo, cambian los dos.
 - Esquema con migraciones: `npx supabase migration new <nombre>` → escribir el SQL → `npx supabase db reset` en local → PR. Nombres descriptivos en snake_case: `crear_orden_e_items`, `rls_avance_seccion`.
 - Tras cambiar el esquema: `npm run db:types` y subir `database.types.ts` en el mismo PR.
@@ -191,5 +196,5 @@ Las decisiones cerradas están en `docs/adr/`. Abierto con el equipo o la PO:
 - ~~El Sprint 1 exige "queda registro de quién marcó" pero el login (HU-16) es Sprint 2. Hace falta al menos un login básico en Sprint 1.~~ Resuelto: login real con Supabase Auth y el rol como claim del JWT (`docs/adr/0006`). ~~Falta HU-17.~~ Resuelto: RLS por rol y acceso por pantalla (`docs/adr/0007`). El PR #37 quedó reemplazado y debe cerrarse.
 - Segundo factor (MFA). Propuesta: TOTP obligatorio para `admin` y `secretaria` exigiendo `aal2` en el proxy y en las políticas sensibles; passkeys para todos cuando Supabase las saque de beta. Antes hace falta SMTP propio para recuperar contraseñas.
 - Content-Security-Policy: `next.config.ts` pone las cabeceras que no dependen de la aplicación; una CSP exige nonces por petición.
-- Proveedor de LLM.
 - Catálogo de talleres satélite (hoy texto libre en HU-10).
+- HU-24 (administrar cuentas) no está en el backlog de Miro: el número es provisional hasta que se cree el issue.

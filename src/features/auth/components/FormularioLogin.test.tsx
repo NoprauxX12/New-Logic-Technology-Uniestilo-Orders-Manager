@@ -16,7 +16,7 @@ vi.mock("@/features/auth/actions", () => ({
 }));
 
 describe("FormularioLogin · lo que se ve al abrir la pantalla", () => {
-  it("pide el correo y la contraseña, y el botón dice Entrar", () => {
+  it("pide el correo y la contraseña, y el botón dice Ingresar al sistema", () => {
     render(<FormularioLogin next="/" />);
 
     expect(screen.getByRole("textbox", { name: "Correo" })).toBeInTheDocument();
@@ -24,7 +24,9 @@ describe("FormularioLogin · lo que se ve al abrir la pantalla", () => {
       "type",
       "password",
     );
-    expect(screen.getByRole("button", { name: "Entrar" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Ingresar al sistema" }),
+    ).toBeInTheDocument();
   });
 
   it("no muestra ningún error al abrir el formulario", () => {

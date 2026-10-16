@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/server";
  * HU-03 · Lecturas de la programación a diseño.
  *
  * Dos consultas: las órdenes que todavía no se han programado —lo que la
- * secretaria va agregando— y la hoja ya programada, que es lo que diseño
+ * secretaria va agregando— y las hojas ya armadas, que es lo que diseño
  * trabaja.
  *
  * Las dos traen `descripcion` y `cantidad` de cada prenda, que es lo que la
@@ -42,8 +42,19 @@ export type OrdenPorProgramar = {
 };
 
 export type OrdenEnLaHoja = OrdenPorProgramar & {
-  numeroOrdenProgramacion: string;
-  posicionProgramacion: number;
+  /** Su turno dentro de la hoja. */
+  turno: number;
+};
+
+/** Una hoja de programación completa, como la de papel. */
+export type HojaDeProgramacion = {
+  numero: number;
+  ordenes: OrdenEnLaHoja[];
+  /** El total de prendas de toda la hoja, como el número del pie de la hoja. */
+  totalPrendas: number;
+  /** Cuándo y quién la programó, de la bitácora. */
+  programadaEn: string | null;
+  programadaPor: string | null;
 };
 
 const SELECCION = `id,
@@ -54,18 +65,22 @@ const SELECCION = `id,
    posicion_programacion,
    cliente ( razon_social ),
    item_orden ( id, descripcion, cantidad ),
-   avance_seccion ( checkpoint )`;
+   avance_seccion ( checkpoint, fecha_hora, usuario ( nombre ) )`;
 
 type FilaOrden = {
   id: string;
   numero_orden_compra: string;
   fecha_ingreso: string;
   fecha_entrega: string;
-  numero_orden_programacion: string | null;
+  numero_orden_programacion: number | null;
   posicion_programacion: number | null;
   cliente: { razon_social: string } | null;
   item_orden: { id: string; descripcion: string; cantidad: number }[];
-  avance_seccion: { checkpoint: CheckpointId }[];
+  avance_seccion: {
+    checkpoint: CheckpointId;
+    fecha_hora: string;
+    usuario: { nombre: string } | null;
+  }[];
 };
 
 function aOrden(fila: FilaOrden): OrdenPorProgramar {
@@ -91,19 +106,15 @@ function aOrden(fila: FilaOrden): OrdenPorProgramar {
  * Las órdenes que esperan programación, la que llegó primero arriba.
  *
  * El orden sugerido es el de llegada (`fecha_ingreso`), que es el criterio por
- * defecto de la historia; el de relevancia lo decide la secretaria agregándolas
- * en el orden que quiera, y eso no se guarda como preferencia: queda en la
- * posición con la que se programaron.
+ * defecto de la historia; el de relevancia lo decide la secretaria moviéndolas
+ * en la hoja, y eso no se guarda como preferencia: queda en el turno con el que
+ * se programaron.
  *
  * Quién califica lo decide el motor y no una condición escrita aquí: aparece la
  * orden a la que el motor le permitiría marcar esta etapa. Hoy eso es "toda
  * orden sin programar", porque la cotización (HU-02) todavía no está
  * disponible; el día que esa historia encienda su etapa, las órdenes sin
  * cotización aprobada dejarán de aparecer solas, sin tocar este archivo.
- *
- * Se filtra en memoria y no con un `not.in` porque las órdenes son decenas, no
- * miles, y la condición "no tiene este avance" sobre una tabla embebida no se
- * expresa en PostgREST sin una vista.
  */
 export async function listarOrdenesPorProgramar(): Promise<
   OrdenPorProgramar[]
@@ -131,66 +142,61 @@ export async function listarOrdenesPorProgramar(): Promise<
     );
 }
 
-/** La hoja de programación, en el orden en que diseño debe trabajarla. */
-export async function listarHojaDeProgramacion(): Promise<OrdenEnLaHoja[]> {
+/**
+ * Las hojas de programación, de la más reciente a la más vieja, y dentro de
+ * cada una las órdenes en su turno.
+ *
+ * Se agrupa aquí y no en la base porque son dos columnas de la misma tabla: la
+ * consulta trae las órdenes ya ordenadas por hoja y turno, y esto solo las
+ * reparte.
+ */
+export async function listarHojasDeProgramacion(): Promise<
+  HojaDeProgramacion[]
+> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("orden")
     .select(SELECCION)
     .not("posicion_programacion", "is", null)
+    .order("numero_orden_programacion", { ascending: false })
     .order("posicion_programacion", { ascending: true });
 
   if (error) {
-    console.error("[HU-03] No se pudo leer la hoja de programación", error);
-    throw new Error("No se pudo leer la hoja de programación.");
+    console.error("[HU-03] No se pudieron leer las hojas", error);
+    throw new Error("No se pudieron leer las hojas de programación.");
   }
 
-  return data.flatMap((fila) => {
-    // El check `orden_programacion_completa` garantiza que si hay posición hay
-    // número; el estrechamiento es para TypeScript, no una condición real.
-    if (fila.numero_orden_programacion === null) return [];
-    if (fila.posicion_programacion === null) return [];
+  const hojas = new Map<number, HojaDeProgramacion>();
 
-    return [
-      {
-        ...aOrden(fila),
-        numeroOrdenProgramacion: fila.numero_orden_programacion,
-        posicionProgramacion: fila.posicion_programacion,
-      },
-    ];
-  });
-}
+  for (const fila of data) {
+    // El check `orden_programacion_completa` garantiza que si hay turno hay
+    // hoja; el estrechamiento es para TypeScript, no una condición real.
+    if (fila.numero_orden_programacion === null) continue;
+    if (fila.posicion_programacion === null) continue;
 
-/**
- * Los números de programación que ya existen entre los que se quieren usar.
- *
- * El índice único de la base es la verdad, pero rechazaría la programación
- * entera con un código de error. Esto se consulta antes para poder decir qué
- * número hay que cambiar.
- */
-export async function numerosYaUsados(
-  numeros: readonly string[],
-): Promise<string[]> {
-  if (numeros.length === 0) return [];
+    const orden: OrdenEnLaHoja = {
+      ...aOrden(fila),
+      turno: fila.posicion_programacion,
+    };
 
-  const supabase = await createClient();
+    const avance = fila.avance_seccion.find(
+      (candidato) => candidato.checkpoint === "programada_diseno",
+    );
 
-  const { data, error } = await supabase
-    .from("orden")
-    .select("numero_orden_programacion")
-    .not("numero_orden_programacion", "is", null);
+    const hoja = hojas.get(fila.numero_orden_programacion) ?? {
+      numero: fila.numero_orden_programacion,
+      ordenes: [],
+      totalPrendas: 0,
+      programadaEn: avance?.fecha_hora ?? null,
+      programadaPor: avance?.usuario?.nombre ?? null,
+    };
 
-  if (error) {
-    console.error("[HU-03] No se pudieron leer los números en uso", error);
-    // No es motivo para frenar: si esta consulta falla, el índice único de la
-    // base sigue protegiendo la unicidad.
-    return [];
+    hoja.ordenes.push(orden);
+    hoja.totalPrendas += orden.totalPrendas;
+
+    hojas.set(fila.numero_orden_programacion, hoja);
   }
 
-  const enUso = new Set(
-    data.map((fila) => (fila.numero_orden_programacion ?? "").toUpperCase()),
-  );
-
-  return numeros.filter((numero) => enUso.has(numero.toUpperCase()));
+  return [...hojas.values()];
 }

@@ -74,6 +74,12 @@ type Peticion = {
    * se asume que no.
    */
   recepcionConfirmada?: boolean;
+  /**
+   * Si la orden tiene una alerta de tela sin llegada (HU-06, HU-22). Solo lo
+   * mira la etapa que declara el requisito `tela_en_empresa`; si no se
+   * informa, se asume que no.
+   */
+  esperandoTela?: boolean;
 };
 
 /**
@@ -87,6 +93,7 @@ export function puedeMarcar({
   marcados,
   rol,
   recepcionConfirmada = false,
+  esperandoTela = false,
 }: Peticion): ResultadoMarcado {
   const { etiqueta, rolDueno, disponible, requisito } =
     buscarCheckpoint(checkpoint);
@@ -132,6 +139,14 @@ export function puedeMarcar({
       permitido: false,
       motivo: "requisito_pendiente",
       mensaje: `${ETIQUETAS_ROL.logistica} debe confirmar primero la recepción de las prendas del taller.`,
+    };
+  }
+
+  if (requisito === "tela_en_empresa" && esperandoTela) {
+    return {
+      permitido: false,
+      motivo: "requisito_pendiente",
+      mensaje: `La orden está esperando tela. ${ETIQUETAS_ROL.secretaria} tiene que marcar que llegó.`,
     };
   }
 

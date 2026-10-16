@@ -36,6 +36,7 @@ export type Database = {
     Tables: {
       alerta: {
         Row: {
+          creada_por: string | null
           destinatario_id: string
           detalle: string
           estado: Database["public"]["Enums"]["estado_alerta"]
@@ -43,9 +44,12 @@ export type Database = {
           fecha_creacion: string
           id: string
           orden_id: string
+          tela_llegada_en: string | null
+          tela_recibida_por: string | null
           tipo: Database["public"]["Enums"]["tipo_alerta"]
         }
         Insert: {
+          creada_por?: string | null
           destinatario_id: string
           detalle: string
           estado?: Database["public"]["Enums"]["estado_alerta"]
@@ -53,9 +57,12 @@ export type Database = {
           fecha_creacion?: string
           id?: string
           orden_id: string
+          tela_llegada_en?: string | null
+          tela_recibida_por?: string | null
           tipo: Database["public"]["Enums"]["tipo_alerta"]
         }
         Update: {
+          creada_por?: string | null
           destinatario_id?: string
           detalle?: string
           estado?: Database["public"]["Enums"]["estado_alerta"]
@@ -63,9 +70,18 @@ export type Database = {
           fecha_creacion?: string
           id?: string
           orden_id?: string
+          tela_llegada_en?: string | null
+          tela_recibida_por?: string | null
           tipo?: Database["public"]["Enums"]["tipo_alerta"]
         }
         Relationships: [
+          {
+            foreignKeyName: "alerta_creada_por_fkey"
+            columns: ["creada_por"]
+            isOneToOne: false
+            referencedRelation: "usuario"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "alerta_destinatario_id_fkey"
             columns: ["destinatario_id"]
@@ -78,6 +94,13 @@ export type Database = {
             columns: ["orden_id"]
             isOneToOne: false
             referencedRelation: "orden"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerta_tela_recibida_por_fkey"
+            columns: ["tela_recibida_por"]
+            isOneToOne: false
+            referencedRelation: "usuario"
             referencedColumns: ["id"]
           },
         ]
@@ -305,7 +328,7 @@ export type Database = {
           id: string
           numero_factura: string | null
           numero_orden_compra: string
-          numero_orden_programacion: string | null
+          numero_orden_programacion: number | null
           observaciones: string | null
           orden_original_id: string | null
           posicion_programacion: number | null
@@ -319,7 +342,7 @@ export type Database = {
           id?: string
           numero_factura?: string | null
           numero_orden_compra: string
-          numero_orden_programacion?: string | null
+          numero_orden_programacion?: number | null
           observaciones?: string | null
           orden_original_id?: string | null
           posicion_programacion?: number | null
@@ -333,7 +356,7 @@ export type Database = {
           id?: string
           numero_factura?: string | null
           numero_orden_compra?: string
-          numero_orden_programacion?: string | null
+          numero_orden_programacion?: number | null
           observaciones?: string | null
           orden_original_id?: string | null
           posicion_programacion?: number | null
@@ -357,6 +380,7 @@ export type Database = {
       }
       usuario: {
         Row: {
+          activo: boolean
           creado_en: string
           email: string
           id: string
@@ -364,6 +388,7 @@ export type Database = {
           rol: Database["public"]["Enums"]["rol"]
         }
         Insert: {
+          activo?: boolean
           creado_en?: string
           email: string
           id: string
@@ -371,6 +396,7 @@ export type Database = {
           rol: Database["public"]["Enums"]["rol"]
         }
         Update: {
+          activo?: boolean
           creado_en?: string
           email?: string
           id?: string
@@ -386,8 +412,10 @@ export type Database = {
     Functions: {
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       nit_normalizado: { Args: { p_nit: string }; Returns: string }
+      orden_espera_tela: { Args: { p_orden_id: string }; Returns: boolean }
+      ordenes_esperando_tela: { Args: never; Returns: string[] }
       programar_ordenes_a_diseno: {
-        Args: { p_programaciones: Json }
+        Args: { p_ordenes: string[] }
         Returns: number
       }
       registrar_orden: {

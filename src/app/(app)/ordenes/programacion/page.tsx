@@ -4,7 +4,7 @@ import { exigirAcceso } from "@/features/auth/guardia";
 import { FormularioProgramacion } from "@/features/programacion/components/FormularioProgramacion";
 import { HojaDeProgramacion } from "@/features/programacion/components/HojaDeProgramacion";
 import {
-  listarHojaDeProgramacion,
+  listarHojasDeProgramacion,
   listarOrdenesPorProgramar,
 } from "@/features/programacion/queries";
 
@@ -16,9 +16,9 @@ export const metadata: Metadata = {
 export default async function ProgramacionPage() {
   await exigirAcceso("/ordenes/programacion");
 
-  const [porProgramar, hoja] = await Promise.all([
+  const [porProgramar, hojas] = await Promise.all([
     listarOrdenesPorProgramar(),
-    listarHojaDeProgramacion(),
+    listarHojasDeProgramacion(),
   ]);
 
   return (
@@ -30,22 +30,28 @@ export default async function ProgramacionPage() {
             Programar a diseño
           </h1>
           <p className="text-base text-zinc-600">
-            Arma la lista de órdenes que diseño debe trabajar, en el orden en
-            que deben trabajarse. Puedes seguir agregando en otro momento.
+            Arma la programación con las órdenes que diseño debe trabajar, en el
+            orden en que deben trabajarse. Las que no alcancen quedan para la
+            siguiente.
           </p>
         </header>
 
         <FormularioProgramacion ordenes={porProgramar} />
 
-        <section className="flex flex-col gap-3">
+        <section className="flex flex-col gap-4">
           <h2 className="text-lg font-semibold text-zinc-900">
-            Hoja de programación
+            Programaciones hechas
           </h2>
-          <p className="text-sm text-zinc-600">
-            Lo que diseño ya tiene para trabajar, en orden.
-          </p>
 
-          <HojaDeProgramacion ordenes={hoja} />
+          {hojas.length === 0 ? (
+            <p className="rounded-xl border border-zinc-200 bg-white p-6 text-center text-sm text-zinc-600">
+              Todavía no has armado ninguna programación.
+            </p>
+          ) : (
+            hojas.map((hoja) => (
+              <HojaDeProgramacion key={hoja.numero} hoja={hoja} />
+            ))
+          )}
         </section>
       </main>
     </div>

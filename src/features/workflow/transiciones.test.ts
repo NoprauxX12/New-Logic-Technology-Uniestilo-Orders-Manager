@@ -372,3 +372,109 @@ describe("puedeMarcar · requisito de recepción del taller (HU-12)", () => {
     expect(resultado.motivo).toBe("fuera_de_secuencia");
   });
 });
+
+/**
+ * HU-22 · El corte tiene un requisito que no es un checkpoint: la orden no
+ * puede estar esperando tela. Una alerta de falta de tela (HU-06) la frena
+ * hasta que secretaría marca que la tela llegó.
+ */
+describe("puedeMarcar · requisito de tela en la empresa (HU-22)", () => {
+  const { rolDueno } = buscarCheckpoint("corte_completado");
+  const previos = primerasDisponibles(DISPONIBLES.indexOf("corte_completado"));
+
+  it("checkpoints.ts declara que el corte exige la tela en la empresa", () => {
+    expect(buscarCheckpoint("corte_completado").requisito).toBe(
+      "tela_en_empresa",
+    );
+  });
+
+  it("no deja marcar el corte mientras la orden espera tela, y dice a quién le toca", () => {
+    const resultado = puedeMarcar({
+      checkpoint: "corte_completado",
+      marcados: previos,
+      rol: rolDueno,
+      esperandoTela: true,
+    });
+
+    expect(resultado.permitido).toBe(false);
+    if (resultado.permitido) return;
+    expect(resultado.motivo).toBe("requisito_pendiente");
+    expect(resultado.mensaje).toMatch(/esperando tela.*Secretaría/);
+  });
+
+  it("deja marcar el corte cuando la tela ya llegó", () => {
+    expect(
+      puedeMarcar({
+        checkpoint: "corte_completado",
+        marcados: previos,
+        rol: rolDueno,
+        esperandoTela: false,
+      }),
+    ).toEqual({ permitido: true });
+  });
+
+  it("si no se informa, asume que la orden no espera tela", () => {
+    expect(
+      puedeMarcar({
+        checkpoint: "corte_completado",
+        marcados: previos,
+        rol: rolDueno,
+      }),
+    ).toEqual({ permitido: true });
+  });
+
+  it("esperar tela no frena las demás etapas", () => {
+    const previosMarcacion = primerasDisponibles(
+      DISPONIBLES.indexOf("llegada_marcacion"),
+    );
+
+    expect(
+      puedeMarcar({
+        checkpoint: "llegada_marcacion",
+        marcados: previosMarcacion,
+        rol: buscarCheckpoint("llegada_marcacion").rolDueno,
+        recepcionConfirmada: true,
+        esperandoTela: true,
+      }),
+    ).toEqual({ permitido: true });
+  });
+
+  it("el rol se dice antes que la tela: a corte le toca, aunque falte tela", () => {
+    const resultado = puedeMarcar({
+      checkpoint: "corte_completado",
+      marcados: previos,
+      rol: "secretaria",
+      esperandoTela: true,
+    });
+
+    expect(resultado.permitido === false && resultado.motivo).toBe(
+      "rol_no_autorizado",
+    );
+  });
+});
+
+describe("HU-09 · recogido y bordado", () => {
+  it("permite a logística marcar después del corte", () => {
+    expect(
+      puedeMarcar({
+        checkpoint: "recogido_bordado",
+        marcados: ["corte_completado"],
+        rol: "logistica",
+      }),
+    ).toEqual({ permitido: true });
+  });
+
+  it("impide pasar a marcación sin recogido y bordado", () => {
+    expect(
+      puedeMarcar({
+        checkpoint: "llegada_marcacion",
+        marcados: ["corte_completado"],
+        rol: "marcacion",
+        recepcionConfirmada: true,
+      }),
+    ).toMatchObject({
+      permitido: false,
+      motivo: "fuera_de_secuencia",
+    });
+  });
+});

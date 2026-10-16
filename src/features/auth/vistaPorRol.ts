@@ -29,12 +29,17 @@ const VISTAS: Record<Rol, VistaDeRol> = {
     botones: [
       { etiqueta: "Ver el tablero", ruta: "/tablero" },
       { etiqueta: "Registrar una orden", ruta: "/ordenes/nueva" },
+      { etiqueta: "Crear cuentas", ruta: "/usuarios" },
     ],
     aviso: null,
   },
   secretaria: {
     botones: [
+      // En el orden del flujo: primero se programa, después se valida la tela
+      // y al final se cierra.
       { etiqueta: "Programar a diseño", ruta: "/ordenes/programacion" },
+      // HU-06: avisar a administración que falta tela.
+      { etiqueta: "Validar telas", ruta: "/ordenes/telas" },
       { etiqueta: "Cerrar órdenes", ruta: "/ordenes/cierre" },
     ],
     aviso: null,
@@ -55,6 +60,12 @@ const VISTAS: Record<Rol, VistaDeRol> = {
   },
   logistica: {
     botones: [
+      // En el orden del flujo: lo cortado se recoge y borda (HU-09) antes de
+      // despacharlo a un taller (HU-10).
+      {
+        etiqueta: `Marcar ${buscarCheckpoint("recogido_bordado").etiqueta.toLowerCase()}`,
+        ruta: "/ordenes/recogido-bordado",
+      },
       { etiqueta: "Despachar y recibir lotes", ruta: "/ordenes/talleres" },
     ],
     aviso: null,

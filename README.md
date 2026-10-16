@@ -64,30 +64,36 @@ Y hay siete órdenes, cada una parada en un punto distinto del flujo, para que n
 | --------- | ------- | -------------------- | ---------------------------------------------- |
 | `OC-5001` | 0       | Cotización aprobada  | El comienzo del flujo (HU-02)                  |
 | `OC-5002` | 4       | Corte completado     | HU-08                                          |
-| `OC-5003` | 5       | Recogido y bordado   | HU-09, y tiene un lote todavía en el taller    |
-| `OC-5004` | 6       | Llegada a marcación  | HU-12, y tiene un lote recibido incompleto     |
+| `OC-5003` | 5       | Recogido y bordado   | HU-09; después, despacharla a taller (HU-10)   |
+| `OC-5004` | 6       | Llegada a marcación  | HU-12; un lote incompleto y otro en el taller  |
 | `OC-5005` | 7       | Lista para despachar | HU-19. Va atrasada: sirve para el semáforo     |
 | `OC-5006` | 8       | Orden cerrada        | HU-13                                          |
 | `OC-5007` | 9       | —                    | Flujo completo, para el tablero y el histórico |
 
-HU-10 despacha un lote nuevo desde cualquier orden que ya tenga el corte hecho (`OC-5003` en adelante); HU-11 confirma los lotes que el seed dejó abiertos.
+HU-10 despacha un lote nuevo desde cualquier orden que ya esté recogida y bordada (`OC-5004` en adelante, u `OC-5003` después de marcar HU-09); HU-11 confirma el lote que el seed dejó abierto en `OC-5004`.
 
 ## Iniciar sesión
 
 Login real contra Supabase Auth (HU-16), en `/login`, con las seis cuentas del seed. Al entrar, `/` muestra a quién le toca qué y un botón a su pantalla:
 
-| Rol          | Botón                                            | Ruta                         |
-| ------------ | ------------------------------------------------ | ---------------------------- |
-| `admin`      | Ver el tablero / Registrar una orden             | `/tablero`, `/ordenes/nueva` |
-| `secretaria` | Cerrar órdenes                                   | `/ordenes/cierre`            |
-| `corte`      | Marcar corte completado                          | `/ordenes/corte`             |
-| `marcacion`  | Marcar llegada a marcación                       | `/ordenes/marcacion`         |
-| `logistica`  | Despachar y recibir lotes                        | `/ordenes/talleres`          |
-| `diseno`     | Solo un aviso: su pantalla (HU-04) no existe aún | —                            |
+| Rol          | Botón                                                 | Ruta                                             |
+| ------------ | ----------------------------------------------------- | ------------------------------------------------ |
+| `admin`      | Ver el tablero / Registrar una orden / Crear cuentas  | `/tablero`, `/ordenes/nueva`, `/usuarios`        |
+| `secretaria` | Cerrar órdenes / Validar telas                        | `/ordenes/cierre`, `/ordenes/telas`              |
+| `corte`      | Marcar corte completado                               | `/ordenes/corte`                                 |
+| `marcacion`  | Marcar llegada a marcación                            | `/ordenes/marcacion`                             |
+| `logistica`  | Marcar recogido y bordado / Despachar y recibir lotes | `/ordenes/recogido-bordado`, `/ordenes/talleres` |
+| `diseno`     | Solo un aviso: su pantalla (HU-04) no existe aún      | —                                                |
 
 Sin sesión, el proxy manda a `/login` a cualquier ruta que no sea `/` o `/login`. Con sesión, cada pantalla exige el rol que le toca (HU-17): el mapa está en `src/features/auth/accesoPorRuta.ts` y lo aplica `exigirAcceso()` al principio de cada página. Administración entra a todo; quien abre una pantalla ajena vuelve a `/` con un aviso.
 
 La base repite el control con RLS (`docs/adr/0007-rls-por-rol-y-acceso-por-pantalla.md`): solo se lee con sesión, solo escribe el rol dueño y siempre a su propio nombre. `anon` no tiene permisos y el registro de cuentas está apagado. El rol de cada persona viaja además como claim `user_role` en su JWT (ADR 0006), todavía sin usar.
+
+## Crear cuentas (HU-24)
+
+Administración entra a `/usuarios`, escribe nombre, correo, rol y una contraseña inicial, y le dice la contraseña a la persona. Desde la misma pantalla edita nombre, correo y rol, cambia la contraseña, desactiva o reactiva la cuenta, y la borra si la persona nunca marcó nada (si tiene rastro, la base lo impide y hay que desactivarla). Nadie puede cambiarse el rol, desactivarse ni borrarse a sí mismo.
+
+La cuenta vive en Supabase Auth, que se toca con la API de administración, y el perfil en `usuario`, que se escribe con la sesión del administrador para que RLS vuelva a comprobar el rol (`docs/adr/0008`). Necesita `SUPABASE_SECRET_KEY` en el servidor; en local la trae `npx supabase status`.
 
 ## Marcar un avance
 

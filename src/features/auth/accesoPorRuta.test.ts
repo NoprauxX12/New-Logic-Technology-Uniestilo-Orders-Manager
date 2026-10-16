@@ -32,6 +32,7 @@ describe("rolesDeRuta · derivado de checkpoints.ts", () => {
       "/tablero/00000000-0000-0000-0000-0000000000f3",
       "/ordenes/nueva",
       "/ordenes/talleres",
+      "/usuarios",
       ORDEN,
       ...CHECKPOINTS.flatMap((c) => (c.ruta ? [c.ruta] : [])),
     ];
@@ -63,9 +64,17 @@ describe("puedeEntrar · lo de cada sección", () => {
     expect(puedeEntrar("secretaria", "/tablero")).toBe(false);
   });
 
-  it("la programación no la abre ninguna otra sección", () => {
+  it("la programación no la abre ninguna otra sección (HU-03)", () => {
     for (const rol of ROLES) {
       expect(puedeEntrar(rol, "/ordenes/programacion")).toBe(
+        rol === "secretaria" || rol === "admin",
+      );
+    }
+  });
+
+  it("solo secretaría y administración entran a validar telas (HU-06)", () => {
+    for (const rol of ROLES) {
+      expect(puedeEntrar(rol, "/ordenes/telas")).toBe(
         rol === "secretaria" || rol === "admin",
       );
     }
@@ -77,10 +86,11 @@ describe("puedeEntrar · lo de cada sección", () => {
     expect(puedeEntrar("logistica", "/ordenes/cierre")).toBe(false);
   });
 
-  it("solo administración ve el tablero y registra órdenes", () => {
+  it("solo administración ve el tablero, registra órdenes y crea cuentas", () => {
     for (const rol of ROLES) {
       expect(puedeEntrar(rol, "/tablero")).toBe(rol === "admin");
       expect(puedeEntrar(rol, "/ordenes/nueva")).toBe(rol === "admin");
+      expect(puedeEntrar(rol, "/usuarios")).toBe(rol === "admin");
     }
   });
 

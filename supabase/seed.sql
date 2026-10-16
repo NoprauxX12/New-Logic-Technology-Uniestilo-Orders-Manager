@@ -84,11 +84,11 @@ insert into public.cliente (id, nit, razon_social, contacto_nombre, contacto_cel
 -- Cada orden está parada en un punto distinto del flujo. La columna de la
 -- derecha dice qué historia puede trabajar con ella.
 
--- Las que ya pasaron por diseño llevan su número y su posición de programación
--- (HU-03): son las dos columnas que escribe secretaría al armar la hoja, y van
--- juntas porque el check `orden_programacion_completa` las exige así. Las
--- posiciones siguen el orden en que se programaron, que es el orden de trabajo.
--- Las tres sin programar son las que esperan a secretaría en /ordenes/programacion.
+-- Las que ya pasaron por diseño llevan su hoja de programación y su turno
+-- dentro de ella (HU-03). Hay dos hojas armadas, como las de papel: la #1 con
+-- tres órdenes y la #2 con otras tres, cada una numerada de 1 en adelante. Las
+-- tres sin programar son las que esperan a secretaría en /ordenes/programacion,
+-- y la siguiente hoja que arme será la #3.
 
 insert into public.orden (
   id, numero_orden_compra, cliente_id, fecha_ingreso, fecha_entrega,
@@ -97,19 +97,19 @@ insert into public.orden (
 ) values
   -- Recién registrada, sin ningún avance: la primera candidata a programación (HU-03).
   ('00000000-0000-0000-0000-0000000000f1', 'OC-5001', '00000000-0000-0000-0000-0000000000c1', current_date - 2,  current_date + 25, 'Dotación de profesores, primer semestre', null, null, null, '00000000-0000-0000-0000-0000000000a1'),
-  -- Con la tela programada: le sigue el corte (HU-08).
-  ('00000000-0000-0000-0000-0000000000f2', 'OC-5002', '00000000-0000-0000-0000-0000000000c1', current_date - 20, current_date + 12, null, 'PR-101', 5, null, '00000000-0000-0000-0000-0000000000a1'),
-  -- Con el corte hecho: se puede despachar a taller (HU-10).
-  ('00000000-0000-0000-0000-0000000000f3', 'OC-5003', '00000000-0000-0000-0000-0000000000c2', current_date - 28, current_date + 6,  'El cliente pidió bordado en el bolsillo', 'PR-102', 4, null, '00000000-0000-0000-0000-0000000000a1'),
-  -- Recogida y bordada: le sigue la llegada a marcación (HU-12). En riesgo.
-  ('00000000-0000-0000-0000-0000000000f4', 'OC-5004', '00000000-0000-0000-0000-0000000000c2', current_date - 35, current_date + 2,  null, 'PR-103', 3, null, '00000000-0000-0000-0000-0000000000a1'),
-  -- En marcación: le sigue lista para despachar (HU-19). Atrasada.
-  ('00000000-0000-0000-0000-0000000000f5', 'OC-5005', '00000000-0000-0000-0000-0000000000c3', current_date - 45, current_date - 3,  'Reprogramada dos veces por falta de tela', 'PR-104', 2, null, '00000000-0000-0000-0000-0000000000a1'),
-  -- Lista para despachar: le sigue el cierre (HU-13).
-  ('00000000-0000-0000-0000-0000000000f6', 'OC-5006', '00000000-0000-0000-0000-0000000000c3', current_date - 40, current_date + 9,  null, 'PR-105', 6, null, '00000000-0000-0000-0000-0000000000a1'),
-  -- Cerrada: sirve para ver el flujo completo y el histórico.
-  ('00000000-0000-0000-0000-0000000000f7', 'OC-5007', '00000000-0000-0000-0000-0000000000c1', current_date - 60, current_date - 10, null, 'PR-100', 1, 'FV-2214', '00000000-0000-0000-0000-0000000000a1'),
-  -- Sin programar, para que la hoja de HU-03 tenga con qué llenarse.
+  -- Con la tela programada: le sigue el corte (HU-08). Hoja 2, tercer turno.
+  ('00000000-0000-0000-0000-0000000000f2', 'OC-5002', '00000000-0000-0000-0000-0000000000c1', current_date - 20, current_date + 12, null, 2, 3, null, '00000000-0000-0000-0000-0000000000a1'),
+  -- Con el corte hecho: se puede despachar a taller (HU-10). Hoja 2, segundo turno.
+  ('00000000-0000-0000-0000-0000000000f3', 'OC-5003', '00000000-0000-0000-0000-0000000000c2', current_date - 28, current_date + 6,  'El cliente pidió bordado en el bolsillo', 2, 2, null, '00000000-0000-0000-0000-0000000000a1'),
+  -- Recogida y bordada: le sigue la llegada a marcación (HU-12). En riesgo. Hoja 2, primer turno.
+  ('00000000-0000-0000-0000-0000000000f4', 'OC-5004', '00000000-0000-0000-0000-0000000000c2', current_date - 35, current_date + 2,  null, 2, 1, null, '00000000-0000-0000-0000-0000000000a1'),
+  -- En marcación: le sigue lista para despachar (HU-19). Atrasada. Hoja 1, segundo turno.
+  ('00000000-0000-0000-0000-0000000000f5', 'OC-5005', '00000000-0000-0000-0000-0000000000c3', current_date - 45, current_date - 3,  'Reprogramada dos veces por falta de tela', 1, 2, null, '00000000-0000-0000-0000-0000000000a1'),
+  -- Lista para despachar: le sigue el cierre (HU-13). Hoja 1, tercer turno.
+  ('00000000-0000-0000-0000-0000000000f6', 'OC-5006', '00000000-0000-0000-0000-0000000000c3', current_date - 40, current_date + 9,  null, 1, 3, null, '00000000-0000-0000-0000-0000000000a1'),
+  -- Cerrada: sirve para ver el flujo completo y el histórico. Hoja 1, primer turno.
+  ('00000000-0000-0000-0000-0000000000f7', 'OC-5007', '00000000-0000-0000-0000-0000000000c1', current_date - 60, current_date - 10, null, 1, 1, 'FV-2214', '00000000-0000-0000-0000-0000000000a1'),
+  -- Sin programar, para que la próxima hoja de HU-03 tenga con qué llenarse.
   ('00000000-0000-0000-0000-0000000000f8', 'OC-5008', '00000000-0000-0000-0000-0000000000c2', current_date - 6,  current_date + 20, 'Pidieron reflectivo en la espalda', null, null, null, '00000000-0000-0000-0000-0000000000a1'),
   ('00000000-0000-0000-0000-0000000000f9', 'OC-5009', '00000000-0000-0000-0000-0000000000c3', current_date - 4,  current_date + 18, null, null, null, null, '00000000-0000-0000-0000-0000000000a1');
 
@@ -161,7 +161,7 @@ insert into public.avance_seccion (orden_id, checkpoint, usuario_id, fecha_hora,
   ('00000000-0000-0000-0000-0000000000f4', 'ficha_adjunta',       '00000000-0000-0000-0000-0000000000a3', now() - interval '29 days', null),
   ('00000000-0000-0000-0000-0000000000f4', 'tela_programada',     '00000000-0000-0000-0000-0000000000a2', now() - interval '25 days', null),
   ('00000000-0000-0000-0000-0000000000f4', 'corte_completado',    '00000000-0000-0000-0000-0000000000a4', now() - interval '15 days', null),
-  ('00000000-0000-0000-0000-0000000000f4', 'recogido_bordado',    '00000000-0000-0000-0000-0000000000a5', now() - interval '4 days',  null),
+  ('00000000-0000-0000-0000-0000000000f4', 'recogido_bordado',    '00000000-0000-0000-0000-0000000000a5', now() - interval '13 days', null),
 
   -- OC-5005: en marcación, y atrasada.
   ('00000000-0000-0000-0000-0000000000f5', 'cotizacion_aprobada', '00000000-0000-0000-0000-0000000000a2', now() - interval '43 days', null),
@@ -209,21 +209,30 @@ insert into public.ficha_tecnica (orden_id, archivo_ruta, subida_por) values
 -- ---------------------------------------------------------------------------
 -- Lotes a taller
 -- ---------------------------------------------------------------------------
--- Uno todavía afuera, para que HU-11 tenga qué confirmar, y uno ya recibido
--- incompleto, que es el caso que HU-11 tiene que saber mostrar.
+-- OC-5004 repartida en dos talleres (regla 6): uno ya recibido incompleto, que
+-- es el caso que HU-11 tiene que saber mostrar, y otro todavía afuera, para que
+-- HU-11 tenga qué confirmar. Los dos salen después del recogido y bordado: el
+-- despacho lo exige (HU-09). OC-5003 no tiene lotes: espera su recogido.
 
 insert into public.lote_taller (
   orden_id, taller, descripcion_prendas, fecha_envio, enviado_por,
   recibido_completo, fecha_recepcion, recibido_por, observaciones_recepcion
 ) values
-  ('00000000-0000-0000-0000-0000000000f3', 'Taller Marinilla Centro', '250 polos verdes talla S y M', now() - interval '5 days', '00000000-0000-0000-0000-0000000000a5', null, null, null, null),
-  ('00000000-0000-0000-0000-0000000000f4', 'Confecciones El Retiro',  '120 overoles completos',       now() - interval '12 days', '00000000-0000-0000-0000-0000000000a5', false, now() - interval '5 days', '00000000-0000-0000-0000-0000000000a5', 'Llegaron 115; faltan 5 talla XL');
+  ('00000000-0000-0000-0000-0000000000f4', 'Confecciones El Retiro',  '90 overoles tallas M y L',     now() - interval '12 days', '00000000-0000-0000-0000-0000000000a5', false, now() - interval '5 days', '00000000-0000-0000-0000-0000000000a5', 'Llegaron 85; faltan 5 talla L'),
+  ('00000000-0000-0000-0000-0000000000f4', 'Taller Marinilla Centro', '30 overoles talla XL',         now() - interval '3 days',  '00000000-0000-0000-0000-0000000000a5', null, null, null, null);
 
 -- ---------------------------------------------------------------------------
 -- Alertas
 -- ---------------------------------------------------------------------------
 
-insert into public.alerta (tipo, orden_id, destinatario_id, detalle, estado, fecha_creacion, fecha_atencion) values
-  ('falta_tela',         '00000000-0000-0000-0000-0000000000f5', '00000000-0000-0000-0000-0000000000a2', 'La tela antifluidos lleva 3 semanas sin llegar', 'pendiente', now() - interval '7 days', null),
-  ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f4', '00000000-0000-0000-0000-0000000000a1', 'Entrega en 2 días y el lote del taller llegó incompleto', 'pendiente', now() - interval '1 day', null),
-  ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f7', '00000000-0000-0000-0000-0000000000a1', 'Entrega la próxima semana', 'atendida', now() - interval '25 days', now() - interval '24 days');
+-- Las de tela (HU-06) las envía secretaría y le llegan a administración. Una
+-- abierta en OC-5002, que espera el corte, para que HU-07 tenga qué mostrar y
+-- HU-22 qué liberar —mientras no llegue la tela, corte no puede marcarla—; y
+-- una ya cerrada en OC-5005, cuya tela llegó (HU-22) antes de su corte. Las de
+-- entrega (HU-20) las genera el sistema y no tienen quién las haya creado.
+
+insert into public.alerta (tipo, orden_id, destinatario_id, creada_por, detalle, estado, fecha_creacion, fecha_atencion, tela_llegada_en, tela_recibida_por) values
+  ('falta_tela',         '00000000-0000-0000-0000-0000000000f2', '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a2', 'Faltan 40 metros de tela impermeable azul', 'pendiente', now() - interval '2 days', null, null, null),
+  ('falta_tela',         '00000000-0000-0000-0000-0000000000f5', '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a2', 'La tela antifluidos lleva 3 semanas sin llegar', 'atendida', now() - interval '35 days', now() - interval '33 days', now() - interval '31 days', '00000000-0000-0000-0000-0000000000a2'),
+  ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f4', '00000000-0000-0000-0000-0000000000a1', null,                                   'Entrega en 2 días y el lote del taller llegó incompleto', 'pendiente', now() - interval '1 day', null, null, null),
+  ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f7', '00000000-0000-0000-0000-0000000000a1', null,                                   'Entrega la próxima semana', 'atendida', now() - interval '25 days', now() - interval '24 days', null, null);
