@@ -29,11 +29,16 @@ const VISTAS: Record<Rol, VistaDeRol> = {
     botones: [
       { etiqueta: "Ver el tablero", ruta: "/tablero" },
       { etiqueta: "Registrar una orden", ruta: "/ordenes/nueva" },
+      { etiqueta: "Crear cuentas", ruta: "/usuarios" },
     ],
     aviso: null,
   },
   secretaria: {
-    botones: [{ etiqueta: "Cerrar órdenes", ruta: "/ordenes/cierre" }],
+    botones: [
+      { etiqueta: "Cerrar órdenes", ruta: "/ordenes/cierre" },
+      // HU-06: avisar a administración que falta tela.
+      { etiqueta: "Validar telas", ruta: "/ordenes/telas" },
+    ],
     aviso: null,
   },
   diseno: {

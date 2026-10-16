@@ -210,7 +210,14 @@ insert into public.lote_taller (
 -- Alertas
 -- ---------------------------------------------------------------------------
 
-insert into public.alerta (tipo, orden_id, destinatario_id, detalle, estado, fecha_creacion, fecha_atencion) values
-  ('falta_tela',         '00000000-0000-0000-0000-0000000000f5', '00000000-0000-0000-0000-0000000000a2', 'La tela antifluidos lleva 3 semanas sin llegar', 'pendiente', now() - interval '7 days', null),
-  ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f4', '00000000-0000-0000-0000-0000000000a1', 'Entrega en 2 días y el lote del taller llegó incompleto', 'pendiente', now() - interval '1 day', null),
-  ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f7', '00000000-0000-0000-0000-0000000000a1', 'Entrega la próxima semana', 'atendida', now() - interval '25 days', now() - interval '24 days');
+-- Las de tela (HU-06) las envía secretaría y le llegan a administración. Una
+-- abierta en OC-5002, que espera el corte, para que HU-07 tenga qué mostrar y
+-- HU-22 qué liberar —mientras no llegue la tela, corte no puede marcarla—; y
+-- una ya cerrada en OC-5005, cuya tela llegó (HU-22) antes de su corte. Las de
+-- entrega (HU-20) las genera el sistema y no tienen quién las haya creado.
+
+insert into public.alerta (tipo, orden_id, destinatario_id, creada_por, detalle, estado, fecha_creacion, fecha_atencion, tela_llegada_en, tela_recibida_por) values
+  ('falta_tela',         '00000000-0000-0000-0000-0000000000f2', '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a2', 'Faltan 40 metros de tela impermeable azul', 'pendiente', now() - interval '2 days', null, null, null),
+  ('falta_tela',         '00000000-0000-0000-0000-0000000000f5', '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a2', 'La tela antifluidos lleva 3 semanas sin llegar', 'atendida', now() - interval '35 days', now() - interval '33 days', now() - interval '31 days', '00000000-0000-0000-0000-0000000000a2'),
+  ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f4', '00000000-0000-0000-0000-0000000000a1', null,                                   'Entrega en 2 días y el lote del taller llegó incompleto', 'pendiente', now() - interval '1 day', null, null, null),
+  ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f7', '00000000-0000-0000-0000-0000000000a1', null,                                   'Entrega la próxima semana', 'atendida', now() - interval '25 days', now() - interval '24 days', null, null);

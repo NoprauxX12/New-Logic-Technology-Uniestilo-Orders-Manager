@@ -1,4 +1,4 @@
-import type { SemaforoOrden } from "@/features/tablero/types";
+import type { SemaforoOrden } from "@/lib/ordenes/types";
 
 const ETIQUETA: Record<SemaforoOrden, string> = {
   a_tiempo: "A tiempo",

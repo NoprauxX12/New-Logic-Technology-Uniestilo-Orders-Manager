@@ -4,7 +4,7 @@ import { TableroOrdenes } from "@/features/tablero/components/TableroOrdenes";
 import {
   listarOrdenesTablero,
   obtenerResumenTablero,
-} from "@/features/tablero/queries";
+} from "@/lib/ordenes/estadoOrden";
 
 /** HU-14 · El tablero es de administración (HU-17). */
 export default async function TableroPage() {

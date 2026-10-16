@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { BadgeSemaforo } from "@/features/tablero/components/BadgeSemaforo";
-import type { DetalleOrden, EtapaTablero } from "@/features/tablero/types";
+import type { DetalleOrden, EtapaTablero } from "@/lib/ordenes/types";
 import { buscarCheckpoint } from "@/features/workflow/checkpoints";
 
 function formatoFechaHora(iso: string) {

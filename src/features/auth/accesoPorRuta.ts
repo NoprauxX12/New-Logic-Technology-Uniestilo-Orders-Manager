@@ -41,9 +41,14 @@ const REGLAS: readonly Regla[] = [
   conId("/tablero", [ADMIN]),
   // HU-01: registrar órdenes es de administración.
   exacta("/ordenes/nueva", [ADMIN]),
+  // HU-24: crear cuentas es de administración.
+  exacta("/usuarios", [ADMIN]),
   // HU-10 y HU-11: logística despacha y recibe desde el detalle de la orden.
   exacta("/ordenes/talleres", ["logistica", ADMIN]),
   conId("/ordenes", ["logistica", ADMIN]),
+  // HU-06: secretaría valida la tela y avisa cuando falta. No es la pantalla
+  // de un checkpoint: avisar crea una alerta (regla 7), no marca una etapa.
+  exacta("/ordenes/telas", ["secretaria", ADMIN]),
   // La pantalla de cada etapa es de su rol dueño.
   ...CHECKPOINTS.flatMap((checkpoint) =>
     checkpoint.ruta
