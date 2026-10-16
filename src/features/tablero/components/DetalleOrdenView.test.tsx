@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { DetalleOrdenView } from "@/features/tablero/components/DetalleOrdenView";
-import type { DetalleOrden, EtapaTablero } from "@/features/tablero/types";
+import type { DetalleOrden, EtapaTablero } from "@/lib/ordenes/types";
 import { CHECKPOINTS } from "@/features/workflow/checkpoints";
 
 /**

@@ -1,4 +1,4 @@
-import type { ResumenTablero } from "@/features/tablero/types";
+import type { ResumenTablero } from "@/lib/ordenes/types";
 
 const TARJETAS: {
   clave: keyof ResumenTablero;
