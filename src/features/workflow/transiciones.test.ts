@@ -452,3 +452,29 @@ describe("puedeMarcar · requisito de tela en la empresa (HU-22)", () => {
     );
   });
 });
+
+describe("HU-09 · recogido y bordado", () => {
+  it("permite a logística marcar después del corte", () => {
+    expect(
+      puedeMarcar({
+        checkpoint: "recogido_bordado",
+        marcados: ["corte_completado"],
+        rol: "logistica",
+      }),
+    ).toEqual({ permitido: true });
+  });
+
+  it("impide pasar a marcación sin recogido y bordado", () => {
+    expect(
+      puedeMarcar({
+        checkpoint: "llegada_marcacion",
+        marcados: ["corte_completado"],
+        rol: "marcacion",
+        recepcionConfirmada: true,
+      }),
+    ).toMatchObject({
+      permitido: false,
+      motivo: "fuera_de_secuencia",
+    });
+  });
+});

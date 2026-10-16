@@ -34,10 +34,10 @@ import { createClient } from "@/lib/supabase/server";
  * 1. El esquema revisa lo que se escribió (taller obligatorio).
  * 2. Se identifica a la persona con sesión (HU-16): quien despacha sale de ahí,
  *    nunca de un campo del formulario.
- * 3. Las reglas de la feature comprueban que sea de logística y que el corte
- *    esté completado.
+ * 3. Las reglas de la feature comprueban que sea de logística y que la orden
+ *    esté recogida y bordada.
  * 4. La base vuelve a comprobar las dos cosas —el rol y la firma con RLS
- *    (HU-17), el corte con un trigger—, porque una server action se puede
+ *    (HU-17), el recogido con un trigger—, porque una server action se puede
  *    invocar con un POST directo sin pasar por el formulario.
  *
  * Despachar no marca ningún checkpoint: un lote es entidad propia (regla 6) y
@@ -53,8 +53,8 @@ export type EstadoFormularioDespacho = {
   valores: EntradaDespacho;
 };
 
-/** El trigger que exige el corte completado. */
-const CORTE_SIN_COMPLETAR = "UE001";
+/** El trigger que exige el recogido y bordado antes del despacho. */
+const SIN_RECOGIDO_BORDADO = "UE001";
 /** La orden o el usuario referenciados no existen. */
 const REFERENCIA_INEXISTENTE = "23503";
 /** RLS rechazó la fila: el rol o la firma no corresponden. */
@@ -124,11 +124,11 @@ export async function despacharLote(
   });
 
   if (error) {
-    if (error.code === CORTE_SIN_COMPLETAR) {
+    if (error.code === SIN_RECOGIDO_BORDADO) {
       return {
         ok: false,
         mensaje:
-          "Esta orden todavía no tiene el corte completado, así que no se puede despachar.",
+          "Esta orden todavía no tiene el recogido y bordado, así que no se puede despachar.",
         errores: {},
         valores: escrito,
       };

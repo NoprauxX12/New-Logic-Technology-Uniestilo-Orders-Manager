@@ -113,8 +113,8 @@ export const CHECKPOINTS = [
     etiqueta: "Recogido y bordado",
     rolDueno: "logistica",
     hu: "HU-09",
-    disponible: false,
-    ruta: null,
+    disponible: true,
+    ruta: "/ordenes/recogido-bordado",
   },
   {
     id: "llegada_marcacion",

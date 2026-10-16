@@ -17,10 +17,11 @@ export function ListaOrdenesTalleres({ ordenes }: Props) {
     return (
       <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6 text-center">
         <p className="font-medium text-zinc-900">
-          No hay órdenes con el corte hecho
+          No hay órdenes listas para el taller
         </p>
         <p className="mt-1 text-sm text-zinc-600">
-          Cuando corte termine una orden, aparecerá aquí para despacharla.
+          Cuando logística marque el recogido y bordado de una orden, aparecerá
+          aquí para despacharla.
         </p>
       </div>
     );

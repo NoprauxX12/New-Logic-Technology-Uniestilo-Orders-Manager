@@ -57,6 +57,12 @@ const VISTAS: Record<Rol, VistaDeRol> = {
   },
   logistica: {
     botones: [
+      // En el orden del flujo: lo cortado se recoge y borda (HU-09) antes de
+      // despacharlo a un taller (HU-10).
+      {
+        etiqueta: `Marcar ${buscarCheckpoint("recogido_bordado").etiqueta.toLowerCase()}`,
+        ruta: "/ordenes/recogido-bordado",
+      },
       { etiqueta: "Despachar y recibir lotes", ruta: "/ordenes/talleres" },
     ],
     aviso: null,

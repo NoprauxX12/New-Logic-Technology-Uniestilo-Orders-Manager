@@ -8,7 +8,10 @@ import {
   pareceUuid,
   resumirOrden,
 } from "@/features/asistente/formato";
-import { CHECKPOINTS_DISPONIBLES } from "@/features/workflow/checkpoints";
+import {
+  CHECKPOINTS_DISPONIBLES,
+  ETIQUETAS_ROL,
+} from "@/features/workflow/checkpoints";
 import { armarEtapas, contarProgreso } from "@/lib/ordenes/reglas";
 import type {
   AvanceSeccion,
@@ -17,6 +20,18 @@ import type {
 } from "@/lib/ordenes/types";
 
 const AHORA = new Date("2026-10-10T12:00:00");
+
+// Las etapas disponibles cambian cada sprint (cada HU pone la suya en
+// `disponible: true`): las expectativas salen de `checkpoints.ts`, no se fijan.
+const TOTAL = CHECKPOINTS_DISPONIBLES.length;
+const DESPUES_DEL_CORTE = CHECKPOINTS_DISPONIBLES.slice(
+  CHECKPOINTS_DISPONIBLES.findIndex((cp) => cp.id === "corte_completado") + 1,
+);
+
+/** Una fecha distinta por etapa, en orden, sin importar cuántas haya. */
+function diaDeOctubre(i: number): string {
+  return `2026-10-${String(i + 1).padStart(2, "0")}T10:00:00Z`;
+}
 
 function avance(
   seccion: AvanceSeccion["seccion"],
@@ -76,8 +91,11 @@ describe("resumirOrden", () => {
       diasParaEntrega: 6,
       semaforo: "a tiempo",
       etapaActual: "Corte completado",
-      loQueSigue: { etapa: "Llegada a marcación", responsable: "Marcación" },
-      avance: "1 de 7 etapas",
+      loQueSigue: {
+        etapa: DESPUES_DEL_CORTE[0].etiqueta,
+        responsable: ETIQUETAS_ROL[DESPUES_DEL_CORTE[0].rolDueno],
+      },
+      avance: `1 de ${TOTAL} etapas`,
       enlace: "/tablero/f3",
     });
   });
@@ -94,13 +112,13 @@ describe("resumirOrden", () => {
 
   it("no tiene nada que seguir cuando la orden está cerrada", () => {
     const todas = CHECKPOINTS_DISPONIBLES.map((cp, i) =>
-      avance(cp.id, `2026-10-0${i + 1}T10:00:00Z`),
+      avance(cp.id, diaDeOctubre(i)),
     );
     const resumen = resumirOrden(ordenStub({ avances: todas }), AHORA);
 
     expect(resumen.etapaActual).toBe("Orden cerrada");
     expect(resumen.loQueSigue).toBeNull();
-    expect(resumen.avance).toBe("7 de 7 etapas");
+    expect(resumen.avance).toBe(`${TOTAL} de ${TOTAL} etapas`);
   });
 });
 
@@ -124,14 +142,9 @@ describe("detallarOrden", () => {
         observacion: "Faltó un rollo",
       },
     ]);
-    expect(detalle.etapasPendientes).toEqual([
-      "Llegada a marcación",
-      "Lista para despachar",
-      "Etiquetas asignadas",
-      "Documentos de despacho",
-      "Factura generada",
-      "Orden cerrada",
-    ]);
+    expect(detalle.etapasPendientes).toEqual(
+      DESPUES_DEL_CORTE.map((cp) => cp.etiqueta),
+    );
   });
 });
 
@@ -179,7 +192,7 @@ describe("filtrarPorEstado", () => {
     id: "c",
     semaforo: "en_riesgo",
     avances: CHECKPOINTS_DISPONIBLES.map((cp, i) =>
-      avance(cp.id, `2026-10-0${i + 1}T10:00:00Z`),
+      avance(cp.id, diaDeOctubre(i)),
     ),
   });
   const ordenes = [sinEmpezar, enProduccion, terminada];
