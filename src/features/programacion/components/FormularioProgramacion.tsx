@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { flushSync } from "react-dom";
 
 import {
   programarOrdenes,
@@ -39,6 +40,38 @@ const ESTADO_INICIAL: EstadoProgramacion = {
   valores: ENTRADA_VACIA,
 };
 
+/**
+ * Aplica un cambio dejando que el navegador anime el reacomodo.
+ *
+ * Al mover una orden se mueven todas las de abajo, y sin animación es fácil
+ * perderle el rastro a la que se movió. `startViewTransition` toma una foto
+ * antes y otra después y lleva cada tarjeta a su nuevo puesto: el nombre que
+ * las identifica entre las dos fotos es el `viewTransitionName` de cada una.
+ *
+ * Si el navegador no tiene la API —o la persona pidió menos movimiento en su
+ * sistema— el cambio se aplica directo y la pantalla se comporta como antes.
+ * jsdom tampoco la tiene, así que en los tests siempre se va por ese camino.
+ */
+function conReacomodoVisible(cambio: () => void) {
+  // Se pregunta por la API antes que nada: jsdom no la tiene y tampoco tiene
+  // `matchMedia`, así que en los tests se sale por aquí sin tocar lo segundo.
+  if (!document.startViewTransition) {
+    cambio();
+    return;
+  }
+
+  const prefiereQuietud = window.matchMedia?.(
+    "(prefers-reduced-motion: reduce)",
+  )?.matches;
+
+  if (prefiereQuietud) {
+    cambio();
+    return;
+  }
+
+  document.startViewTransition(() => flushSync(cambio));
+}
+
 type Props = {
   ordenes: OrdenPorProgramar[];
 };
@@ -52,6 +85,17 @@ export function FormularioProgramacion({ ordenes }: Props) {
   /** Los ids en el orden en que deben trabajarse. */
   const [hoja, setHoja] = useState<string[]>([]);
 
+  /** Lo último que pasó al acomodar, para quien no vio la animación. */
+  const [ultimoMovimiento, setUltimoMovimiento] = useState("");
+
+  /**
+   * El resultado que la persona ya cerró con la ×. Se guarda el objeto y no el
+   * texto porque cada guardado devuelve uno nuevo: así el mensaje siguiente
+   * aparece aunque diga exactamente lo mismo que el anterior.
+   */
+  const [resultadoCerrado, setResultadoCerrado] =
+    useState<EstadoProgramacion | null>(null);
+
   const porId = new Map(ordenes.map((orden) => [orden.id, orden]));
   const agregadas = hoja.flatMap((id) => {
     const orden = porId.get(id);
@@ -60,16 +104,34 @@ export function FormularioProgramacion({ ordenes }: Props) {
 
   const llena = hoja.length >= MAXIMO_POR_HOJA;
 
+  const mostrarResultado = estado.mensaje !== "" && estado !== resultadoCerrado;
+
   function alternar(ordenId: string) {
-    setHoja((actual) =>
-      actual.includes(ordenId)
-        ? actual.filter((id) => id !== ordenId)
-        : [...actual, ordenId],
+    setUltimoMovimiento("");
+    conReacomodoVisible(() =>
+      setHoja((actual) =>
+        actual.includes(ordenId)
+          ? actual.filter((id) => id !== ordenId)
+          : [...actual, ordenId],
+      ),
     );
   }
 
   function mover(posicion: number, direccion: "arriba" | "abajo") {
-    setHoja((actual) => moverEnLista(actual, posicion, direccion));
+    const movida = agregadas[posicion];
+    const destino = direccion === "arriba" ? posicion - 1 : posicion + 1;
+
+    // Las flechas de los extremos están deshabilitadas, así que esto no debería
+    // pasar; si pasara, no hay nada que mover ni que contar.
+    if (!movida || destino < 0 || destino >= agregadas.length) return;
+
+    conReacomodoVisible(() =>
+      setHoja((actual) => moverEnLista(actual, posicion, direccion)),
+    );
+
+    setUltimoMovimiento(
+      `${movida.razonSocial} quedó en el puesto ${destino + 1} de ${agregadas.length}.`,
+    );
   }
 
   if (ordenes.length === 0) {
@@ -181,6 +243,9 @@ export function FormularioProgramacion({ ordenes }: Props) {
                 return (
                   <li
                     key={orden.id}
+                    // El nombre con el que el navegador reconoce esta tarjeta
+                    // entre la foto de antes y la de después del movimiento.
+                    style={{ viewTransitionName: `orden-${orden.id}` }}
                     className={[
                       "flex items-center gap-2 rounded-lg border bg-white p-2",
                       errores?.length ? "border-red-600" : "border-zinc-200",
@@ -244,6 +309,12 @@ export function FormularioProgramacion({ ordenes }: Props) {
                 );
               })}
             </ol>
+
+            {/* Lo que acaba de pasar, para quien no alcanzó a ver el
+                movimiento y para quien usa lector de pantalla. */}
+            <p role="status" className="text-sm text-zinc-600">
+              {ultimoMovimiento}
+            </p>
           </>
         )}
 
@@ -265,18 +336,30 @@ export function FormularioProgramacion({ ordenes }: Props) {
           Quedará registrado con tu nombre y la hora.
         </p>
 
-        {estado.mensaje ? (
-          <p
+        {mostrarResultado ? (
+          <div
             role={estado.ok ? "status" : "alert"}
             className={[
-              "rounded-lg px-4 py-3 text-sm",
+              "flex items-start gap-2 rounded-lg py-2 pr-2 pl-4 text-sm",
               estado.ok
                 ? "bg-emerald-50 text-emerald-800"
                 : "bg-red-50 text-red-800",
             ].join(" ")}
           >
-            {estado.mensaje}
-          </p>
+            <p className="flex-1 self-center">{estado.mensaje}</p>
+
+            <button
+              type="button"
+              onClick={() => setResultadoCerrado(estado)}
+              aria-label="Cerrar el aviso"
+              className={[
+                "size-11 flex-none rounded-lg text-lg",
+                estado.ok ? "hover:bg-emerald-100" : "hover:bg-red-100",
+              ].join(" ")}
+            >
+              ×
+            </button>
+          </div>
         ) : null}
       </section>
     </form>

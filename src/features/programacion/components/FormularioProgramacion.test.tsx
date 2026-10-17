@@ -237,4 +237,49 @@ describe("FormularioProgramacion", () => {
     expect(screen.queryByRole("combobox")).toBeNull();
     expect(screen.queryByLabelText(/quién programa/i)).toBeNull();
   });
+
+  it("cuenta dónde quedó la orden que se acaba de mover", () => {
+    render(<FormularioProgramacion ordenes={ORDENES} />);
+
+    alternar("Colegio San Ignacio");
+    alternar("Ferretería La 33");
+    alternar("Clínica del Norte");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Subir Clínica del Norte" }),
+    );
+
+    expect(
+      screen.getByText("Clínica del Norte quedó en el puesto 2 de 3."),
+    ).toBeInTheDocument();
+  });
+
+  it("el aviso de lo que pasó se borra al cambiar la hoja", () => {
+    render(<FormularioProgramacion ordenes={ORDENES} />);
+
+    alternar("Colegio San Ignacio");
+    alternar("Ferretería La 33");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Subir Ferretería La 33" }),
+    );
+    expect(screen.getByText(/quedó en el puesto/)).toBeInTheDocument();
+
+    alternar("Clínica del Norte");
+
+    expect(screen.queryByText(/quedó en el puesto/)).toBeNull();
+  });
+
+  it("el mensaje del resultado se puede cerrar con la ×", async () => {
+    render(<FormularioProgramacion ordenes={ORDENES} />);
+
+    alternar("Colegio San Ignacio");
+    fireEvent.click(screen.getByRole("button", { name: "Programar a diseño" }));
+
+    expect(await screen.findByText(ESTADO_OK.mensaje)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar el aviso" }));
+
+    expect(screen.queryByText(ESTADO_OK.mensaje)).toBeNull();
+  });
 });
