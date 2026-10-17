@@ -24,9 +24,12 @@ const AHORA = new Date("2026-10-10T12:00:00");
 // Las etapas disponibles cambian cada sprint (cada HU pone la suya en
 // `disponible: true`): las expectativas salen de `checkpoints.ts`, no se fijan.
 const TOTAL = CHECKPOINTS_DISPONIBLES.length;
-const DESPUES_DEL_CORTE = CHECKPOINTS_DISPONIBLES.slice(
-  CHECKPOINTS_DISPONIBLES.findIndex((cp) => cp.id === "corte_completado") + 1,
+const INDICE_CORTE = CHECKPOINTS_DISPONIBLES.findIndex(
+  (cp) => cp.id === "corte_completado",
 );
+/** Lo que una orden lleva marcado cuando acaba de pasar por corte. */
+const HASTA_CORTE = CHECKPOINTS_DISPONIBLES.slice(0, INDICE_CORTE + 1);
+const DESPUES_DEL_CORTE = CHECKPOINTS_DISPONIBLES.slice(INDICE_CORTE + 1);
 
 /** Una fecha distinta por etapa, en orden, sin importar cuántas haya. */
 function diaDeOctubre(i: number): string {
@@ -75,8 +78,18 @@ function ordenStub(
 describe("resumirOrden", () => {
   it("cuenta la orden en lenguaje del taller, con fechas legibles", () => {
     const resumen = resumirOrden(
+      // El recorrido completo hasta el corte, no solo esa marca: el motor no
+      // deja marcar una etapa sin las anteriores, y así "lo que sigue" es de
+      // verdad lo que sigue al corte.
       ordenStub({
-        avances: [avance("corte_completado", "2026-10-09T15:12:00Z")],
+        avances: HASTA_CORTE.map((cp, i) =>
+          avance(
+            cp.id,
+            i === HASTA_CORTE.length - 1
+              ? "2026-10-09T15:12:00Z"
+              : diaDeOctubre(i),
+          ),
+        ),
       }),
       AHORA,
     );
@@ -95,7 +108,7 @@ describe("resumirOrden", () => {
         etapa: DESPUES_DEL_CORTE[0].etiqueta,
         responsable: ETIQUETAS_ROL[DESPUES_DEL_CORTE[0].rolDueno],
       },
-      avance: `1 de ${TOTAL} etapas`,
+      avance: `${HASTA_CORTE.length} de ${TOTAL} etapas`,
       enlace: "/tablero/f3",
     });
   });
@@ -105,8 +118,8 @@ describe("resumirOrden", () => {
 
     expect(resumen.etapaActual).toMatch(/sin etapas marcadas/);
     expect(resumen.loQueSigue).toEqual({
-      etapa: "Corte completado",
-      responsable: "Corte",
+      etapa: CHECKPOINTS_DISPONIBLES[0].etiqueta,
+      responsable: ETIQUETAS_ROL[CHECKPOINTS_DISPONIBLES[0].rolDueno],
     });
   });
 
@@ -142,8 +155,12 @@ describe("detallarOrden", () => {
         observacion: "Faltó un rollo",
       },
     ]);
+    // Pendiente es toda etapa disponible sin marcar, no solo las que vienen
+    // después: esta orden tiene el corte marcado y nada más.
     expect(detalle.etapasPendientes).toEqual(
-      DESPUES_DEL_CORTE.map((cp) => cp.etiqueta),
+      CHECKPOINTS_DISPONIBLES.filter((cp) => cp.id !== "corte_completado").map(
+        (cp) => cp.etiqueta,
+      ),
     );
   });
 });
