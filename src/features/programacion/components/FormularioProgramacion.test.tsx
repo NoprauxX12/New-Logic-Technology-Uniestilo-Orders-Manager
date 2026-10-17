@@ -18,15 +18,7 @@ import type { OrdenPorProgramar } from "@/features/programacion/queries";
 
 const programarOrdenes = vi.hoisted(() => vi.fn());
 
-vi.mock("@/features/programacion/actions", () => ({
-  programarOrdenes,
-  ESTADO_INICIAL: {
-    ok: false,
-    mensaje: "",
-    errores: {},
-    valores: { ordenes: [] },
-  },
-}));
+vi.mock("@/features/programacion/actions", () => ({ programarOrdenes }));
 
 const ESTADO_OK: EstadoProgramacion = {
   ok: true,
@@ -69,11 +61,20 @@ const ORDENES: OrdenPorProgramar[] = [
   ]),
 ];
 
+/**
+ * La tarjeta de la izquierda, por su nombre accesible.
+ *
+ * Se ancla al inicio porque el nombre de la tarjeta arranca con la razón social
+ * —sin espacio antes del número de orden, que viene en otro `span`— mientras
+ * que los botones de la hoja arrancan con "Subir", "Bajar" o "Quitar".
+ */
+function tarjeta(razonSocial: string) {
+  return screen.getByRole("button", { name: new RegExp(`^${razonSocial}`) });
+}
+
 /** Toca la tarjeta de la izquierda: agrega o quita. */
 function alternar(razonSocial: string) {
-  fireEvent.click(
-    screen.getByRole("button", { name: new RegExp(`${razonSocial} ·`) }),
-  );
+  fireEvent.click(tarjeta(razonSocial));
 }
 
 /** Los nombres de las órdenes de la hoja, en el orden en que están. */
@@ -92,9 +93,9 @@ describe("FormularioProgramacion", () => {
   it("muestra las órdenes por programar con sus referencias y su total", () => {
     render(<FormularioProgramacion ordenes={ORDENES} />);
 
-    expect(
-      screen.getByRole("button", { name: /Colegio San Ignacio ·/ }),
-    ).toHaveTextContent("2 referencias · 240 prendas");
+    expect(tarjeta("Colegio San Ignacio")).toHaveTextContent(
+      "2 referencias · 240 prendas",
+    );
   });
 
   it("no se puede guardar una programación vacía", () => {

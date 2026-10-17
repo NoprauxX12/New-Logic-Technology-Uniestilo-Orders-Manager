@@ -3,9 +3,10 @@
 import { useActionState, useState } from "react";
 
 import {
-  ESTADO_INICIAL,
   programarOrdenes,
+  type EstadoProgramacion,
 } from "@/features/programacion/actions";
+import { ENTRADA_VACIA } from "@/features/programacion/formulario";
 import type { OrdenPorProgramar } from "@/features/programacion/queries";
 import { MAXIMO_POR_HOJA, moverEnLista } from "@/features/programacion/reglas";
 import { formatearFecha } from "@/lib/utils/fechas";
@@ -25,6 +26,18 @@ import { formatearFecha } from "@/lib/utils/fechas";
  * navegador los manda en ese mismo orden; así `leerFormularioProgramacion`
  * reconstruye la secuencia sin numerarla a mano.
  */
+
+/**
+ * Vive aquí y no en `actions.ts` porque un archivo `"use server"` solo puede
+ * exportar funciones asíncronas: una constante exportada desde allá llega como
+ * `undefined` al navegador.
+ */
+const ESTADO_INICIAL: EstadoProgramacion = {
+  ok: false,
+  mensaje: "",
+  errores: {},
+  valores: ENTRADA_VACIA,
+};
 
 type Props = {
   ordenes: OrdenPorProgramar[];

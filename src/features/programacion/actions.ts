@@ -44,13 +44,6 @@ export type EstadoProgramacion = {
   valores: EntradaProgramacion;
 };
 
-export const ESTADO_INICIAL: EstadoProgramacion = {
-  ok: false,
-  mensaje: "",
-  errores: {},
-  valores: ENTRADA_VACIA,
-};
-
 /** Violación de unicidad: esa hoja y ese turno ya existían. */
 const DUPLICADO = "23505";
 /** La orden ya está completada (trigger de HU-13). */
