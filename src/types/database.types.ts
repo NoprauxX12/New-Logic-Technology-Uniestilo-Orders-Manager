@@ -328,9 +328,10 @@ export type Database = {
           id: string
           numero_factura: string | null
           numero_orden_compra: string
-          numero_orden_programacion: string | null
+          numero_orden_programacion: number | null
           observaciones: string | null
           orden_original_id: string | null
+          posicion_programacion: number | null
         }
         Insert: {
           cliente_id: string
@@ -341,9 +342,10 @@ export type Database = {
           id?: string
           numero_factura?: string | null
           numero_orden_compra: string
-          numero_orden_programacion?: string | null
+          numero_orden_programacion?: number | null
           observaciones?: string | null
           orden_original_id?: string | null
+          posicion_programacion?: number | null
         }
         Update: {
           cliente_id?: string
@@ -354,9 +356,10 @@ export type Database = {
           id?: string
           numero_factura?: string | null
           numero_orden_compra?: string
-          numero_orden_programacion?: string | null
+          numero_orden_programacion?: number | null
           observaciones?: string | null
           orden_original_id?: string | null
+          posicion_programacion?: number | null
         }
         Relationships: [
           {
@@ -411,6 +414,10 @@ export type Database = {
       nit_normalizado: { Args: { p_nit: string }; Returns: string }
       orden_espera_tela: { Args: { p_orden_id: string }; Returns: boolean }
       ordenes_esperando_tela: { Args: never; Returns: string[] }
+      programar_ordenes_a_diseno: {
+        Args: { p_ordenes: string[] }
+        Returns: number
+      }
       registrar_orden: {
         Args: {
           p_contacto_celular: string

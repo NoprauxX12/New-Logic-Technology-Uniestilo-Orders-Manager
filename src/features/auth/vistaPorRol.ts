@@ -35,9 +35,12 @@ const VISTAS: Record<Rol, VistaDeRol> = {
   },
   secretaria: {
     botones: [
-      { etiqueta: "Cerrar órdenes", ruta: "/ordenes/cierre" },
+      // En el orden del flujo: primero se programa, después se valida la tela
+      // y al final se cierra.
+      { etiqueta: "Programar a diseño", ruta: "/ordenes/programacion" },
       // HU-06: avisar a administración que falta tela.
       { etiqueta: "Validar telas", ruta: "/ordenes/telas" },
+      { etiqueta: "Cerrar órdenes", ruta: "/ordenes/cierre" },
     ],
     aviso: null,
   },
