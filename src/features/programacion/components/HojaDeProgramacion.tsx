@@ -1,5 +1,5 @@
 import type { HojaDeProgramacion as Hoja } from "@/features/programacion/queries";
-import { formatearFecha } from "@/lib/utils/fechas";
+import { formatearDia } from "@/lib/utils/fechas";
 
 /**
  * HU-03 · La hoja que trabaja diseño.
@@ -28,7 +28,7 @@ export function HojaDeProgramacion({ hoja }: { hoja: Hoja }) {
           {hoja.ordenes.length === 1 ? "orden" : "órdenes"} ·{" "}
           {hoja.totalPrendas} prendas
           {hoja.programadaPor && hoja.programadaEn
-            ? ` · ${hoja.programadaPor}, ${formatearFecha(hoja.programadaEn)}`
+            ? ` · ${hoja.programadaPor}, ${formatearDia(hoja.programadaEn)}`
             : null}
         </p>
       </header>
