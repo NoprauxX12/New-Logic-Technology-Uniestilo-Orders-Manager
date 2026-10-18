@@ -15,23 +15,10 @@ import {
 } from "@/features/workflow/transiciones";
 
 /**
- * Reglas del motor de workflow. Aquí vive el riesgo del dominio, así que se
- * prueban las condiciones por separado y también cuál gana cuando fallan
- * varias a la vez.
- *
- * Los casos se arman a partir de `CHECKPOINTS`, no de valores escritos a mano,
- * para que sigan valiendo cuando una historia de otro sprint ponga su etapa
- * como disponible.
+ * Los casos se arman a partir de CHECKPOINTS para incluir las etapas
+ * que se vayan habilitando.
  */
 
-/**
- * Todos los valores del enum `checkpoint` de la base, escritos a mano.
- *
- * Es un `Record` a propósito: si alguien agrega un checkpoint en una migración
- * y regenera `database.types.ts`, TypeScript exige completarlo aquí, y el test
- * de abajo exige que también esté en `CHECKPOINTS`. Es la red que mantiene
- * sincronizados la base y la fuente única de la secuencia.
- */
 const TODOS: Record<CheckpointId, true> = {
   cotizacion_aprobada: true,
   programada_diseno: true,
@@ -47,24 +34,15 @@ const TODOS: Record<CheckpointId, true> = {
   cerrada: true,
 };
 
-/** La secuencia completa del flujo del taller. */
 const SECUENCIA = CHECKPOINTS.map((checkpoint) => checkpoint.id);
 
-/**
- * Lo que hoy se puede marcar, en el orden del flujo.
- *
- * Se anota como `CheckpointId[]` a propósito: TypeScript deduce de
- * `CHECKPOINTS_DISPONIBLES` el subconjunto exacto de etapas disponibles, y sin
- * ensanchar aquí no dejaría preguntar si una etapa cualquiera está en la lista.
- */
 const DISPONIBLES: CheckpointId[] = CHECKPOINTS_DISPONIBLES.map(
   (checkpoint) => checkpoint.id,
 );
 
-/** Los seis roles del modelo, para elegir uno por su relación con otro. */
 const ROLES = Object.keys(ETIQUETAS_ROL) as Rol[];
 
-/** Una orden que ya recorrió las primeras `cuantas` etapas disponibles. */
+/** Una orden que ya recorrió las primeras etapas disponibles. */
 function primerasDisponibles(cuantas: number): CheckpointId[] {
   return DISPONIBLES.slice(0, cuantas);
 }
@@ -165,7 +143,6 @@ describe("puedeMarcar", () => {
 
   it("no deja marcar una etapa que todavía no tiene pantalla", () => {
     const sinPantalla = CHECKPOINTS.find((c) => !c.disponible);
-    // Cuando el Sprint 3 construya la última, este caso deja de existir.
     if (!sinPantalla) return;
 
     const resultado = puedeMarcar({
@@ -197,6 +174,7 @@ describe("puedeMarcar", () => {
   it("no deja marcar a un rol que no es dueño de la sección", () => {
     const primera = CHECKPOINTS_DISPONIBLES[0];
     const otroRol = ROLES.find((rol) => rol !== primera.rolDueno);
+
     expect(otroRol).toBeDefined();
     if (!otroRol) return;
 
@@ -214,10 +192,8 @@ describe("puedeMarcar", () => {
 
   it("avisa que ya está marcado antes que del rol, cuando fallan las dos", () => {
     const primera = CHECKPOINTS_DISPONIBLES[0];
-    // Cualquier rol que no sea el dueño. Se busca en vez de escribirlo porque
-    // `CHECKPOINTS` es `as const`: TypeScript conoce el rol exacto de esta
-    // etapa y trata como imposible cualquier comparación escrita a mano.
     const otroRol = ROLES.find((rol) => rol !== primera.rolDueno);
+
     expect(otroRol).toBeDefined();
     if (!otroRol) return;
 
@@ -240,7 +216,6 @@ describe("puedeMarcar", () => {
         checkpoint: checkpoint.id,
         marcados,
         rol: checkpoint.rolDueno,
-        // Logística ya recibió el lote: es el recorrido completo y feliz.
         recepcionConfirmada: true,
       });
 
@@ -252,17 +227,8 @@ describe("puedeMarcar", () => {
   });
 });
 
-/**
- * Los casos de arriba prueban las reglas del motor con un checkpoint cualquiera.
- * Estos prueban la posición concreta de `lista_despacho` en la secuencia, que es
- * el criterio 2 de HU-19: "solo está disponible si la orden ya pasó por
- * marcación". Si alguien reordena `CHECKPOINTS`, los genéricos siguen en verde
- * y estos dos no.
- */
 describe("puedeMarcar · lista para despachar (HU-19)", () => {
   const { rolDueno } = buscarCheckpoint("lista_despacho");
-  // Se cuenta sobre las etapas disponibles, que es lo que mira el motor: las
-  // que todavía no tienen pantalla no se exigen.
   const pasosPrevios = DISPONIBLES.indexOf("lista_despacho");
 
   it("no se puede marcar mientras la orden no haya llegado a marcación", () => {
@@ -291,12 +257,6 @@ describe("puedeMarcar · lista para despachar (HU-19)", () => {
   });
 });
 
-/**
- * HU-12 tiene un requisito que no es un checkpoint: logística tiene que haber
- * confirmado la recepción de al menos un lote (HU-11) antes de que marcación
- * reciba la orden. El motor lo conoce para que siga siendo el único que decide
- * (regla 2), y `checkpoints.ts` dice qué etapa lo exige (regla 4).
- */
 describe("puedeMarcar · requisito de recepción del taller (HU-12)", () => {
   const { rolDueno } = buscarCheckpoint("llegada_marcacion");
   const previos = primerasDisponibles(DISPONIBLES.indexOf("llegada_marcacion"));
@@ -346,6 +306,7 @@ describe("puedeMarcar · requisito de recepción del taller (HU-12)", () => {
     const sinRequisito = CHECKPOINTS_DISPONIBLES.find(
       (c) => !("requisito" in c),
     );
+
     expect(sinRequisito).toBeDefined();
     if (!sinRequisito) return;
 
@@ -373,11 +334,6 @@ describe("puedeMarcar · requisito de recepción del taller (HU-12)", () => {
   });
 });
 
-/**
- * HU-22 · El corte tiene un requisito que no es un checkpoint: la orden no
- * puede estar esperando tela. Una alerta de falta de tela (HU-06) la frena
- * hasta que secretaría marca que la tela llegó.
- */
 describe("puedeMarcar · requisito de tela en la empresa (HU-22)", () => {
   const { rolDueno } = buscarCheckpoint("corte_completado");
   const previos = primerasDisponibles(DISPONIBLES.indexOf("corte_completado"));
@@ -454,27 +410,37 @@ describe("puedeMarcar · requisito de tela en la empresa (HU-22)", () => {
 });
 
 describe("HU-09 · recogido y bordado", () => {
+  const previosAlRecogido = primerasDisponibles(
+    DISPONIBLES.indexOf("recogido_bordado"),
+  );
+
   it("permite a logística marcar después del corte", () => {
     expect(
       puedeMarcar({
         checkpoint: "recogido_bordado",
-        marcados: ["corte_completado"],
+        marcados: previosAlRecogido,
         rol: "logistica",
       }),
     ).toEqual({ permitido: true });
   });
 
   it("impide pasar a marcación sin recogido y bordado", () => {
-    expect(
-      puedeMarcar({
-        checkpoint: "llegada_marcacion",
-        marcados: ["corte_completado"],
-        rol: "marcacion",
-        recepcionConfirmada: true,
-      }),
-    ).toMatchObject({
+    const resultado = puedeMarcar({
+      checkpoint: "llegada_marcacion",
+      marcados: previosAlRecogido,
+      rol: "marcacion",
+      recepcionConfirmada: true,
+    });
+
+    expect(resultado).toMatchObject({
       permitido: false,
       motivo: "fuera_de_secuencia",
     });
+
+    if (resultado.permitido) return;
+
+    expect(resultado.mensaje).toContain(
+      buscarCheckpoint("recogido_bordado").etiqueta,
+    );
   });
 });
