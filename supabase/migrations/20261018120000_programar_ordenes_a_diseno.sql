@@ -67,20 +67,15 @@ create unique index orden_programacion_unica_idx
   on public.orden (numero_orden_programacion, posicion_programacion);
 
 -- ---------------------------------------------------------------------------
--- Permiso para escribir esas dos columnas
+-- Sin permiso directo sobre esas dos columnas
 -- ---------------------------------------------------------------------------
 -- HU-13 quitó el update sobre `orden` entera y lo concedió solo sobre
--- `numero_factura`, dejando dicho que cada historia tendría que sumar su propio
--- grant. Este es el de HU-03.
---
--- La política no hace falta: `"secretaria registra la factura"` (HU-17) ya
--- autoriza el update de `orden` a secretaría, y las políticas RLS no distinguen
--- columnas. Lo que limita a estas dos columnas es el grant. Su nombre quedó
--- hablando solo de la factura; cuando una tercera historia escriba en `orden`
--- vale la pena renombrarla a algo como "secretaria actualiza lo suyo".
-
-grant update (numero_orden_programacion, posicion_programacion)
-  on public.orden to authenticated;
+-- `numero_factura`. Aquí no se concede nada más, a propósito: con un `grant
+-- update` de estas columnas, secretaría podía cambiar desde la API la hoja o el
+-- turno de cualquier orden ya programada, sin pasar por la función y sin dejar
+-- rastro en la bitácora (la política de update de `orden` no distingue filas
+-- ni columnas). La única vía para escribirlas es `programar_ordenes_a_diseno`,
+-- que corre con los permisos de su dueño (ver abajo).
 
 -- ---------------------------------------------------------------------------
 -- programar_ordenes_a_diseno
@@ -88,15 +83,21 @@ grant update (numero_orden_programacion, posicion_programacion)
 -- Recibe las órdenes de la hoja en el orden en que deben trabajarse y devuelve
 -- el número de hoja que les tocó, para poder decírselo a la secretaria.
 --
--- Como el resto de funciones del proyecto: SECURITY INVOKER para que respete
--- las políticas RLS, `search_path` vacío y cada tabla calificada. Quién programa
--- sale de `auth.uid()` y no de un parámetro (regla 6).
+-- SECURITY DEFINER, como `orden_espera_tela` (HU-22): es la única vía para
+-- escribir la hoja y el turno, que `authenticated` no puede tocar directo. Por
+-- eso la función hace ella misma lo que haría RLS —exige sesión y el rol de
+-- secretaría— y solo escribe órdenes sin programar. Las demás barreras siguen
+-- en pie porque no dependen de quién llama: el índice único de `avance_seccion`,
+-- el trigger de la orden cerrada y el que firma el avance con la sesión.
+-- `search_path` vacío y cada tabla calificada. Quién programa sale de
+-- `auth.uid()` y no de un parámetro (regla 6).
 
 create or replace function public.programar_ordenes_a_diseno(
   p_ordenes uuid[]
 )
 returns integer
 language plpgsql
+security definer
 set search_path = ''
 as $$
 declare
@@ -109,8 +110,7 @@ begin
       using errcode = 'UE006';
   end if;
 
-  -- RLS rechazaría el update de todos modos, pero lo haría sin encontrar la
-  -- fila: el mensaje diría que la orden no existe, que es falso y desorienta.
+  -- Con SECURITY DEFINER no hay RLS que lo ataje: esta es la barrera del rol.
   if public.rol_actual() is distinct from 'secretaria' then
     raise exception 'La programación a diseño la registra secretaría'
       using errcode = 'UE007';
@@ -133,10 +133,13 @@ begin
     update public.orden
     set numero_orden_programacion = v_hoja,
         posicion_programacion = v_fila.turno
-    where id = v_fila.orden_id;
+    where id = v_fila.orden_id
+      and posicion_programacion is null;
 
+    -- Una orden ya programada no cambia de hoja ni de turno: el update no la
+    -- encuentra y la hoja entera se deshace.
     if not found then
-      raise exception 'Una de las órdenes de la hoja no existe'
+      raise exception 'Una de las órdenes de la hoja no existe o ya está programada'
         using errcode = 'UE005';
     end if;
 

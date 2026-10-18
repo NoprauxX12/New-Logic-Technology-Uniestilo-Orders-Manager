@@ -48,8 +48,8 @@ export type EstadoProgramacion = {
 const DUPLICADO = "23505";
 /** La orden ya está completada (trigger de HU-13). */
 const ORDEN_COMPLETADA = "UE004";
-/** Una de las órdenes de la hoja no existe. */
-const ORDEN_INEXISTENTE = "UE005";
+/** Una de las órdenes de la hoja no existe o ya se programó. */
+const ORDEN_NO_DISPONIBLE = "UE005";
 /** La función no encontró sesión. */
 const SIN_SESION = "UE006";
 /** Quien programa no es secretaría. */
@@ -76,8 +76,8 @@ function mensajeConocido(codigo: string | undefined): string | null {
       return `La programación a diseño la registra ${ETIQUETAS_ROL[ROL_DE_PROGRAMACION]}.`;
     case HOJA_VACIA:
       return "Agrega al menos una orden a la programación.";
-    case ORDEN_INEXISTENTE:
-      return "Una de las órdenes ya no existe. Vuelve a abrir la pantalla.";
+    case ORDEN_NO_DISPONIBLE:
+      return "Una de las órdenes ya no existe o ya la programaron. Vuelve a abrir la pantalla.";
     case ORDEN_COMPLETADA:
       return "Una de las órdenes ya está completada y no admite más cambios.";
     case DUPLICADO:
