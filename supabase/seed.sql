@@ -148,7 +148,7 @@ insert into public.avance_seccion (orden_id, checkpoint, usuario_id, fecha_hora,
   ('00000000-0000-0000-0000-0000000000f4', 'ficha_adjunta',       '00000000-0000-0000-0000-0000000000a3', now() - interval '29 days', null),
   ('00000000-0000-0000-0000-0000000000f4', 'tela_programada',     '00000000-0000-0000-0000-0000000000a2', now() - interval '25 days', null),
   ('00000000-0000-0000-0000-0000000000f4', 'corte_completado',    '00000000-0000-0000-0000-0000000000a4', now() - interval '15 days', null),
-  ('00000000-0000-0000-0000-0000000000f4', 'recogido_bordado',    '00000000-0000-0000-0000-0000000000a5', now() - interval '4 days',  null),
+  ('00000000-0000-0000-0000-0000000000f4', 'recogido_bordado',    '00000000-0000-0000-0000-0000000000a5', now() - interval '13 days', null),
 
   -- OC-5005: en marcación, y atrasada.
   ('00000000-0000-0000-0000-0000000000f5', 'cotizacion_aprobada', '00000000-0000-0000-0000-0000000000a2', now() - interval '43 days', null),
@@ -196,21 +196,30 @@ insert into public.ficha_tecnica (orden_id, archivo_ruta, subida_por) values
 -- ---------------------------------------------------------------------------
 -- Lotes a taller
 -- ---------------------------------------------------------------------------
--- Uno todavía afuera, para que HU-11 tenga qué confirmar, y uno ya recibido
--- incompleto, que es el caso que HU-11 tiene que saber mostrar.
+-- OC-5004 repartida en dos talleres (regla 6): uno ya recibido incompleto, que
+-- es el caso que HU-11 tiene que saber mostrar, y otro todavía afuera, para que
+-- HU-11 tenga qué confirmar. Los dos salen después del recogido y bordado: el
+-- despacho lo exige (HU-09). OC-5003 no tiene lotes: espera su recogido.
 
 insert into public.lote_taller (
   orden_id, taller, descripcion_prendas, fecha_envio, enviado_por,
   recibido_completo, fecha_recepcion, recibido_por, observaciones_recepcion
 ) values
-  ('00000000-0000-0000-0000-0000000000f3', 'Taller Marinilla Centro', '250 polos verdes talla S y M', now() - interval '5 days', '00000000-0000-0000-0000-0000000000a5', null, null, null, null),
-  ('00000000-0000-0000-0000-0000000000f4', 'Confecciones El Retiro',  '120 overoles completos',       now() - interval '12 days', '00000000-0000-0000-0000-0000000000a5', false, now() - interval '5 days', '00000000-0000-0000-0000-0000000000a5', 'Llegaron 115; faltan 5 talla XL');
+  ('00000000-0000-0000-0000-0000000000f4', 'Confecciones El Retiro',  '90 overoles tallas M y L',     now() - interval '12 days', '00000000-0000-0000-0000-0000000000a5', false, now() - interval '5 days', '00000000-0000-0000-0000-0000000000a5', 'Llegaron 85; faltan 5 talla L'),
+  ('00000000-0000-0000-0000-0000000000f4', 'Taller Marinilla Centro', '30 overoles talla XL',         now() - interval '3 days',  '00000000-0000-0000-0000-0000000000a5', null, null, null, null);
 
 -- ---------------------------------------------------------------------------
 -- Alertas
 -- ---------------------------------------------------------------------------
 
-insert into public.alerta (tipo, orden_id, destinatario_id, detalle, estado, fecha_creacion, fecha_atencion) values
-  ('falta_tela',         '00000000-0000-0000-0000-0000000000f5', '00000000-0000-0000-0000-0000000000a2', 'La tela antifluidos lleva 3 semanas sin llegar', 'pendiente', now() - interval '7 days', null),
-  ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f4', '00000000-0000-0000-0000-0000000000a1', 'Entrega en 2 días y el lote del taller llegó incompleto', 'pendiente', now() - interval '1 day', null),
-  ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f7', '00000000-0000-0000-0000-0000000000a1', 'Entrega la próxima semana', 'atendida', now() - interval '25 days', now() - interval '24 days');
+-- Las de tela (HU-06) las envía secretaría y le llegan a administración. Una
+-- abierta en OC-5002, que espera el corte, para que HU-07 tenga qué mostrar y
+-- HU-22 qué liberar —mientras no llegue la tela, corte no puede marcarla—; y
+-- una ya cerrada en OC-5005, cuya tela llegó (HU-22) antes de su corte. Las de
+-- entrega (HU-20) las genera el sistema y no tienen quién las haya creado.
+
+insert into public.alerta (tipo, orden_id, destinatario_id, creada_por, detalle, estado, fecha_creacion, fecha_atencion, tela_llegada_en, tela_recibida_por) values
+  ('falta_tela',         '00000000-0000-0000-0000-0000000000f2', '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a2', 'Faltan 40 metros de tela impermeable azul', 'pendiente', now() - interval '2 days', null, null, null),
+  ('falta_tela',         '00000000-0000-0000-0000-0000000000f5', '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a2', 'La tela antifluidos lleva 3 semanas sin llegar', 'atendida', now() - interval '35 days', now() - interval '33 days', now() - interval '31 days', '00000000-0000-0000-0000-0000000000a2'),
+  ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f4', '00000000-0000-0000-0000-0000000000a1', null,                                   'Entrega en 2 días y el lote del taller llegó incompleto', 'pendiente', now() - interval '1 day', null, null, null),
+  ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f7', '00000000-0000-0000-0000-0000000000a1', null,                                   'Entrega la próxima semana', 'atendida', now() - interval '25 days', now() - interval '24 days', null, null);

@@ -11,8 +11,8 @@ import {
   derivarSemaforo,
   diasHasta,
   resumirTablero,
-} from "@/features/tablero/reglas";
-import type { AvanceSeccion, OrdenEnTablero } from "@/features/tablero/types";
+} from "@/lib/ordenes/reglas";
+import type { AvanceSeccion, OrdenEnTablero } from "@/lib/ordenes/types";
 
 /** Fecha fija para que los tests no dependan del reloj del PC. */
 const AHORA = new Date("2026-09-06T12:00:00");

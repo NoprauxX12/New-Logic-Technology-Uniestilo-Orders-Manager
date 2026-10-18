@@ -1,8 +1,8 @@
 import type { CheckpointId } from "@/features/workflow/checkpoints";
 
 /**
- * Formas de dominio del tablero (HU-14).
- * `queries.ts` mapea filas de la base a estos tipos.
+ * Formas de dominio del estado de una orden (HU-14, HU-15).
+ * `estadoOrden.ts` mapea filas de la base a estos tipos.
  * El "estado" de la orden NO se guarda: se deriva de `avances` + fechas.
  */
 

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { exigirAcceso } from "@/features/auth/guardia";
 import { DetalleOrdenView } from "@/features/tablero/components/DetalleOrdenView";
 import { TableroEnVivo } from "@/features/tablero/components/TableroEnVivo";
-import { obtenerDetalleOrden } from "@/features/tablero/queries";
+import { obtenerDetalleOrden } from "@/lib/ordenes/estadoOrden";
 import { AccionMarcarAvance } from "@/features/workflow/components/AccionMarcarAvance";
 import { puedeMarcar } from "@/features/workflow/transiciones";
 

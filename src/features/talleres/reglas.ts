@@ -14,8 +14,12 @@ import type { LoteEnviado } from "@/lib/talleres/estadoLotes";
  * Viven aquí, puras y sin base de datos, para poder probarlas sin levantar nada.
  */
 
-/** Sin esto marcado, no hay nada que mandar al taller. */
-export const CHECKPOINT_REQUERIDO: CheckpointId = "corte_completado";
+/**
+ * Sin esto marcado, no hay nada que mandar al taller: lo cortado se recoge y
+ * se borda antes de salir (HU-08 → HU-09 → HU-10). El recogido ya exige el
+ * corte por la secuencia del motor.
+ */
+export const CHECKPOINT_REQUERIDO: CheckpointId = "recogido_bordado";
 
 /** El único rol que despacha y recibe lotes. */
 export const ROL_DE_TALLERES: Rol = "logistica";
@@ -34,8 +38,8 @@ function rolNoAutorizado(): ResultadoDespacho {
  * ¿Puede esta persona mandar un lote de esta orden a un taller?
  *
  * Se puede despachar más de una vez: una orden se reparte entre varios talleres
- * (regla 6). Se exige que el corte esté hecho y que quien despacha sea de
- * logística; el rol sale de la sesión, nunca del formulario.
+ * (regla 6). Se exige que la orden esté recogida y bordada y que quien despacha
+ * sea de logística; el rol sale de la sesión, nunca del formulario.
  */
 export function puedeDespachar(
   marcados: readonly CheckpointId[],
