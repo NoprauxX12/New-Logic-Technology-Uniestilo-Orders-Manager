@@ -54,7 +54,8 @@ src/
     api/health/           Health check para el monitoreo (RNF-06)
   features/               Un módulo por área del dominio. Cada uno es dueño de sus
                           server actions, consultas, validaciones y componentes.
-    ordenes/              HU-01, HU-02, HU-03, HU-05
+    ordenes/              HU-01, HU-02, HU-05
+    programacion/         Hoja de programación a diseño: HU-03 (docs/adr/0010)
     workflow/             Motor de checkpoints: HU-08, HU-09, HU-12, HU-19, HU-13 (RNF-05)
     talleres/             Lotes a taller satélite: HU-10, HU-11
     tablero/              HU-14 + suscripción Realtime
