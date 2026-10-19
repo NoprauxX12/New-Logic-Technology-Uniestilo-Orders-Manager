@@ -188,3 +188,52 @@ export async function obtenerAdministradores(): Promise<Administrador[]> {
 
   return data.map((admin) => ({ id: admin.id, creadoEn: admin.creado_en }));
 }
+
+/** Una alerta de tela pendiente, como la ve administración en el tablero. */
+export type AlertaTelaEnTablero = {
+  id: string;
+  detalle: string;
+  fechaCreacion: string;
+  numeroOrdenCompra: string;
+  razonSocial: string;
+  enviadaPor: string;
+};
+
+/**
+ * HU-07 · Las alertas de tela que siguen pendientes.
+ *
+ * Atendida no sale: marcarla resuelta la saca del tablero sin borrar la fila.
+ * Las de proximidad de entrega (HU-20) no son esta historia.
+ */
+export async function listarAlertasDeTelaPendientes(): Promise<
+  AlertaTelaEnTablero[]
+> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("alerta")
+    .select(
+      `id,
+       detalle,
+       fecha_creacion,
+       orden ( numero_orden_compra, cliente ( razon_social ) ),
+       creador:creada_por ( nombre )`,
+    )
+    .eq("tipo", "falta_tela")
+    .eq("estado", "pendiente")
+    .order("fecha_creacion", { ascending: true });
+
+  if (error) {
+    console.error("[HU-07] No se pudieron leer las alertas", error);
+    throw new Error("No se pudieron leer las alertas de tela.");
+  }
+
+  return data.map((alerta) => ({
+    id: alerta.id,
+    detalle: alerta.detalle,
+    fechaCreacion: alerta.fecha_creacion,
+    numeroOrdenCompra: alerta.orden?.numero_orden_compra ?? "Sin orden",
+    razonSocial: alerta.orden?.cliente?.razon_social ?? "Sin cliente",
+    enviadaPor: alerta.creador?.nombre ?? "Secretaría",
+  }));
+}

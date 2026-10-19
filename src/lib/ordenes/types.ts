@@ -1,4 +1,5 @@
 import type { CheckpointId } from "@/features/workflow/checkpoints";
+import type { FichaVisible } from "@/lib/storage/fichas";
 
 /**
  * Formas de dominio del estado de una orden (HU-14, HU-15).
@@ -27,6 +28,8 @@ export type OrdenResumen = {
   tallerNombre: string | null;
   /** HU-10 y HU-11: derivado de los lotes ("En confección", "Todo volvió"…). */
   estadoTalleres: string;
+  /** HU-04: si diseño ya subió al menos un archivo. */
+  tieneFicha: boolean;
 };
 
 /** Semáforo derivado en aplicación (no columna editable). */
@@ -59,4 +62,6 @@ export type ResumenTablero = {
 
 export type DetalleOrden = OrdenEnTablero & {
   avances: AvanceSeccion[];
+  /** URLs firmadas para abrir el archivo (expiran; no se guardan). */
+  fichas: FichaVisible[];
 };

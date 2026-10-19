@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
 
+import { FichasAdjuntas } from "@/components/FichasAdjuntas";
 import {
   marcarCheckpoint,
   type EstadoMarcado,
@@ -119,6 +120,15 @@ function TarjetaOrden({
           </div>
         )}
       </div>
+
+      {orden.fichas.length > 0 ? (
+        <div className="mt-4 border-t border-zinc-100 pt-3">
+          <p className="mb-1 text-sm font-medium text-zinc-700">
+            Ficha técnica
+          </p>
+          <FichasAdjuntas fichas={orden.fichas} />
+        </div>
+      ) : null}
 
       {estado?.mensaje ? (
         <p

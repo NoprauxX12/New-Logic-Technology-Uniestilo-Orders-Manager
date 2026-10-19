@@ -51,3 +51,4 @@ Thumbs.db
 # Certificados y llaves
 *.pem
 *.key
+.env*

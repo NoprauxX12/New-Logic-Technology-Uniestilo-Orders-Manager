@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   destinatarioDeAlertaTela,
+  puedeAtenderAlerta,
   puedeAvisarFaltaDeTela,
   puedeMarcarLlegadaDeTela,
 } from "@/features/alertas/reglas";
@@ -144,6 +145,23 @@ describe("destinatarioDeAlertaTela", () => {
     destinatarioDeAlertaTela(administradores);
 
     expect(administradores.map((admin) => admin.id)).toEqual(["b", "a"]);
+  });
+});
+
+describe("puedeAtenderAlerta (HU-07)", () => {
+  it("deja que administración marque la alerta como resuelta", () => {
+    expect(puedeAtenderAlerta({ rol: "admin" })).toEqual({ permitido: true });
+  });
+
+  it("nadie más la resuelve, ni siquiera quien avisó", () => {
+    for (const rol of ROLES.filter((r) => r !== "admin")) {
+      const resultado = puedeAtenderAlerta({ rol });
+
+      expect(resultado.permitido).toBe(false);
+      expect(resultado.permitido === false && resultado.mensaje).toContain(
+        "Administración",
+      );
+    }
   });
 });
 

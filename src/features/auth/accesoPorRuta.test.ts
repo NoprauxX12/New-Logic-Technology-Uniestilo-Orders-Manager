@@ -44,6 +44,12 @@ describe("rolesDeRuta · derivado de checkpoints.ts", () => {
 });
 
 describe("puedeEntrar · lo de cada sección", () => {
+  it("diseño entra a su pantalla y no al tablero", () => {
+    expect(puedeEntrar("diseno", "/ordenes/diseno")).toBe(true);
+    expect(puedeEntrar("diseno", "/ordenes/corte")).toBe(false);
+    expect(puedeEntrar("diseno", "/tablero")).toBe(false);
+  });
+
   it("corte entra a su pantalla y a nada más", () => {
     expect(puedeEntrar("corte", "/ordenes/corte")).toBe(true);
     expect(puedeEntrar("corte", "/ordenes/marcacion")).toBe(false);

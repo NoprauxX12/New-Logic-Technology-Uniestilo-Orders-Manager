@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { FichasAdjuntas } from "@/components/FichasAdjuntas";
 import { BadgeSemaforo } from "@/features/tablero/components/BadgeSemaforo";
 import type { DetalleOrden, EtapaTablero } from "@/lib/ordenes/types";
 import { buscarCheckpoint } from "@/features/workflow/checkpoints";
@@ -132,6 +133,18 @@ export function DetalleOrdenView({ orden, accion }: Props) {
       </header>
 
       {accion}
+
+      <section aria-labelledby="ficha-tecnica-titulo">
+        <h2
+          id="ficha-tecnica-titulo"
+          className="mb-3 text-lg font-semibold text-zinc-900"
+        >
+          Ficha técnica
+        </h2>
+        <div className="rounded-xl border border-zinc-200 bg-white p-4">
+          <FichasAdjuntas fichas={orden.fichas} conMeta />
+        </div>
+      </section>
 
       <section aria-labelledby="linea-tiempo-titulo">
         <h2

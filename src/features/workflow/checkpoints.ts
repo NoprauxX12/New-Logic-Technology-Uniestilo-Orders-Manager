@@ -88,8 +88,8 @@ export const CHECKPOINTS = [
     etiqueta: "Ficha técnica adjunta",
     rolDueno: "diseno",
     hu: "HU-04",
-    disponible: false,
-    ruta: null,
+    disponible: true,
+    ruta: "/ordenes/diseno",
   },
   {
     id: "tela_programada",

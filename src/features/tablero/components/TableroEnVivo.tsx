@@ -7,8 +7,9 @@ import { suscribirAvancesTablero } from "@/features/tablero/tiempoReal";
 import { createClient } from "@/lib/supabase/client";
 
 /**
- * Escucha INSERT en `avance_seccion` y pide al servidor los datos de nuevo
- * (`router.refresh`), sin recargar el navegador ni perder el scroll.
+ * Escucha un avance nuevo, un lote a taller, una ficha técnica y una alerta
+ * de tela, y pide al servidor los datos de nuevo (`router.refresh`), sin
+ * recargar el navegador ni perder el scroll.
  */
 export function TableroEnVivo({ children }: { children: ReactNode }) {
   const router = useRouter();

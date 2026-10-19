@@ -32,3 +32,11 @@ export type AvisoFaltaDeTela = z.infer<typeof avisarFaltaDeTelaSchema>;
 export const marcarLlegadaDeTelaSchema = z.object({
   ordenId: z.guid({ error: "No se sabe de qué orden llegó la tela" }),
 });
+
+/**
+ * HU-07 · Marcar una alerta de tela como resuelta. Solo viaja su id: quién la
+ * atiende sale de la sesión y la hora la pone la base.
+ */
+export const atenderAlertaSchema = z.object({
+  alertaId: z.guid({ error: "No se sabe qué alerta resolver" }),
+});

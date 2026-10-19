@@ -186,12 +186,12 @@ insert into public.avance_seccion (orden_id, checkpoint, usuario_id, fecha_hora,
 -- ---------------------------------------------------------------------------
 -- Fichas técnicas
 -- ---------------------------------------------------------------------------
--- La ruta apunta a Storage; el archivo no existe en la base local, pero sirve
--- para que HU-04 tenga contra qué probar la lectura.
+-- La ruta es el objeto dentro del bucket `fichas` (`<orden_id>/<archivo>`).
+-- En local, `config.toml` siembra los PDF de ejemplo al levantar Storage.
 
 insert into public.ficha_tecnica (orden_id, archivo_ruta, subida_por) values
-  ('00000000-0000-0000-0000-0000000000f3', 'fichas/00000000-0000-0000-0000-0000000000f3/ficha-polo-verde.pdf', '00000000-0000-0000-0000-0000000000a3'),
-  ('00000000-0000-0000-0000-0000000000f6', 'fichas/00000000-0000-0000-0000-0000000000f6/ficha-quirurgicos.pdf', '00000000-0000-0000-0000-0000000000a3');
+  ('00000000-0000-0000-0000-0000000000f3', '00000000-0000-0000-0000-0000000000f3/ficha-polo-verde.pdf', '00000000-0000-0000-0000-0000000000a3'),
+  ('00000000-0000-0000-0000-0000000000f6', '00000000-0000-0000-0000-0000000000f6/ficha-quirurgicos.pdf', '00000000-0000-0000-0000-0000000000a3');
 
 -- ---------------------------------------------------------------------------
 -- Lotes a taller

@@ -54,6 +54,20 @@ describe("suscribirAvancesTablero", () => {
       },
       alCambiar,
     );
+    expect(canal.on).toHaveBeenCalledWith(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "ficha_tecnica",
+      },
+      alCambiar,
+    );
+    expect(canal.on).toHaveBeenCalledWith(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "alerta" },
+      alCambiar,
+    );
     expect(canal.subscribe).toHaveBeenCalledOnce();
 
     desuscribir();

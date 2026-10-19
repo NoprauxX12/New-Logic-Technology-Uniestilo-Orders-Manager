@@ -93,6 +93,11 @@ export function FilaOrden({ orden }: { orden: OrdenEnTablero }) {
               Orden terminada
             </p>
           )}
+          {orden.tieneFicha ? (
+            <p className="text-xs font-medium text-emerald-800">
+              Ficha técnica adjunta
+            </p>
+          ) : null}
         </div>
       </div>
 

@@ -1,3 +1,5 @@
+import { ListaAlertasTablero } from "@/features/alertas/components/ListaAlertasTablero";
+import { listarAlertasDeTelaPendientes } from "@/features/alertas/queries";
 import { exigirAcceso } from "@/features/auth/guardia";
 import { TableroEnVivo } from "@/features/tablero/components/TableroEnVivo";
 import { TableroOrdenes } from "@/features/tablero/components/TableroOrdenes";
@@ -10,12 +12,19 @@ import {
 export default async function TableroPage() {
   await exigirAcceso("/tablero");
 
-  const ordenes = await listarOrdenesTablero();
+  const [ordenes, alertas] = await Promise.all([
+    listarOrdenesTablero(),
+    listarAlertasDeTelaPendientes(),
+  ]);
   const resumen = await obtenerResumenTablero(ordenes);
 
   return (
     <TableroEnVivo>
-      <TableroOrdenes ordenes={ordenes} resumen={resumen} />
+      <TableroOrdenes
+        ordenes={ordenes}
+        resumen={resumen}
+        avisos={<ListaAlertasTablero alertas={alertas} />}
+      />
     </TableroEnVivo>
   );
 }

@@ -15,10 +15,12 @@ import {
 } from "@/features/alertas/queries";
 import {
   destinatarioDeAlertaTela,
+  puedeAtenderAlerta,
   puedeAvisarFaltaDeTela,
   puedeMarcarLlegadaDeTela,
 } from "@/features/alertas/reglas";
 import {
+  atenderAlertaSchema,
   avisarFaltaDeTelaSchema,
   marcarLlegadaDeTelaSchema,
 } from "@/features/alertas/schemas";
@@ -277,4 +279,100 @@ export async function marcarLlegadaDeTela(
     ok: true,
     mensaje: `Tela recibida. La orden ${situacion.numeroOrdenCompra} ya puede pasar a corte.`,
   };
+}
+
+/**
+ * HU-07 · Marcar una alerta de tela como resuelta para que salga del tablero.
+ *
+ * No se borra: queda atendida, con fecha de atención. Eso no libera la orden
+ * a corte; la tela la marca secretaría cuando llega (HU-22).
+ */
+
+export type EstadoAtencionAlerta = {
+  ok: boolean;
+  mensaje: string;
+};
+
+export async function atenderAlertaDeTela(
+  _estadoPrevio: EstadoAtencionAlerta,
+  formData: FormData,
+): Promise<EstadoAtencionAlerta> {
+  const validacion = atenderAlertaSchema.safeParse({
+    alertaId: formData.get("alertaId"),
+  });
+
+  if (!validacion.success) {
+    return {
+      ok: false,
+      mensaje: "No se pudo identificar la alerta. Vuelve a abrir el tablero.",
+    };
+  }
+
+  const usuario = await getUsuarioActual();
+
+  if (!usuario) {
+    return {
+      ok: false,
+      mensaje: "Inicia sesión para resolver la alerta.",
+    };
+  }
+
+  const permiso = puedeAtenderAlerta({ rol: usuario.rol });
+
+  if (!permiso.permitido) return { ok: false, mensaje: permiso.mensaje };
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("alerta")
+    .update({
+      estado: "atendida",
+      fecha_atencion: new Date().toISOString(),
+    })
+    .eq("id", validacion.data.alertaId)
+    .eq("tipo", "falta_tela")
+    .eq("estado", "pendiente")
+    .select("id");
+
+  if (error) {
+    if (error.code === RLS_RECHAZO) {
+      return {
+        ok: false,
+        mensaje: "Las alertas de tela las resuelve Administración.",
+      };
+    }
+
+    console.error("[HU-07] No se pudo resolver la alerta", error);
+    return {
+      ok: false,
+      mensaje: "No se pudo resolver la alerta. Vuelve a intentarlo.",
+    };
+  }
+
+  if (data.length === 0) {
+    const { data: sigue } = await supabase
+      .from("alerta")
+      .select("estado")
+      .eq("id", validacion.data.alertaId)
+      .maybeSingle();
+
+    revalidatePath("/tablero");
+
+    if (sigue?.estado === "pendiente") {
+      return {
+        ok: false,
+        mensaje: "No se pudo resolver la alerta. Vuelve a intentarlo.",
+      };
+    }
+
+    return {
+      ok: false,
+      mensaje: "Esa alerta ya estaba resuelta.",
+    };
+  }
+
+  revalidatePath("/tablero");
+  revalidatePath("/ordenes/telas");
+
+  return { ok: true, mensaje: "Alerta resuelta." };
 }

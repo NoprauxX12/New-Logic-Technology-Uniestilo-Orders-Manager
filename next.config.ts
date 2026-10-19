@@ -27,6 +27,13 @@ const CABECERAS_DE_SEGURIDAD = [
 const nextConfig: NextConfig = {
   // La versión de package.json, para el pie del login.
   env: { NEXT_PUBLIC_VERSION: version },
+  // HU-04: la ficha técnica puede pesar hasta 10 MB. El tope por defecto de
+  // las Server Actions es 1 MB y rechazaría el archivo antes de validarlo.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "11mb",
+    },
+  },
   async headers() {
     return [{ source: "/(.*)", headers: CABECERAS_DE_SEGURIDAD }];
   },
