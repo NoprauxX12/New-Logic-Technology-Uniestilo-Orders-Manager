@@ -84,24 +84,34 @@ insert into public.cliente (id, nit, razon_social, contacto_nombre, contacto_cel
 -- Cada orden está parada en un punto distinto del flujo. La columna de la
 -- derecha dice qué historia puede trabajar con ella.
 
+-- Las que ya pasaron por diseño llevan su hoja de programación y su turno
+-- dentro de ella (HU-03). Hay dos hojas armadas, como las de papel: la #1 con
+-- tres órdenes y la #2 con otras tres, cada una numerada de 1 en adelante. Las
+-- tres sin programar son las que esperan a secretaría en /ordenes/programacion,
+-- y la siguiente hoja que arme será la #3.
+
 insert into public.orden (
   id, numero_orden_compra, cliente_id, fecha_ingreso, fecha_entrega,
-  observaciones, numero_factura, creado_por
+  observaciones, numero_orden_programacion, posicion_programacion,
+  numero_factura, creado_por
 ) values
-  -- Recién registrada, sin ningún avance.
-  ('00000000-0000-0000-0000-0000000000f1', 'OC-5001', '00000000-0000-0000-0000-0000000000c1', current_date - 2,  current_date + 25, 'Dotación de profesores, primer semestre', null, '00000000-0000-0000-0000-0000000000a1'),
-  -- Con la tela programada: le sigue el corte (HU-08).
-  ('00000000-0000-0000-0000-0000000000f2', 'OC-5002', '00000000-0000-0000-0000-0000000000c1', current_date - 20, current_date + 12, null, null, '00000000-0000-0000-0000-0000000000a1'),
-  -- Con el corte hecho: se puede despachar a taller (HU-10).
-  ('00000000-0000-0000-0000-0000000000f3', 'OC-5003', '00000000-0000-0000-0000-0000000000c2', current_date - 28, current_date + 6,  'El cliente pidió bordado en el bolsillo', null, '00000000-0000-0000-0000-0000000000a1'),
-  -- Recogida y bordada: le sigue la llegada a marcación (HU-12). En riesgo.
-  ('00000000-0000-0000-0000-0000000000f4', 'OC-5004', '00000000-0000-0000-0000-0000000000c2', current_date - 35, current_date + 2,  null, null, '00000000-0000-0000-0000-0000000000a1'),
-  -- En marcación: le sigue lista para despachar (HU-19). Atrasada.
-  ('00000000-0000-0000-0000-0000000000f5', 'OC-5005', '00000000-0000-0000-0000-0000000000c3', current_date - 45, current_date - 3,  'Reprogramada dos veces por falta de tela', null, '00000000-0000-0000-0000-0000000000a1'),
-  -- Lista para despachar: le sigue el cierre (HU-13).
-  ('00000000-0000-0000-0000-0000000000f6', 'OC-5006', '00000000-0000-0000-0000-0000000000c3', current_date - 40, current_date + 9,  null, null, '00000000-0000-0000-0000-0000000000a1'),
-  -- Cerrada: sirve para ver el flujo completo y el histórico.
-  ('00000000-0000-0000-0000-0000000000f7', 'OC-5007', '00000000-0000-0000-0000-0000000000c1', current_date - 60, current_date - 10, null, 'FV-2214', '00000000-0000-0000-0000-0000000000a1');
+  -- Recién registrada, sin ningún avance: la primera candidata a programación (HU-03).
+  ('00000000-0000-0000-0000-0000000000f1', 'OC-5001', '00000000-0000-0000-0000-0000000000c1', current_date - 2,  current_date + 25, 'Dotación de profesores, primer semestre', null, null, null, '00000000-0000-0000-0000-0000000000a1'),
+  -- Con la tela programada: le sigue el corte (HU-08). Hoja 2, tercer turno.
+  ('00000000-0000-0000-0000-0000000000f2', 'OC-5002', '00000000-0000-0000-0000-0000000000c1', current_date - 20, current_date + 12, null, 2, 3, null, '00000000-0000-0000-0000-0000000000a1'),
+  -- Con el corte hecho: se puede despachar a taller (HU-10). Hoja 2, segundo turno.
+  ('00000000-0000-0000-0000-0000000000f3', 'OC-5003', '00000000-0000-0000-0000-0000000000c2', current_date - 28, current_date + 6,  'El cliente pidió bordado en el bolsillo', 2, 2, null, '00000000-0000-0000-0000-0000000000a1'),
+  -- Recogida y bordada: le sigue la llegada a marcación (HU-12). En riesgo. Hoja 2, primer turno.
+  ('00000000-0000-0000-0000-0000000000f4', 'OC-5004', '00000000-0000-0000-0000-0000000000c2', current_date - 35, current_date + 2,  null, 2, 1, null, '00000000-0000-0000-0000-0000000000a1'),
+  -- En marcación: le sigue lista para despachar (HU-19). Atrasada. Hoja 1, segundo turno.
+  ('00000000-0000-0000-0000-0000000000f5', 'OC-5005', '00000000-0000-0000-0000-0000000000c3', current_date - 45, current_date - 3,  'Reprogramada dos veces por falta de tela', 1, 2, null, '00000000-0000-0000-0000-0000000000a1'),
+  -- Lista para despachar: le sigue el cierre (HU-13). Hoja 1, tercer turno.
+  ('00000000-0000-0000-0000-0000000000f6', 'OC-5006', '00000000-0000-0000-0000-0000000000c3', current_date - 40, current_date + 9,  null, 1, 3, null, '00000000-0000-0000-0000-0000000000a1'),
+  -- Cerrada: sirve para ver el flujo completo y el histórico. Hoja 1, primer turno.
+  ('00000000-0000-0000-0000-0000000000f7', 'OC-5007', '00000000-0000-0000-0000-0000000000c1', current_date - 60, current_date - 10, null, 1, 1, 'FV-2214', '00000000-0000-0000-0000-0000000000a1'),
+  -- Sin programar, para que la próxima hoja de HU-03 tenga con qué llenarse.
+  ('00000000-0000-0000-0000-0000000000f8', 'OC-5008', '00000000-0000-0000-0000-0000000000c2', current_date - 6,  current_date + 20, 'Pidieron reflectivo en la espalda', null, null, null, '00000000-0000-0000-0000-0000000000a1'),
+  ('00000000-0000-0000-0000-0000000000f9', 'OC-5009', '00000000-0000-0000-0000-0000000000c3', current_date - 4,  current_date + 18, null, null, null, null, '00000000-0000-0000-0000-0000000000a1');
 
 -- ---------------------------------------------------------------------------
 -- Prendas
@@ -115,7 +125,10 @@ insert into public.item_orden (orden_id, descripcion, cantidad, tallas, valor, o
   ('00000000-0000-0000-0000-0000000000f4', 'Overoles de dotación',                   120, 'M:40, L:50, XL:30',  19800000.00, null),
   ('00000000-0000-0000-0000-0000000000f5', 'Batas blancas de laboratorio',           200, 'S:70, M:80, L:50',   14500000.00, 'Tela antifluidos'),
   ('00000000-0000-0000-0000-0000000000f6', 'Uniformes quirúrgicos',                  300, 'S:100, M:120, L:80', 27000000.00, null),
-  ('00000000-0000-0000-0000-0000000000f7', 'Camisas escolares blancas',              450, 'XS:150, S:200, M:100', 25200000.00, null);
+  ('00000000-0000-0000-0000-0000000000f7', 'Camisas escolares blancas',              450, 'XS:150, S:200, M:100', 25200000.00, null),
+  ('00000000-0000-0000-0000-0000000000f8', 'Chalecos reflectivos',                    60, 'M:20, L:25, XL:15',   4800000.00, 'Reflectivo en la espalda'),
+  ('00000000-0000-0000-0000-0000000000f8', 'Camisas tipo polo grises',                60, 'M:20, L:25, XL:15',   5400000.00, null),
+  ('00000000-0000-0000-0000-0000000000f9', 'Batas antifluido verdes',                 40, 'S:15, M:15, L:10',    3900000.00, null);
 
 -- ---------------------------------------------------------------------------
 -- Avances

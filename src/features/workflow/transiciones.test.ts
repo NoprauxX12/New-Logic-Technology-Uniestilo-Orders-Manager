@@ -454,11 +454,18 @@ describe("puedeMarcar · requisito de tela en la empresa (HU-22)", () => {
 });
 
 describe("HU-09 · recogido y bordado", () => {
+  // Todo lo que una orden lleva marcado justo antes del recogido. Sale de las
+  // etapas disponibles y no de una lista escrita a mano, para que siga valiendo
+  // cuando otra historia encienda una etapa anterior.
+  const hastaElCorte = primerasDisponibles(
+    DISPONIBLES.indexOf("recogido_bordado"),
+  );
+
   it("permite a logística marcar después del corte", () => {
     expect(
       puedeMarcar({
         checkpoint: "recogido_bordado",
-        marcados: ["corte_completado"],
+        marcados: hastaElCorte,
         rol: "logistica",
       }),
     ).toEqual({ permitido: true });
@@ -468,7 +475,7 @@ describe("HU-09 · recogido y bordado", () => {
     expect(
       puedeMarcar({
         checkpoint: "llegada_marcacion",
-        marcados: ["corte_completado"],
+        marcados: hastaElCorte,
         rol: "marcacion",
         recepcionConfirmada: true,
       }),
