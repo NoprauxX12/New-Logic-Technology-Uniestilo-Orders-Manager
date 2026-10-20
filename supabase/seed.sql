@@ -117,18 +117,20 @@ insert into public.orden (
 -- Prendas
 -- ---------------------------------------------------------------------------
 
-insert into public.item_orden (orden_id, descripcion, cantidad, tallas, valor, observaciones) values
-  ('00000000-0000-0000-0000-0000000000f1', 'Camisas ejecutivas blancas manga larga', 240, 'S:60, M:100, L:80',  18500000.00, null),
-  ('00000000-0000-0000-0000-0000000000f1', 'Pantalones de paño gris',               240, 'S:60, M:100, L:80',  22000000.00, 'Bota recta'),
-  ('00000000-0000-0000-0000-0000000000f2', 'Chaquetas impermeables azules',           80, 'M:30, L:30, XL:20',  16400000.00, null),
-  ('00000000-0000-0000-0000-0000000000f3', 'Camisetas tipo polo verdes',             500, 'S:150, M:200, L:150', 21000000.00, 'Bordado en el bolsillo izquierdo'),
-  ('00000000-0000-0000-0000-0000000000f4', 'Overoles de dotación',                   120, 'M:40, L:50, XL:30',  19800000.00, null),
-  ('00000000-0000-0000-0000-0000000000f5', 'Batas blancas de laboratorio',           200, 'S:70, M:80, L:50',   14500000.00, 'Tela antifluidos'),
-  ('00000000-0000-0000-0000-0000000000f6', 'Uniformes quirúrgicos',                  300, 'S:100, M:120, L:80', 27000000.00, null),
-  ('00000000-0000-0000-0000-0000000000f7', 'Camisas escolares blancas',              450, 'XS:150, S:200, M:100', 25200000.00, null),
-  ('00000000-0000-0000-0000-0000000000f8', 'Chalecos reflectivos',                    60, 'M:20, L:25, XL:15',   4800000.00, 'Reflectivo en la espalda'),
-  ('00000000-0000-0000-0000-0000000000f8', 'Camisas tipo polo grises',                60, 'M:20, L:25, XL:15',   5400000.00, null),
-  ('00000000-0000-0000-0000-0000000000f9', 'Batas antifluido verdes',                 40, 'S:15, M:15, L:10',    3900000.00, null);
+-- Los pantalones de OC-5001 quedan sin tallaje a propósito: así hay una orden "anterior"
+-- al tallaje (tallas escritas a mano, letras en una prenda inferior) para ver que se muestra igual.
+insert into public.item_orden (orden_id, descripcion, cantidad, tallas, tallaje, valor, observaciones) values
+  ('00000000-0000-0000-0000-0000000000f1', 'Camisas ejecutivas blancas manga larga', 240, 'S:60, M:100, L:80', 'superior_hombre',  18500000.00, null),
+  ('00000000-0000-0000-0000-0000000000f1', 'Pantalones de paño gris',               240, 'S:60, M:100, L:80', null,  22000000.00, 'Bota recta'),
+  ('00000000-0000-0000-0000-0000000000f2', 'Chaquetas impermeables azules',           80, 'M:30, L:30, XL:20', 'superior_hombre',  16400000.00, null),
+  ('00000000-0000-0000-0000-0000000000f3', 'Camisetas tipo polo verdes',             500, 'S:150, M:200, L:150', 'superior_hombre', 21000000.00, 'Bordado en el bolsillo izquierdo'),
+  ('00000000-0000-0000-0000-0000000000f4', 'Overoles de dotación',                   120, 'M:40, L:50, XL:30', 'superior_hombre',  19800000.00, null),
+  ('00000000-0000-0000-0000-0000000000f5', 'Batas blancas de laboratorio',           200, 'S:70, M:80, L:50', 'superior_hombre',   14500000.00, 'Tela antifluidos'),
+  ('00000000-0000-0000-0000-0000000000f6', 'Uniformes quirúrgicos',                  300, 'S:100, M:120, L:80', 'superior_hombre', 27000000.00, null),
+  ('00000000-0000-0000-0000-0000000000f7', 'Camisas escolares blancas',              450, 'XS:150, S:200, M:100', 'superior_hombre', 25200000.00, null),
+  ('00000000-0000-0000-0000-0000000000f8', 'Chalecos reflectivos',                    60, 'M:20, L:25, XL:15', 'superior_hombre',   4800000.00, 'Reflectivo en la espalda'),
+  ('00000000-0000-0000-0000-0000000000f8', 'Camisas tipo polo grises',                60, 'M:20, L:25, XL:15', 'superior_hombre',   5400000.00, null),
+  ('00000000-0000-0000-0000-0000000000f9', 'Batas antifluido verdes',                 40, 'S:15, M:15, L:10', 'superior_hombre',    3900000.00, null);
 
 -- ---------------------------------------------------------------------------
 -- Avances

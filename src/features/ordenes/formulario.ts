@@ -15,6 +15,13 @@ export type EntradaPrenda = {
   tallas: string;
   valor: string;
   observaciones: string;
+  /**
+   * El tallaje elegido. Sin definir si el formulario no lo mandó (quien llama
+   * sin pasar por la pantalla): el esquema lo trata como tallas escritas a mano.
+   */
+  tallaje?: string;
+  /** Cuántas prendas de cada talla, con la talla como clave. */
+  cantidadesPorTalla?: Record<string, string>;
 };
 
 /**
@@ -52,6 +59,31 @@ function texto(valor: FormDataEntryValue | null | undefined): string {
 }
 
 /**
+ * Las cantidades por talla de cada prenda. Cada casilla se llama
+ * `talla.<posición de la prenda>.<talla>` porque cuántas casillas hay depende
+ * del tallaje: con el mismo nombre repetido, como el resto de campos, no se
+ * sabría a qué prenda pertenece cada una.
+ */
+function leerCantidadesPorTalla(
+  formData: FormData,
+): Map<number, Record<string, string>> {
+  const porPrenda = new Map<number, Record<string, string>>();
+
+  for (const [nombre, valor] of formData.entries()) {
+    const coincidencia = /^talla\.(\d+)\.(.+)$/.exec(nombre);
+    if (!coincidencia || typeof valor !== "string") continue;
+
+    const posicion = Number(coincidencia[1]);
+    porPrenda.set(posicion, {
+      ...porPrenda.get(posicion),
+      [coincidencia[2]]: valor,
+    });
+  }
+
+  return porPrenda;
+}
+
+/**
  * Agrupa los errores de zod por campo.
  *
  * La clave es la ruta del campo tal como la nombra el formulario: `razonSocial`
@@ -83,6 +115,8 @@ export function leerFormularioOrden(
   const tallas = formData.getAll("tallas");
   const valores = formData.getAll("valor");
   const observacionesItem = formData.getAll("observacionesItem");
+  const tallajes = formData.getAll("tallaje");
+  const cantidadesPorTalla = leerCantidadesPorTalla(formData);
 
   return {
     numeroOrdenCompra: texto(formData.get("numeroOrdenCompra")),
@@ -99,6 +133,9 @@ export function leerFormularioOrden(
       tallas: texto(tallas[indice]),
       valor: texto(valores[indice]),
       observaciones: texto(observacionesItem[indice]),
+      tallaje:
+        typeof tallajes[indice] === "string" ? tallajes[indice] : undefined,
+      cantidadesPorTalla: cantidadesPorTalla.get(indice),
     })),
   };
 }

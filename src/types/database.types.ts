@@ -223,6 +223,7 @@ export type Database = {
           observaciones: string | null
           observaciones_tela: string | null
           orden_id: string
+          tallaje: string | null
           tallas: string
           tipo_tela: string | null
           unidad_tela: string | null
@@ -237,6 +238,7 @@ export type Database = {
           observaciones?: string | null
           observaciones_tela?: string | null
           orden_id: string
+          tallaje?: string | null
           tallas: string
           tipo_tela?: string | null
           unidad_tela?: string | null
@@ -251,6 +253,7 @@ export type Database = {
           observaciones?: string | null
           observaciones_tela?: string | null
           orden_id?: string
+          tallaje?: string | null
           tallas?: string
           tipo_tela?: string | null
           unidad_tela?: string | null
