@@ -4,6 +4,11 @@
 -- se guarda esa ruta (no una URL firmada, que expira). Quien tiene sesión
 -- puede leer; solo diseño sube. No hay update ni delete: una ficha equivocada
 -- se corrige subiendo otra.
+--
+-- Es idempotente a propósito: el bucket y las dos políticas se crearon a mano
+-- en el proyecto hospedado antes de que esta migración existiera, así que
+-- `db push` las encuentra ya hechas. Los `drop policy if exists` las vuelven a
+-- crear iguales en vez de fallar con "already exists".
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
@@ -25,6 +30,9 @@ set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
+drop policy if exists "quien tiene sesion lee las fichas" on storage.objects;
+drop policy if exists "diseno sube las fichas" on storage.objects;
+
 create policy "quien tiene sesion lee las fichas"
   on storage.objects
   for select
@@ -41,6 +49,13 @@ create policy "diseno sube las fichas"
   with check (
     bucket_id = 'fichas'
     and public.rol_actual() = 'diseno'
+    -- La carpeta es el id de una orden que existe: sin esto, diseño podría
+    -- dejar archivos sueltos que no pertenecen a ninguna orden.
+    and exists (
+      select 1
+      from public.orden
+      where id::text = (storage.foldername(name))[1]
+    )
   );
 
 -- El tablero se entera cuando llega una ficha nueva, no solo cuando se marca
