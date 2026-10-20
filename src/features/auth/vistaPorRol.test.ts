@@ -94,10 +94,11 @@ describe("vistaDeRol · roles con pantalla propia", () => {
     expect(vista.botones[1].etiqueta).toMatch(/lista para despachar/i);
   });
 
-  it("secretaría va al cierre", () => {
-    const vista = vistaDeRol("secretaria");
+  it("secretaría programa a diseño y cierra órdenes, sus dos pantallas", () => {
+    const rutas = vistaDeRol("secretaria").botones.map((b) => b.ruta);
 
-    expect(vista.botones[0].ruta).toBe("/ordenes/cierre");
+    expect(rutas).toContain("/ordenes/programacion");
+    expect(rutas).toContain("/ordenes/cierre");
   });
 
   it("secretaría también valida telas y avisa cuando falta (HU-06)", () => {

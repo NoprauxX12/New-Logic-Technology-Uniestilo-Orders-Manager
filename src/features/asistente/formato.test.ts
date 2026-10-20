@@ -21,19 +21,17 @@ import type {
 
 const AHORA = new Date("2026-10-10T12:00:00");
 
-// Las etapas disponibles cambian cada sprint: las expectativas salen
-// de checkpoints.ts para incluir las etapas que se vayan habilitando.
+// Las etapas disponibles cambian cada sprint (cada HU pone la suya en
+// `disponible: true`): las expectativas salen de `checkpoints.ts`, no se fijan.
 const TOTAL = CHECKPOINTS_DISPONIBLES.length;
-
 const INDICE_CORTE = CHECKPOINTS_DISPONIBLES.findIndex(
   (cp) => cp.id === "corte_completado",
 );
-
-const HASTA_EL_CORTE = CHECKPOINTS_DISPONIBLES.slice(0, INDICE_CORTE + 1);
-
+/** Lo que una orden lleva marcado cuando acaba de pasar por corte. */
+const HASTA_CORTE = CHECKPOINTS_DISPONIBLES.slice(0, INDICE_CORTE + 1);
 const DESPUES_DEL_CORTE = CHECKPOINTS_DISPONIBLES.slice(INDICE_CORTE + 1);
 
-/** Una fecha distinta por etapa, en orden. */
+/** Una fecha distinta por etapa, en orden, sin importar cuántas haya. */
 function diaDeOctubre(i: number): string {
   return `2026-10-${String(i + 1).padStart(2, "0")}T10:00:00Z`;
 }
@@ -52,22 +50,12 @@ function avance(
   };
 }
 
-/** Una orden que completó las etapas disponibles hasta el corte. */
-function avancesHastaCorte(observacion?: string): AvanceSeccion[] {
-  return HASTA_EL_CORTE.map((cp, i) =>
-    cp.id === "corte_completado"
-      ? avance(cp.id, "2026-10-09T15:12:00Z", observacion)
-      : avance(cp.id, diaDeOctubre(i)),
-  );
-}
-
 function ordenStub(
   parcial: Partial<OrdenEnTablero> & { avances?: AvanceSeccion[] } = {},
 ): DetalleOrden {
   const avances = parcial.avances ?? [];
   const etapas = armarEtapas(avances);
   const { completadas, totales } = contarProgreso(etapas);
-
   return {
     id: "f3",
     numeroOrdenCompra: "OC-5003",
@@ -90,8 +78,18 @@ function ordenStub(
 describe("resumirOrden", () => {
   it("cuenta la orden en lenguaje del taller, con fechas legibles", () => {
     const resumen = resumirOrden(
+      // El recorrido completo hasta el corte, no solo esa marca: el motor no
+      // deja marcar una etapa sin las anteriores, y así "lo que sigue" es de
+      // verdad lo que sigue al corte.
       ordenStub({
-        avances: avancesHastaCorte(),
+        avances: HASTA_CORTE.map((cp, i) =>
+          avance(
+            cp.id,
+            i === HASTA_CORTE.length - 1
+              ? "2026-10-09T15:12:00Z"
+              : diaDeOctubre(i),
+          ),
+        ),
       }),
       AHORA,
     );
@@ -110,19 +108,18 @@ describe("resumirOrden", () => {
         etapa: DESPUES_DEL_CORTE[0].etiqueta,
         responsable: ETIQUETAS_ROL[DESPUES_DEL_CORTE[0].rolDueno],
       },
-      avance: `${HASTA_EL_CORTE.length} de ${TOTAL} etapas`,
+      avance: `${HASTA_CORTE.length} de ${TOTAL} etapas`,
       enlace: "/tablero/f3",
     });
   });
 
   it("dice que no hay etapas marcadas cuando la orden está recién registrada", () => {
     const resumen = resumirOrden(ordenStub(), AHORA);
-    const primera = CHECKPOINTS_DISPONIBLES[0];
 
     expect(resumen.etapaActual).toMatch(/sin etapas marcadas/);
     expect(resumen.loQueSigue).toEqual({
-      etapa: primera.etiqueta,
-      responsable: ETIQUETAS_ROL[primera.rolDueno],
+      etapa: CHECKPOINTS_DISPONIBLES[0].etiqueta,
+      responsable: ETIQUETAS_ROL[CHECKPOINTS_DISPONIBLES[0].rolDueno],
     });
   });
 
@@ -130,7 +127,6 @@ describe("resumirOrden", () => {
     const todas = CHECKPOINTS_DISPONIBLES.map((cp, i) =>
       avance(cp.id, diaDeOctubre(i)),
     );
-
     const resumen = resumirOrden(ordenStub({ avances: todas }), AHORA);
 
     expect(resumen.etapaActual).toBe("Orden cerrada");
@@ -143,29 +139,28 @@ describe("detallarOrden", () => {
   it("agrega quién marcó cada etapa, cuándo (hora de Colombia) y qué falta", () => {
     const detalle = detallarOrden(
       ordenStub({
-        avances: avancesHastaCorte("Faltó un rollo"),
+        avances: [
+          avance("corte_completado", "2026-10-09T15:12:00Z", "Faltó un rollo"),
+        ],
       }),
       CHECKPOINTS_DISPONIBLES,
       AHORA,
     );
 
-    expect(detalle.historial).toHaveLength(HASTA_EL_CORTE.length);
-
-    expect(detalle.historial.map((entrada) => entrada.etapa)).toEqual(
-      HASTA_EL_CORTE.map((cp) => cp.etiqueta),
-    );
-
-    expect(
-      detalle.historial.find((entrada) => entrada.etapa === "Corte completado"),
-    ).toEqual({
-      etapa: "Corte completado",
-      quien: "Camila Ríos",
-      cuando: expect.stringMatching(/9\/10\/2026.*10:12/),
-      observacion: "Faltó un rollo",
-    });
-
+    expect(detalle.historial).toEqual([
+      {
+        etapa: "Corte completado",
+        quien: "Camila Ríos",
+        cuando: expect.stringMatching(/9\/10\/2026.*10:12/),
+        observacion: "Faltó un rollo",
+      },
+    ]);
+    // Pendiente es toda etapa disponible sin marcar, no solo las que vienen
+    // después: esta orden tiene el corte marcado y nada más.
     expect(detalle.etapasPendientes).toEqual(
-      DESPUES_DEL_CORTE.map((cp) => cp.etiqueta),
+      CHECKPOINTS_DISPONIBLES.filter((cp) => cp.id !== "corte_completado").map(
+        (cp) => cp.etiqueta,
+      ),
     );
   });
 });
@@ -205,13 +200,11 @@ describe("filtrarOrdenes", () => {
 
 describe("filtrarPorEstado", () => {
   const sinEmpezar = ordenStub({ id: "a" });
-
   const enProduccion = ordenStub({
     id: "b",
     semaforo: "atrasada",
-    avances: avancesHastaCorte(),
+    avances: [avance("corte_completado", "2026-10-01T10:00:00Z")],
   });
-
   const terminada = ordenStub({
     id: "c",
     semaforo: "en_riesgo",
@@ -219,7 +212,6 @@ describe("filtrarPorEstado", () => {
       avance(cp.id, diaDeOctubre(i)),
     ),
   });
-
   const ordenes = [sinEmpezar, enProduccion, terminada];
   const ids = (lista: OrdenEnTablero[]) => lista.map((o) => o.id);
 
