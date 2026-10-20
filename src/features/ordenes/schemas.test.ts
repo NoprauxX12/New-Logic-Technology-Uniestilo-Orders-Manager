@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { agruparErrores } from "@/features/ordenes/formulario";
 import { nuevaOrdenSchema } from "@/features/ordenes/schemas";
 
 /**
@@ -219,5 +220,155 @@ describe("nuevaOrdenSchema · datos del cliente", () => {
         ordenValida({ contactoCelular: "300 123 4567" }),
       ).success,
     ).toBe(true);
+  });
+});
+
+describe("nuevaOrdenSchema · tallaje", () => {
+  function conPrenda(prenda: Record<string, unknown>) {
+    return ordenValida({
+      items: [
+        {
+          descripcion: "Camisas",
+          valor: "1000",
+          cantidad: "",
+          tallas: "",
+          ...prenda,
+        },
+      ],
+    });
+  }
+
+  function errores(entrada: unknown) {
+    const resultado = nuevaOrdenSchema.safeParse(entrada);
+    return resultado.success ? {} : agruparErrores(resultado.error);
+  }
+
+  it("la cantidad es la suma de las tallas y el texto sale en el formato de siempre", () => {
+    const resultado = nuevaOrdenSchema.safeParse(
+      conPrenda({
+        tallaje: "superior_hombre",
+        cantidadesPorTalla: { M: "40", S: "20", L: "30", XL: "" },
+      }),
+    );
+
+    expect(resultado.success).toBe(true);
+    if (!resultado.success) return;
+    expect(resultado.data.items[0]).toMatchObject({
+      cantidad: 90,
+      tallas: "S:20, M:40, L:30",
+      tallaje: "superior_hombre",
+    });
+  });
+
+  it("ignora la cantidad y las tallas que lleguen escritas: manda la cuadrícula", () => {
+    const resultado = nuevaOrdenSchema.safeParse(
+      conPrenda({
+        tallaje: "inferior_dama",
+        cantidad: "9999",
+        tallas: "XS:9999",
+        cantidadesPorTalla: { "8": "5", "10": "7" },
+      }),
+    );
+
+    expect(resultado.success).toBe(true);
+    if (!resultado.success) return;
+    expect(resultado.data.items[0]).toMatchObject({
+      cantidad: 12,
+      tallas: "8:5, 10:7",
+    });
+  });
+
+  it("exige al menos una talla con prendas", () => {
+    expect(
+      errores(
+        conPrenda({
+          tallaje: "superior_hombre",
+          cantidadesPorTalla: { S: "", M: "0" },
+        }),
+      )["items.0.tallas"]?.[0],
+    ).toContain("al menos una talla");
+  });
+
+  it("rechaza una talla que no es del tallaje elegido", () => {
+    expect(
+      errores(
+        conPrenda({
+          tallaje: "inferior_hombre",
+          cantidadesPorTalla: { M: "5" },
+        }),
+      )["items.0.tallas"]?.[0],
+    ).toContain("no es de este tallaje");
+  });
+
+  it("rechaza cantidades con decimales o negativas", () => {
+    for (const cantidad of ["2.5", "-3", "abc"]) {
+      expect(
+        errores(
+          conPrenda({
+            tallaje: "superior_hombre",
+            cantidadesPorTalla: { S: cantidad },
+          }),
+        )["items.0.tallas"]?.[0],
+      ).toContain("números enteros");
+    }
+  });
+
+  it("pide elegir el tallaje cuando llega vacío o desconocido", () => {
+    for (const tallaje of ["", "talla_unica"]) {
+      expect(errores(conPrenda({ tallaje }))["items.0.tallaje"]?.[0]).toContain(
+        "Elige",
+      );
+    }
+  });
+
+  it("con 'otro' se escriben la cantidad y las tallas, como antes", () => {
+    const resultado = nuevaOrdenSchema.safeParse(
+      conPrenda({ tallaje: "otro", cantidad: "50", tallas: "Única:50" }),
+    );
+
+    expect(resultado.success).toBe(true);
+    if (!resultado.success) return;
+    expect(resultado.data.items[0]).toMatchObject({
+      cantidad: 50,
+      tallas: "Única:50",
+      tallaje: "otro",
+    });
+
+    expect(
+      errores(conPrenda({ tallaje: "otro" }))["items.0.cantidad"],
+    ).toBeDefined();
+    expect(
+      errores(conPrenda({ tallaje: "otro" }))["items.0.tallas"],
+    ).toBeDefined();
+  });
+
+  it("sin tallaje (quien no pasa por el formulario) se comporta como 'otro'", () => {
+    const resultado = nuevaOrdenSchema.safeParse(ordenValida());
+
+    expect(resultado.success).toBe(true);
+    if (!resultado.success) return;
+    expect(resultado.data.items[0].tallaje).toBe("otro");
+    expect(resultado.data.items[0].cantidad).toBe(240);
+  });
+
+  it("señala todos los errores de la prenda de una vez", () => {
+    const campos = Object.keys(
+      errores(
+        conPrenda({
+          descripcion: "",
+          valor: "",
+          tallaje: "superior_dama",
+          cantidadesPorTalla: {},
+        }),
+      ),
+    );
+
+    expect(campos).toEqual(
+      expect.arrayContaining([
+        "items.0.descripcion",
+        "items.0.valor",
+        "items.0.tallas",
+      ]),
+    );
   });
 });

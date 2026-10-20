@@ -221,8 +221,12 @@ export type Database = {
           descripcion: string
           id: string
           observaciones: string | null
+          observaciones_tela: string | null
           orden_id: string
+          tallaje: string | null
           tallas: string
+          tipo_tela: string | null
+          unidad_tela: string | null
           valor: number
         }
         Insert: {
@@ -232,8 +236,12 @@ export type Database = {
           descripcion: string
           id?: string
           observaciones?: string | null
+          observaciones_tela?: string | null
           orden_id: string
+          tallaje?: string | null
           tallas: string
+          tipo_tela?: string | null
+          unidad_tela?: string | null
           valor: number
         }
         Update: {
@@ -243,8 +251,12 @@ export type Database = {
           descripcion?: string
           id?: string
           observaciones?: string | null
+          observaciones_tela?: string | null
           orden_id?: string
+          tallaje?: string | null
           tallas?: string
+          tipo_tela?: string | null
+          unidad_tela?: string | null
           valor?: number
         }
         Relationships: [
@@ -417,6 +429,10 @@ export type Database = {
       programar_ordenes_a_diseno: {
         Args: { p_ordenes: string[] }
         Returns: number
+      }
+      programar_tela: {
+        Args: { p_items: Json; p_orden_id: string }
+        Returns: undefined
       }
       registrar_orden: {
         Args: {

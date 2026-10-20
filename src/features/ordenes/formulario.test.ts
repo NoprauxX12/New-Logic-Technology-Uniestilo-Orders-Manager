@@ -29,6 +29,9 @@ function formularioCon(
     formData.append("tallas", prenda.tallas ?? "");
     formData.append("valor", prenda.valor ?? "");
     formData.append("observacionesItem", prenda.observaciones ?? "");
+    if (prenda.tallaje !== undefined) {
+      formData.append("tallaje", prenda.tallaje);
+    }
   }
 
   return formData;
@@ -166,5 +169,67 @@ describe("agruparErrores", () => {
 
     expect(errores["items.1.cantidad"]?.[0]).toContain("mayor que cero");
     expect(errores["items.0.cantidad"]).toBeUndefined();
+  });
+});
+
+describe("leerFormularioOrden · tallaje", () => {
+  const PRENDA = {
+    descripcion: "Camisas",
+    valor: "1",
+    cantidad: "",
+    tallas: "",
+  };
+
+  it("lee el tallaje de cada prenda por su posición", () => {
+    const datos = leerFormularioOrden(
+      formularioCon(ORDEN_BASE, [
+        { ...PRENDA, tallaje: "superior_hombre" },
+        { ...PRENDA, tallaje: "inferior_dama" },
+      ]),
+    );
+
+    expect(datos.items.map((item) => item.tallaje)).toEqual([
+      "superior_hombre",
+      "inferior_dama",
+    ]);
+  });
+
+  it("deja el tallaje sin definir si el formulario no lo mandó", () => {
+    const datos = leerFormularioOrden(formularioCon(ORDEN_BASE, [PRENDA]));
+
+    expect(datos.items[0].tallaje).toBeUndefined();
+  });
+
+  it("agrupa las casillas de talla por la prenda a la que pertenecen", () => {
+    const formData = formularioCon(ORDEN_BASE, [
+      { ...PRENDA, tallaje: "superior_hombre" },
+      { ...PRENDA, tallaje: "inferior_hombre" },
+    ]);
+    formData.append("talla.0.S", "20");
+    formData.append("talla.0.M", "");
+    formData.append("talla.1.30", "12");
+
+    const datos = leerFormularioOrden(formData);
+
+    expect(datos.items[0].cantidadesPorTalla).toEqual({ S: "20", M: "" });
+    expect(datos.items[1].cantidadesPorTalla).toEqual({ "30": "12" });
+  });
+
+  it("produce datos que el esquema acepta, con la cantidad sumada", () => {
+    const formData = formularioCon(ORDEN_BASE, [
+      { ...PRENDA, tallaje: "superior_hombre" },
+    ]);
+    formData.append("talla.0.S", "20");
+    formData.append("talla.0.M", "40");
+
+    const resultado = nuevaOrdenSchema.safeParse(leerFormularioOrden(formData));
+
+    expect(resultado.success).toBe(true);
+    if (!resultado.success) return;
+    expect(resultado.data.items[0]).toMatchObject({
+      cantidad: 60,
+      tallas: "S:20, M:40",
+      tallaje: "superior_hombre",
+    });
   });
 });

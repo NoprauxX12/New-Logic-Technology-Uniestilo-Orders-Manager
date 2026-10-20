@@ -96,8 +96,8 @@ export const CHECKPOINTS = [
     etiqueta: "Tela programada",
     rolDueno: "secretaria",
     hu: "HU-05",
-    disponible: false,
-    ruta: null,
+    disponible: true,
+    ruta: "/ordenes/tela",
   },
   {
     id: "corte_completado",
