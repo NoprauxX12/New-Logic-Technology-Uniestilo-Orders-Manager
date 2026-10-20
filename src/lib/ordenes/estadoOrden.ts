@@ -13,6 +13,7 @@ import type {
   OrdenResumen,
   ResumenTablero,
 } from "@/lib/ordenes/types";
+import { firmarFichas } from "@/lib/storage/firmarFichas";
 import { createClient } from "@/lib/supabase/server";
 import { describirEstadoDeTalleres } from "@/lib/talleres/estadoLotes";
 
@@ -44,6 +45,12 @@ const SELECCION_ORDEN = `
     fecha_hora,
     observaciones,
     usuario ( nombre )
+  ),
+  ficha_tecnica (
+    id,
+    archivo_ruta,
+    fecha_subida,
+    usuario:subida_por ( nombre )
   )
 ` as const;
 
@@ -121,6 +128,7 @@ function resumenDe(fila: OrdenFila): OrdenResumen {
         recibido: lote.recibido_completo !== null,
       })),
     ),
+    tieneFicha: fila.ficha_tecnica.length > 0,
   };
 }
 
@@ -157,8 +165,11 @@ export async function obtenerDetalleOrden(
   const [fila] = await leerOrdenes(ordenId);
   if (!fila) return null;
 
+  const supabase = await createClient();
+
   return {
     ...enriquecer(fila),
     avances: avancesDe(fila.avance_seccion),
+    fichas: await firmarFichas(supabase, fila.ficha_tecnica),
   };
 }

@@ -9,6 +9,8 @@ import {
   puedeMarcar,
   type ResultadoMarcado,
 } from "@/features/workflow/transiciones";
+import { firmarFichas } from "@/lib/storage/firmarFichas";
+import type { FichaVisible } from "@/lib/storage/fichas";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -81,6 +83,8 @@ export type OrdenParaSeccion = {
   fechaMarcado: string | null;
   /** Lo que el motor dice de marcar esta etapa, para quien está mirando. */
   veredicto: ResultadoMarcado;
+  /** HU-04: el equipo ve la ficha desde cualquier sección. */
+  fichas: FichaVisible[];
 };
 
 /**
@@ -104,7 +108,13 @@ export async function obtenerOrdenesParaSeccion(
            fecha_entrega,
            cliente ( razon_social ),
            avance_seccion ( checkpoint, fecha_hora ),
-           lote_taller ( recibido_completo )`,
+           lote_taller ( recibido_completo ),
+           ficha_tecnica (
+             id,
+             archivo_ruta,
+             fecha_subida,
+             usuario:subida_por ( nombre )
+           )`,
         )
         .order("fecha_entrega", { ascending: true }),
       // Una sola llamada para toda la lista, no una por tarjeta (HU-22).
@@ -122,28 +132,31 @@ export async function obtenerOrdenesParaSeccion(
 
   const esperandoTela = new Set(esperando ?? []);
 
-  return data.map((orden) => {
-    const marcados = orden.avance_seccion.map((avance) => avance.checkpoint);
-    const propio = orden.avance_seccion.find(
-      (avance) => avance.checkpoint === checkpoint,
-    );
+  return Promise.all(
+    data.map(async (orden) => {
+      const marcados = orden.avance_seccion.map((avance) => avance.checkpoint);
+      const propio = orden.avance_seccion.find(
+        (avance) => avance.checkpoint === checkpoint,
+      );
 
-    return {
-      id: orden.id,
-      numeroOrdenCompra: orden.numero_orden_compra,
-      razonSocial: orden.cliente?.razon_social ?? "Cliente sin nombre",
-      fechaEntrega: orden.fecha_entrega,
-      yaMarcada: propio !== undefined,
-      fechaMarcado: propio?.fecha_hora ?? null,
-      veredicto: puedeMarcar({
-        checkpoint,
-        marcados,
-        rol,
-        recepcionConfirmada: orden.lote_taller.some(
-          (lote) => lote.recibido_completo !== null,
-        ),
-        esperandoTela: esperandoTela.has(orden.id),
-      }),
-    };
-  });
+      return {
+        id: orden.id,
+        numeroOrdenCompra: orden.numero_orden_compra,
+        razonSocial: orden.cliente?.razon_social ?? "Cliente sin nombre",
+        fechaEntrega: orden.fecha_entrega,
+        yaMarcada: propio !== undefined,
+        fechaMarcado: propio?.fecha_hora ?? null,
+        veredicto: puedeMarcar({
+          checkpoint,
+          marcados,
+          rol,
+          recepcionConfirmada: orden.lote_taller.some(
+            (lote) => lote.recibido_completo !== null,
+          ),
+          esperandoTela: esperandoTela.has(orden.id),
+        }),
+        fichas: await firmarFichas(supabase, orden.ficha_tecnica),
+      };
+    }),
+  );
 }

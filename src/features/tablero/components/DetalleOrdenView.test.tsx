@@ -34,11 +34,13 @@ function ordenDePrueba(): DetalleOrden {
     fechaEntrega: "2026-09-21",
     tallerNombre: null,
     estadoTalleres: "Todavía no ha salido a ningún taller.",
+    tieneFicha: false,
     semaforo: "a_tiempo",
     etapas: ETAPAS_PENDIENTES,
     etapasCompletadas: 0,
     etapasTotales: ETAPAS_PENDIENTES.length,
     avances: [],
+    fichas: [],
   };
 }
 
@@ -72,6 +74,40 @@ describe("DetalleOrdenView · ir a marcar", () => {
         }),
       ).toBeNull();
     }
+  });
+
+  it("muestra el enlace a la ficha técnica cuando hay archivo", () => {
+    render(
+      <DetalleOrdenView
+        orden={{
+          ...ordenDePrueba(),
+          tieneFicha: true,
+          fichas: [
+            {
+              id: "ficha-1",
+              nombre: "ficha-polo-verde.pdf",
+              url: "https://example.com/ficha.pdf",
+              subidaPor: "Camila Diseño",
+              fechaSubida: "2026-09-01T10:00:00Z",
+            },
+          ],
+        }}
+      />,
+    );
+
+    const enlace = screen.getByRole("link", {
+      name: /ver ficha-polo-verde\.pdf/i,
+    });
+    expect(enlace).toHaveAttribute("href", "https://example.com/ficha.pdf");
+    expect(screen.getByText(/Camila Diseño/)).toBeInTheDocument();
+  });
+
+  it("avisa cuando la orden todavía no tiene ficha técnica", () => {
+    render(<DetalleOrdenView orden={ordenDePrueba()} />);
+
+    expect(
+      screen.getByText(/todavía no hay ficha técnica/i),
+    ).toBeInTheDocument();
   });
 
   it("distingue las etapas de otros sprints de las que están pendientes", () => {

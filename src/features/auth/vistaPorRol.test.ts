@@ -40,26 +40,27 @@ describe("vistaDeRol · cobertura", () => {
   });
 });
 
-describe("vistaDeRol · roles sin pantalla propia", () => {
-  it("diseño solo ve un aviso mientras HU-04 no exista: el tablero es de administración (HU-17)", () => {
-    const vista = vistaDeRol("diseno");
-
-    expect(vista.aviso).not.toBeNull();
-    expect(vista.botones).toEqual([]);
-  });
-});
-
 describe("vistaDeRol · roles con pantalla propia", () => {
   it("no llevan aviso: su historia ya está construida", () => {
     for (const rol of [
       "admin",
       "secretaria",
+      "diseno",
       "corte",
       "logistica",
       "marcacion",
     ] as const) {
       expect(vistaDeRol(rol).aviso).toBeNull();
     }
+  });
+
+  it("diseño va a adjuntar la ficha técnica, con la etiqueta de checkpoints.ts", () => {
+    const vista = vistaDeRol("diseno");
+    const ruta = buscarCheckpoint("ficha_adjunta").ruta;
+
+    expect(ruta).not.toBeNull();
+    expect(vista.botones[0].ruta).toBe(ruta);
+    expect(vista.botones[0].etiqueta).toMatch(/adjuntar ficha técnica/i);
   });
 
   it("logística marca el recogido y bordado y después despacha y recibe lotes", () => {

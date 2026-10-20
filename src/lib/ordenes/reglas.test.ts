@@ -34,6 +34,7 @@ function ordenStub(
     fechaEntrega: "2026-09-30",
     tallerNombre: null,
     estadoTalleres: "Todavía no ha salido a ningún taller.",
+    tieneFicha: false,
     etapas: [],
     ...parcial,
   };

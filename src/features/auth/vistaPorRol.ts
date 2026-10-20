@@ -4,12 +4,9 @@ import type { Rol } from "@/lib/auth/usuarioActual";
 /**
  * HU-16 · A dónde manda el botón de cada rol al entrar.
  *
- * Diseño (HU-04) todavía no tiene pantalla propia: su historia es de otro
- * sprint. Mientras tanto ve un aviso. No se le manda al tablero porque con
- * HU-17 el tablero es solo de administración.
- *
- * Las etiquetas de corte y marcación salen de `checkpoints.ts` y no se repiten
- * a mano (regla 4): son el mismo texto que ya usa `AccionMarcarAvance`.
+ * Las etiquetas de las etapas salen de `checkpoints.ts` y no se repiten a
+ * mano (regla 4): son el mismo texto que ya usa `AccionMarcarAvance`.
+ * El tablero es solo de administración (HU-17).
  */
 
 export type BotonVista = {
@@ -45,9 +42,13 @@ const VISTAS: Record<Rol, VistaDeRol> = {
     aviso: null,
   },
   diseno: {
-    botones: [],
-    aviso:
-      "Tu pantalla para adjuntar la ficha técnica todavía no existe. Cuando esté lista, aparecerá aquí.",
+    botones: [
+      {
+        etiqueta: "Adjuntar ficha técnica",
+        ruta: "/ordenes/diseno",
+      },
+    ],
+    aviso: null,
   },
   corte: {
     botones: [

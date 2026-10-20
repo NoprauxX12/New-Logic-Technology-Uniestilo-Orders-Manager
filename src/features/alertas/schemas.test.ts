@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { avisarFaltaDeTelaSchema } from "@/features/alertas/schemas";
+import {
+  atenderAlertaSchema,
+  avisarFaltaDeTelaSchema,
+} from "@/features/alertas/schemas";
 
 const ORDEN_ID = "00000000-0000-0000-0000-0000000000f2";
 
@@ -70,5 +73,25 @@ describe("avisarFaltaDeTelaSchema", () => {
       "detalle",
       "ordenId",
     ]);
+  });
+});
+
+describe("atenderAlertaSchema (HU-07)", () => {
+  it("acepta el id de la alerta y nada más", () => {
+    const resultado = atenderAlertaSchema.safeParse({
+      alertaId: "00000000-0000-0000-0000-0000000000b1",
+      usuarioId: "00000000-0000-0000-0000-0000000000a1",
+    });
+
+    expect(resultado.success).toBe(true);
+    expect(resultado.success && Object.keys(resultado.data)).toEqual([
+      "alertaId",
+    ]);
+  });
+
+  it("rechaza un id que no identifica una alerta", () => {
+    const resultado = atenderAlertaSchema.safeParse({ alertaId: "la-alerta" });
+
+    expect(resultado.success).toBe(false);
   });
 });

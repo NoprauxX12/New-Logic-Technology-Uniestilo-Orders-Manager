@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { EstadoVacioTablero } from "@/features/tablero/components/EstadoVacioTablero";
 import { FilaOrden } from "@/features/tablero/components/FilaOrden";
 import { ResumenMetricas } from "@/features/tablero/components/ResumenMetricas";
@@ -6,9 +8,11 @@ import type { OrdenEnTablero, ResumenTablero } from "@/lib/ordenes/types";
 type Props = {
   ordenes: OrdenEnTablero[];
   resumen: ResumenTablero;
+  /** HU-07: las alertas de tela pendientes, arriba de las órdenes. */
+  avisos?: ReactNode;
 };
 
-export function TableroOrdenes({ ordenes, resumen }: Props) {
+export function TableroOrdenes({ ordenes, resumen, avisos }: Props) {
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8">
       <header className="space-y-1">
@@ -21,6 +25,8 @@ export function TableroOrdenes({ ordenes, resumen }: Props) {
           completada o pendiente.
         </p>
       </header>
+
+      {avisos}
 
       <ResumenMetricas resumen={resumen} />
 

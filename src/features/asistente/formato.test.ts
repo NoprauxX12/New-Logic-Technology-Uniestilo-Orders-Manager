@@ -66,11 +66,13 @@ function ordenStub(
     fechaEntrega: "2026-10-16",
     tallerNombre: null,
     estadoTalleres: "Todavía no ha salido a ningún taller.",
+    tieneFicha: false,
     semaforo: "a_tiempo",
     etapas,
     etapasCompletadas: completadas,
     etapasTotales: totales,
     avances,
+    fichas: [],
     ...parcial,
   };
 }

@@ -109,6 +109,23 @@ export function puedeMarcarLlegadaDeTela({
   return { permitido: true };
 }
 
+/**
+ * HU-07 · ¿Puede esta persona marcar la alerta de tela como resuelta?
+ *
+ * La resuelve administración en el tablero. Atenderla no es lo mismo que
+ * recibir la tela (HU-22): la fila se queda, solo deja de estar pendiente.
+ */
+export function puedeAtenderAlerta({ rol }: { rol: Rol }): ResultadoAlerta {
+  if (rol !== "admin") {
+    return {
+      permitido: false,
+      mensaje: "Las alertas de tela las resuelve Administración.",
+    };
+  }
+
+  return { permitido: true };
+}
+
 /** Lo que hace falta saber de una persona de administración para avisarle. */
 export type Administrador = {
   id: string;
