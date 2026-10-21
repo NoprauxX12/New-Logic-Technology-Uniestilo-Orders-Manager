@@ -7,7 +7,8 @@ import { loQueSigue } from "@/features/workflow/estado";
 
 /** Etiquetas cortas para la fila del tablero (el nombre completo va en title + detalle). */
 const ETIQUETA_CORTA: Record<CheckpointId, string> = {
-  cotizacion_aprobada: "Cotizac.",
+  cotizacion_enviada: "Cotiz. env.",
+  cotizacion_aprobada: "Cotiz. apr.",
   programada_diseno: "Diseño",
   ficha_adjunta: "Ficha",
   tela_programada: "Tela",

@@ -34,6 +34,7 @@ import {
  * sincronizados la base y la fuente única de la secuencia.
  */
 const TODOS: Record<CheckpointId, true> = {
+  cotizacion_enviada: true,
   cotizacion_aprobada: true,
   programada_diseno: true,
   ficha_adjunta: true,

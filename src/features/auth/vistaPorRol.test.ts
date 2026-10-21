@@ -101,6 +101,14 @@ describe("vistaDeRol · roles con pantalla propia", () => {
     expect(rutas).toEqual(["/ordenes/marcacion"]);
   });
 
+  it("secretaría empieza por las cotizaciones (HU-02), antes de programar a diseño", () => {
+    const rutas = vistaDeRol("secretaria").botones.map((b) => b.ruta);
+
+    expect(rutas[0]).toBe(buscarCheckpoint("cotizacion_enviada").ruta);
+    expect(rutas[0]).toBe("/ordenes/cotizacion");
+    expect(rutas[1]).toBe("/ordenes/programacion");
+  });
+
   it("secretaría programa a diseño y cierra órdenes, sus dos pantallas", () => {
     const rutas = vistaDeRol("secretaria").botones.map((b) => b.ruta);
 

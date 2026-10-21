@@ -70,6 +70,14 @@ describe("puedeEntrar · lo de cada sección", () => {
     expect(puedeEntrar("secretaria", "/tablero")).toBe(false);
   });
 
+  it("solo secretaría y administración entran a las cotizaciones (HU-02)", () => {
+    for (const rol of ROLES) {
+      expect(puedeEntrar(rol, "/ordenes/cotizacion")).toBe(
+        rol === "secretaria" || rol === "admin",
+      );
+    }
+  });
+
   it("la programación no la abre ninguna otra sección (HU-03)", () => {
     for (const rol of ROLES) {
       expect(puedeEntrar(rol, "/ordenes/programacion")).toBe(

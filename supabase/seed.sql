@@ -147,12 +147,14 @@ insert into public.item_orden (orden_id, descripcion, cantidad, tallas, tallaje,
 
 insert into public.avance_seccion (orden_id, checkpoint, usuario_id, fecha_hora, observaciones) values
   -- OC-5002: hasta la tela programada.
+  ('00000000-0000-0000-0000-0000000000f2', 'cotizacion_enviada',  '00000000-0000-0000-0000-0000000000a2', now() - interval '19 days', null),
   ('00000000-0000-0000-0000-0000000000f2', 'cotizacion_aprobada', '00000000-0000-0000-0000-0000000000a2', now() - interval '18 days', null),
   ('00000000-0000-0000-0000-0000000000f2', 'programada_diseno',   '00000000-0000-0000-0000-0000000000a2', now() - interval '16 days', null),
   ('00000000-0000-0000-0000-0000000000f2', 'ficha_adjunta',       '00000000-0000-0000-0000-0000000000a3', now() - interval '14 days', null),
   ('00000000-0000-0000-0000-0000000000f2', 'tela_programada',     '00000000-0000-0000-0000-0000000000a2', now() - interval '10 days', 'Llegó completa el martes'),
 
   -- OC-5003: hasta el corte.
+  ('00000000-0000-0000-0000-0000000000f3', 'cotizacion_enviada',  '00000000-0000-0000-0000-0000000000a2', now() - interval '27 days', null),
   ('00000000-0000-0000-0000-0000000000f3', 'cotizacion_aprobada', '00000000-0000-0000-0000-0000000000a2', now() - interval '26 days', null),
   ('00000000-0000-0000-0000-0000000000f3', 'programada_diseno',   '00000000-0000-0000-0000-0000000000a2', now() - interval '24 days', null),
   ('00000000-0000-0000-0000-0000000000f3', 'ficha_adjunta',       '00000000-0000-0000-0000-0000000000a3', now() - interval '22 days', null),
@@ -160,6 +162,7 @@ insert into public.avance_seccion (orden_id, checkpoint, usuario_id, fecha_hora,
   ('00000000-0000-0000-0000-0000000000f3', 'corte_completado',    '00000000-0000-0000-0000-0000000000a4', now() - interval '6 days',  'Sobró tela para 12 unidades'),
 
   -- OC-5004: recogida y bordada.
+  ('00000000-0000-0000-0000-0000000000f4', 'cotizacion_enviada',  '00000000-0000-0000-0000-0000000000a2', now() - interval '34 days', null),
   ('00000000-0000-0000-0000-0000000000f4', 'cotizacion_aprobada', '00000000-0000-0000-0000-0000000000a2', now() - interval '33 days', null),
   ('00000000-0000-0000-0000-0000000000f4', 'programada_diseno',   '00000000-0000-0000-0000-0000000000a2', now() - interval '31 days', null),
   ('00000000-0000-0000-0000-0000000000f4', 'ficha_adjunta',       '00000000-0000-0000-0000-0000000000a3', now() - interval '29 days', null),
@@ -168,6 +171,7 @@ insert into public.avance_seccion (orden_id, checkpoint, usuario_id, fecha_hora,
   ('00000000-0000-0000-0000-0000000000f4', 'recogido_bordado',    '00000000-0000-0000-0000-0000000000a5', now() - interval '13 days', null),
 
   -- OC-5005: en marcación, y atrasada.
+  ('00000000-0000-0000-0000-0000000000f5', 'cotizacion_enviada',  '00000000-0000-0000-0000-0000000000a2', now() - interval '44 days', null),
   ('00000000-0000-0000-0000-0000000000f5', 'cotizacion_aprobada', '00000000-0000-0000-0000-0000000000a2', now() - interval '43 days', null),
   ('00000000-0000-0000-0000-0000000000f5', 'programada_diseno',   '00000000-0000-0000-0000-0000000000a2', now() - interval '41 days', null),
   ('00000000-0000-0000-0000-0000000000f5', 'ficha_adjunta',       '00000000-0000-0000-0000-0000000000a3', now() - interval '39 days', null),
@@ -177,6 +181,7 @@ insert into public.avance_seccion (orden_id, checkpoint, usuario_id, fecha_hora,
   ('00000000-0000-0000-0000-0000000000f5', 'llegada_marcacion',   '00000000-0000-0000-0000-0000000000a6', now() - interval '5 days',  null),
 
   -- OC-5006: lista para despachar.
+  ('00000000-0000-0000-0000-0000000000f6', 'cotizacion_enviada',  '00000000-0000-0000-0000-0000000000a2', now() - interval '39 days', null),
   ('00000000-0000-0000-0000-0000000000f6', 'cotizacion_aprobada', '00000000-0000-0000-0000-0000000000a2', now() - interval '38 days', null),
   ('00000000-0000-0000-0000-0000000000f6', 'programada_diseno',   '00000000-0000-0000-0000-0000000000a2', now() - interval '36 days', null),
   ('00000000-0000-0000-0000-0000000000f6', 'ficha_adjunta',       '00000000-0000-0000-0000-0000000000a3', now() - interval '34 days', null),
@@ -187,6 +192,7 @@ insert into public.avance_seccion (orden_id, checkpoint, usuario_id, fecha_hora,
   ('00000000-0000-0000-0000-0000000000f6', 'lista_despacho',      '00000000-0000-0000-0000-0000000000a7', now() - interval '2 days',  null),
 
   -- OC-5007: el flujo completo, hasta el cierre.
+  ('00000000-0000-0000-0000-0000000000f7', 'cotizacion_enviada',  '00000000-0000-0000-0000-0000000000a2', now() - interval '59 days', null),
   ('00000000-0000-0000-0000-0000000000f7', 'cotizacion_aprobada', '00000000-0000-0000-0000-0000000000a2', now() - interval '58 days', null),
   ('00000000-0000-0000-0000-0000000000f7', 'programada_diseno',   '00000000-0000-0000-0000-0000000000a2', now() - interval '56 days', null),
   ('00000000-0000-0000-0000-0000000000f7', 'ficha_adjunta',       '00000000-0000-0000-0000-0000000000a3', now() - interval '54 days', null),
@@ -198,7 +204,16 @@ insert into public.avance_seccion (orden_id, checkpoint, usuario_id, fecha_hora,
   ('00000000-0000-0000-0000-0000000000f7', 'etiquetas',           '00000000-0000-0000-0000-0000000000a2', now() - interval '13 days', null),
   ('00000000-0000-0000-0000-0000000000f7', 'documentos_despacho', '00000000-0000-0000-0000-0000000000a2', now() - interval '12 days', null),
   ('00000000-0000-0000-0000-0000000000f7', 'factura_generada',    '00000000-0000-0000-0000-0000000000a2', now() - interval '11 days', 'Factura FV-2214'),
-  ('00000000-0000-0000-0000-0000000000f7', 'cerrada',             '00000000-0000-0000-0000-0000000000a2', now() - interval '11 days', 'Despachada y facturada');
+  ('00000000-0000-0000-0000-0000000000f7', 'cerrada',             '00000000-0000-0000-0000-0000000000a2', now() - interval '11 days', 'Despachada y facturada'),
+
+  -- HU-02: OC-5008 y OC-5009 ya tienen la cotización enviada y aprobada, para
+  -- que la pantalla de programación a diseño (HU-03) siga teniendo órdenes por
+  -- programar. OC-5001 queda sin ningún avance: es la de partida para probar
+  -- HU-02 desde cero (enviada, aprobada y luego programada).
+  ('00000000-0000-0000-0000-0000000000f8', 'cotizacion_enviada',  '00000000-0000-0000-0000-0000000000a2', now() - interval '5 days',  null),
+  ('00000000-0000-0000-0000-0000000000f8', 'cotizacion_aprobada', '00000000-0000-0000-0000-0000000000a2', now() - interval '4 days',  null),
+  ('00000000-0000-0000-0000-0000000000f9', 'cotizacion_enviada',  '00000000-0000-0000-0000-0000000000a2', now() - interval '3 days',  null),
+  ('00000000-0000-0000-0000-0000000000f9', 'cotizacion_aprobada', '00000000-0000-0000-0000-0000000000a2', now() - interval '2 days',  null);
 
 -- ---------------------------------------------------------------------------
 -- Fichas técnicas

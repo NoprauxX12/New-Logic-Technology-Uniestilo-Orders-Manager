@@ -131,15 +131,15 @@ Salen del diseño de arquitectura y de los RNF. Un PR que las rompa no se mezcla
 
 Roles (enum `rol`) y lo que marca cada uno:
 
-| Rol           | Marca                                                                              |
-| ------------- | ---------------------------------------------------------------------------------- |
-| `admin`       | Registra órdenes, crea las cuentas (HU-24), ve todo el tablero, resuelve alertas   |
-| `secretaria`  | Cotización, programación a diseño y de tela, validación de insumos, cierre (HU-13) |
-| `diseno`      | Ficha técnica (HU-04)                                                              |
-| `corte`       | Corte completado (HU-08)                                                           |
-| `logistica`   | Recogido/bordado (HU-09), despacho a taller (HU-10), recepción del taller (HU-11)  |
-| `marcacion`   | Llegada a marcación (HU-12)                                                        |
-| `terminacion` | Lista para despachar (HU-19)                                                       |
+| Rol           | Marca                                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------------- |
+| `admin`       | Registra órdenes, crea las cuentas (HU-24), ve todo el tablero, resuelve alertas                              |
+| `secretaria`  | Cotización enviada y aprobada (HU-02), programación a diseño y de tela, validación de insumos, cierre (HU-13) |
+| `diseno`      | Ficha técnica (HU-04)                                                                                         |
+| `corte`       | Corte completado (HU-08)                                                                                      |
+| `logistica`   | Recogido/bordado (HU-09), despacho a taller (HU-10), recepción del taller (HU-11)                             |
+| `marcacion`   | Llegada a marcación (HU-12)                                                                                   |
+| `terminacion` | Lista para despachar (HU-19)                                                                                  |
 
 El séptimo rol, `terminacion` (Marcela), es una sección distinta de marcación (Sandra): marca la orden lista para despachar y con eso le queda a secretaría para el cierre.
 

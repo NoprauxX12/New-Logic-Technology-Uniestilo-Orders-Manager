@@ -19,6 +19,7 @@ import {
  */
 
 const HASTA_TELA: CheckpointId[] = [
+  "cotizacion_enviada",
   "cotizacion_aprobada",
   "programada_diseno",
   "ficha_adjunta",

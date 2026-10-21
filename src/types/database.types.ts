@@ -460,6 +460,7 @@ export type Database = {
     }
     Enums: {
       checkpoint:
+        | "cotizacion_enviada"
         | "cotizacion_aprobada"
         | "programada_diseno"
         | "ficha_adjunta"
@@ -613,6 +614,7 @@ export const Constants = {
   public: {
     Enums: {
       checkpoint: [
+        "cotizacion_enviada",
         "cotizacion_aprobada",
         "programada_diseno",
         "ficha_adjunta",

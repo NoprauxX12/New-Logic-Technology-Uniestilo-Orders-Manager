@@ -59,17 +59,19 @@ Hay una persona por rol, con su cuenta de autenticación ya creada y la contrase
 | `marcacion`   | `00000000-0000-0000-0000-0000000000a6` | `marcacion@uniestilo.test`   | Llegada a marcación                       |
 | `terminacion` | `00000000-0000-0000-0000-0000000000a7` | `terminacion@uniestilo.test` | Lista para despachar                      |
 
-Y hay siete órdenes, cada una parada en un punto distinto del flujo, para que nadie tenga que hacerle clic a medio proceso solo para llegar a su pantalla:
+Y hay nueve órdenes, cada una parada en un punto distinto del flujo, para que nadie tenga que hacerle clic a medio proceso solo para llegar a su pantalla:
 
-| Orden     | Avances | Le sigue             | Sirve para                                     |
-| --------- | ------- | -------------------- | ---------------------------------------------- |
-| `OC-5001` | 0       | Cotización aprobada  | El comienzo del flujo (HU-02)                  |
-| `OC-5002` | 4       | Corte completado     | HU-08                                          |
-| `OC-5003` | 5       | Recogido y bordado   | HU-09; después, despacharla a taller (HU-10)   |
-| `OC-5004` | 6       | Llegada a marcación  | HU-12; un lote incompleto y otro en el taller  |
-| `OC-5005` | 7       | Lista para despachar | HU-19. Va atrasada: sirve para el semáforo     |
-| `OC-5006` | 8       | Orden cerrada        | HU-13                                          |
-| `OC-5007` | 9       | —                    | Flujo completo, para el tablero y el histórico |
+| Orden     | Avances | Le sigue             | Sirve para                                                 |
+| --------- | ------- | -------------------- | ---------------------------------------------------------- |
+| `OC-5001` | 0       | Cotización enviada   | El comienzo del flujo (HU-02): enviar, aprobar y programar |
+| `OC-5002` | 5       | Corte completado     | HU-08; trae una alerta de tela abierta                     |
+| `OC-5003` | 6       | Recogido y bordado   | HU-09; después, despacharla a taller (HU-10)               |
+| `OC-5004` | 7       | Llegada a marcación  | HU-12; un lote incompleto y otro en el taller              |
+| `OC-5005` | 8       | Lista para despachar | HU-19. Va atrasada: sirve para el semáforo                 |
+| `OC-5006` | 9       | Etiquetas            | HU-13                                                      |
+| `OC-5007` | 13      | —                    | Flujo completo, para el tablero y el histórico             |
+| `OC-5008` | 2       | Programada a diseño  | HU-03: cotización enviada y aprobada, lista para programar |
+| `OC-5009` | 2       | Programada a diseño  | HU-03: igual que la anterior                               |
 
 HU-10 despacha un lote nuevo desde cualquier orden que ya esté recogida y bordada (`OC-5004` en adelante, u `OC-5003` después de marcar HU-09); HU-11 confirma el lote que el seed dejó abierto en `OC-5004`.
 
@@ -77,15 +79,15 @@ HU-10 despacha un lote nuevo desde cualquier orden que ya esté recogida y borda
 
 Login real contra Supabase Auth (HU-16), en `/login`, con las siete cuentas del seed. Al entrar, `/` muestra a quién le toca qué y un botón a su pantalla:
 
-| Rol           | Botón                                                 | Ruta                                             |
-| ------------- | ----------------------------------------------------- | ------------------------------------------------ |
-| `admin`       | Ver el tablero / Registrar una orden / Crear cuentas  | `/tablero`, `/ordenes/nueva`, `/usuarios`        |
-| `secretaria`  | Cerrar órdenes / Validar telas                        | `/ordenes/cierre`, `/ordenes/telas`              |
-| `corte`       | Marcar corte completado                               | `/ordenes/corte`                                 |
-| `marcacion`   | Marcar llegada a marcación                            | `/ordenes/marcacion`                             |
-| `terminacion` | Marcar lista para despachar                           | `/ordenes/despacho`                              |
-| `logistica`   | Marcar recogido y bordado / Despachar y recibir lotes | `/ordenes/recogido-bordado`, `/ordenes/talleres` |
-| `diseno`      | Solo un aviso: su pantalla (HU-04) no existe aún      | —                                                |
+| Rol           | Botón                                                 | Ruta                                                                                                 |
+| ------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `admin`       | Ver el tablero / Registrar una orden / Crear cuentas  | `/tablero`, `/ordenes/nueva`, `/usuarios`                                                            |
+| `secretaria`  | Cotizaciones / … / Validar telas / Cerrar órdenes     | `/ordenes/cotizacion`, `/ordenes/programacion`, `/ordenes/tela`, `/ordenes/telas`, `/ordenes/cierre` |
+| `corte`       | Marcar corte completado                               | `/ordenes/corte`                                                                                     |
+| `marcacion`   | Marcar llegada a marcación                            | `/ordenes/marcacion`                                                                                 |
+| `terminacion` | Marcar lista para despachar                           | `/ordenes/despacho`                                                                                  |
+| `logistica`   | Marcar recogido y bordado / Despachar y recibir lotes | `/ordenes/recogido-bordado`, `/ordenes/talleres`                                                     |
+| `diseno`      | Solo un aviso: su pantalla (HU-04) no existe aún      | —                                                                                                    |
 
 Sin sesión, el proxy manda a `/login` a cualquier ruta que no sea `/` o `/login`. Con sesión, cada pantalla exige el rol que le toca (HU-17): el mapa está en `src/features/auth/accesoPorRuta.ts` y lo aplica `exigirAcceso()` al principio de cada página. Administración entra a todo; quien abre una pantalla ajena vuelve a `/` con un aviso.
 

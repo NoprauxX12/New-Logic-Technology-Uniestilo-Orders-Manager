@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { DetalleOrdenView } from "@/features/tablero/components/DetalleOrdenView";
 import type { DetalleOrden, EtapaTablero } from "@/lib/ordenes/types";
-import { CHECKPOINTS } from "@/features/workflow/checkpoints";
+import { CHECKPOINTS, type Checkpoint } from "@/features/workflow/checkpoints";
 
 /**
  * La línea de tiempo de una orden ofrece el camino a la pantalla donde se marca
@@ -62,7 +62,9 @@ describe("DetalleOrdenView · ir a marcar", () => {
   });
 
   it("no ofrece botón a las etapas cuya pantalla todavía no existe", () => {
-    const sinRuta = CHECKPOINTS.filter((c) => c.ruta === null);
+    const sinRuta = (CHECKPOINTS as readonly Checkpoint[]).filter(
+      (c) => c.ruta === null,
+    );
     // Cuando todas tengan pantalla, este caso deja de existir.
     if (sinRuta.length === 0) return;
 
