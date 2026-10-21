@@ -16,7 +16,7 @@ import type {
   OrdenEnTablero,
 } from "@/lib/ordenes/types";
 
-const AHORA = new Date("2026-10-10T12:00:00");
+const AHORA = new Date("2026-10-10T17:00:00Z");
 
 // Las etapas disponibles cambian cada sprint (cada HU pone la suya en
 // `disponible: true`): las expectativas salen de `checkpoints.ts`, no se fijan.
@@ -136,6 +136,15 @@ describe("resumirOrden", () => {
     expect(resumen.etapaActual).toBe("Orden cerrada");
     expect(resumen.loQueSigue).toBeNull();
     expect(resumen.avance).toBe(`${TOTAL} de ${TOTAL} etapas`);
+  });
+
+  it("le dice al modelo que una orden cerrada está entregada, no atrasada", () => {
+    const resumen = resumirOrden(
+      ordenStub({ semaforo: "entregada", fechaEntrega: "2026-09-01" }),
+      AHORA,
+    );
+
+    expect(resumen.semaforo).toMatch(/^entregada/);
   });
 });
 

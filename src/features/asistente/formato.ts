@@ -21,6 +21,7 @@ const ETIQUETA_SEMAFORO: Record<SemaforoOrden, string> = {
   a_tiempo: "a tiempo",
   en_riesgo: "en riesgo (entrega en 3 días o menos)",
   atrasada: "atrasada (la fecha de entrega ya pasó)",
+  entregada: "entregada (la orden ya está completada)",
 };
 
 export type OrdenParaModelo = {

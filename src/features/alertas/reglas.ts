@@ -164,24 +164,6 @@ export function destinatarioDeAlertaTela(
  */
 export const DIAS_ALERTA_ENTREGA = 3;
 
-const MS_POR_DIA = 24 * 60 * 60 * 1000;
-
-/**
- * Días que faltan para la entrega, contando desde `hoy` (ambas `YYYY-MM-DD`).
- * Negativo si la entrega ya se pasó.
- */
-export function diasParaEntrega(fechaEntrega: string, hoy: string): number {
-  return Math.round(
-    (Date.parse(`${fechaEntrega}T00:00:00Z`) - Date.parse(`${hoy}T00:00:00Z`)) /
-      MS_POR_DIA,
-  );
-}
-
-/** ¿Hay que avisar de esta entrega? También cuando ya se venció. */
-export function debeAlertarEntrega(dias: number): boolean {
-  return dias <= DIAS_ALERTA_ENTREGA;
-}
-
 /** El plazo en palabras del taller, calculado al momento de mirar. */
 export function frasePlazoEntrega(dias: number): string {
   if (dias < 0) {

@@ -5,8 +5,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   DIAS_ALERTA_ENTREGA,
-  debeAlertarEntrega,
-  diasParaEntrega,
   frasePlazoEntrega,
   puedeAtenderAlertaDeEntrega,
 } from "@/features/alertas/reglas";
@@ -15,35 +13,6 @@ import {
  * HU-20 · Las reglas puras de la alerta de entrega. La generación vive en la
  * base (pg_cron); aquí se prueba lo que la aplicación sabe de ella.
  */
-
-describe("diasParaEntrega", () => {
-  it("cuenta los días que faltan", () => {
-    expect(diasParaEntrega("2026-10-23", "2026-10-20")).toBe(3);
-    expect(diasParaEntrega("2026-10-20", "2026-10-20")).toBe(0);
-  });
-
-  it("es negativo cuando la entrega ya pasó", () => {
-    expect(diasParaEntrega("2026-10-18", "2026-10-20")).toBe(-2);
-  });
-
-  it("no se descuadra al cruzar el fin de mes", () => {
-    expect(diasParaEntrega("2026-11-01", "2026-10-30")).toBe(2);
-  });
-});
-
-describe("debeAlertarEntrega", () => {
-  it("avisa a 3 días", () => {
-    expect(debeAlertarEntrega(3)).toBe(true);
-  });
-
-  it("no avisa a 4 días", () => {
-    expect(debeAlertarEntrega(4)).toBe(false);
-  });
-
-  it("avisa de lo vencido", () => {
-    expect(debeAlertarEntrega(-5)).toBe(true);
-  });
-});
 
 describe("frasePlazoEntrega", () => {
   it.each([

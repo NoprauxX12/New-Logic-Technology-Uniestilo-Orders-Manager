@@ -1,6 +1,7 @@
 import type { CheckpointId, Rol } from "@/features/workflow/checkpoints";
 import {
   puedeMarcar,
+  type EtapaInicial,
   type ResultadoMarcado,
 } from "@/features/workflow/transiciones";
 
@@ -47,8 +48,14 @@ export type ResultadoHoja =
 export function puedeProgramar(
   marcados: readonly CheckpointId[],
   rol: Rol,
+  etapaInicial?: EtapaInicial,
 ): ResultadoMarcado {
-  return puedeMarcar({ checkpoint: CHECKPOINT_PROGRAMACION, marcados, rol });
+  return puedeMarcar({
+    checkpoint: CHECKPOINT_PROGRAMACION,
+    marcados,
+    rol,
+    etapaInicial,
+  });
 }
 
 /**

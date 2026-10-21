@@ -258,7 +258,6 @@ async function listarAlertasDeTela(): Promise<AlertaTelaEnTablero[]> {
 export type AvisoDeEntrega = {
   tipo: "proximidad_entrega";
   id: string;
-  detalle: string;
   numeroOrdenCompra: string;
   razonSocial: string;
   /** `YYYY-MM-DD`, para calcular el plazo al momento de mirar. */
@@ -285,7 +284,6 @@ export async function listarAvisosDeEntrega(): Promise<AvisoDeEntrega[]> {
     .from("alerta")
     .select(
       `id,
-       detalle,
        orden ( numero_orden_compra, fecha_entrega, cliente ( razon_social ) )`,
     )
     .eq("tipo", "proximidad_entrega")
@@ -304,7 +302,6 @@ export async function listarAvisosDeEntrega(): Promise<AvisoDeEntrega[]> {
             {
               tipo: "proximidad_entrega" as const,
               id: alerta.id,
-              detalle: alerta.detalle,
               numeroOrdenCompra: alerta.orden.numero_orden_compra,
               razonSocial: alerta.orden.cliente?.razon_social ?? "Sin cliente",
               fechaEntrega: alerta.orden.fecha_entrega,

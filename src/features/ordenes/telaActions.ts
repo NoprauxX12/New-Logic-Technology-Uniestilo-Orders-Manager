@@ -68,6 +68,7 @@ export async function programarTela(
     checkpoint: "tela_programada",
     marcados: situacion.marcados,
     rol: usuario.rol,
+    etapaInicial: situacion.etapaInicial,
   });
 
   if (!veredicto.permitido) {

@@ -131,7 +131,11 @@ export async function programarOrdenes(
       continue;
     }
 
-    const veredicto = puedeProgramar(situacion.marcados, usuario.rol);
+    const veredicto = puedeProgramar(
+      situacion.marcados,
+      usuario.rol,
+      situacion.etapaInicial,
+    );
     if (!veredicto.permitido) errores[ordenId] = [veredicto.mensaje];
   }
 

@@ -1,6 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import { describe, expect, it } from "vitest";
 
 import {
@@ -146,6 +143,8 @@ describe("etapa de entrada de una corrección", () => {
 
   it("llega hasta 'lista para despachar': las de cierre no sirven de entrada", () => {
     expect(ETAPAS_DE_ENTRADA.at(-1)).toBe("lista_despacho");
+    expect(ETAPAS_DE_ENTRADA).not.toContain("tela_programada");
+    expect(ETAPAS_DE_ENTRADA).not.toContain("llegada_marcacion");
     for (const cierre of [
       "etiquetas",
       "documentos_despacho",
@@ -155,19 +154,6 @@ describe("etapa de entrada de una corrección", () => {
       expect(esEtapaDeEntrada(cierre)).toBe(false);
     }
     expect(esEtapaDeEntrada("corte_completado")).toBe(true);
-  });
-
-  it("coincide con la restricción de la base (orden_etapa_inicial_valida)", () => {
-    const sql = readFileSync(
-      join(
-        process.cwd(),
-        "supabase/migrations/20261021100100_orden_de_correccion.sql",
-      ),
-      "utf8",
-    );
-
-    expect(sql).toMatch(/etapa_inicial <= 'lista_despacho'/);
-    expect(ETAPAS_DE_ENTRADA.at(-1)).toBe("lista_despacho");
   });
 });
 

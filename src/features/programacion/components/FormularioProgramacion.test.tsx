@@ -45,6 +45,7 @@ function orden(
     referencias,
     totalPrendas: referencias.reduce((total, r) => total + r.cantidad, 0),
     marcados: [],
+    etapaInicial: null,
   };
 }
 

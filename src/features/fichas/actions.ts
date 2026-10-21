@@ -74,6 +74,7 @@ export async function adjuntarFichaTecnica(
       checkpoint: "ficha_adjunta",
       marcados: situacion.marcados,
       rol: usuario.rol,
+      etapaInicial: situacion.etapaInicial,
       recepcionConfirmada: situacion.recepcionConfirmada,
     });
 

@@ -8,11 +8,13 @@ import { etapasQueNoAplicaron } from "@/features/workflow/transiciones";
 import type {
   AvanceAnulado,
   AvanceSeccion,
+  Devolucion,
   EtapaTablero,
   OrdenEnTablero,
   ResumenTablero,
   SemaforoOrden,
 } from "@/lib/ordenes/types";
+import { hoyEnBogota } from "@/lib/utils/fechas";
 
 /**
  * Reglas puras para derivar el estado de una orden (HU-14, HU-15). Sin I/O ni
@@ -23,18 +25,30 @@ import type {
 const MS_DIA = 24 * 60 * 60 * 1000;
 export const DIAS_EN_RIESGO = 3;
 
-/** Diferencia en días de calendario (ignora la hora del reloj). */
+/**
+ * Diferencia en días de calendario entre la fecha y "hoy" en Colombia, no el
+ * del servidor: en Vercel es UTC y a las ocho de la noche en Marinilla ya es
+ * mañana allá. Es el mismo "hoy" con el que la base genera las alertas de
+ * entrega (HU-20).
+ */
 export function diasHasta(fechaIso: string, ahora = new Date()): number {
-  const [anio, mes, dia] = fechaIso.split("-").map(Number);
-  const entrega = new Date(anio, mes - 1, dia);
-  const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
-  return Math.round((entrega.getTime() - hoy.getTime()) / MS_DIA);
+  const aUtc = (iso: string) => {
+    const [anio, mes, dia] = iso.split("-").map(Number);
+    return Date.UTC(anio, mes - 1, dia);
+  };
+  return Math.round((aUtc(fechaIso) - aUtc(hoyEnBogota(ahora))) / MS_DIA);
 }
 
+/**
+ * El semáforo de la fecha de entrega. Una orden cerrada ya se entregó: la
+ * fecha deja de importar y no es "atrasada" ni "en riesgo" aunque haya pasado.
+ */
 export function derivarSemaforo(
   fechaEntrega: string,
   ahora = new Date(),
+  cerrada = false,
 ): SemaforoOrden {
+  if (cerrada) return "entregada";
   const dias = diasHasta(fechaEntrega, ahora);
   if (dias < 0) return "atrasada";
   if (dias <= DIAS_EN_RIESGO) return "en_riesgo";
@@ -89,6 +103,25 @@ export function armarEtapas(
         .sort((a, b) => a.fechaHora.localeCompare(b.fechaHora)),
     };
   });
+}
+
+/**
+ * La etapa a la que la orden está devuelta (HU-18): el destino de la última
+ * devolución, y solo mientras siga pendiente. Si ya se rehízo, o si una
+ * devolución posterior la superó, no hay etapa devuelta; las demás etapas que
+ * quedaron con avances anulados conservan su historial pero no la marca.
+ */
+export function etapaDevuelta(
+  etapas: readonly EtapaTablero[],
+  devoluciones: readonly Devolucion[],
+): CheckpointId | null {
+  const ultima = [...devoluciones].sort((a, b) =>
+    a.fechaHora.localeCompare(b.fechaHora),
+  )[devoluciones.length - 1];
+  if (!ultima) return null;
+
+  const destino = etapas.find((etapa) => etapa.seccion === ultima.destino);
+  return destino?.estado === "pendiente" ? destino.seccion : null;
 }
 
 /**

@@ -12,17 +12,11 @@ import { formatearFecha } from "@/lib/utils/fechas";
 
 type Props = {
   alertas: readonly AlertaDelTablero[];
-  /** El día de hoy en Colombia, `YYYY-MM-DD`. Se calcula si no se pasa. */
-  hoy?: string;
+  /** El momento desde el que se cuenta el plazo de los avisos; por defecto, ahora. */
+  ahora?: Date;
 };
 
-function hoyEnColombia(): string {
-  return new Date().toLocaleDateString("en-CA", {
-    timeZone: "America/Bogota",
-  });
-}
-
-export function ListaAlertasTablero({ alertas, hoy }: Props) {
+export function ListaAlertasTablero({ alertas, ahora }: Props) {
   const tela = alertas.filter((alerta) => alerta.tipo === "falta_tela");
   const entrega = alertas.filter(
     (alerta) => alerta.tipo === "proximidad_entrega",
@@ -60,7 +54,7 @@ export function ListaAlertasTablero({ alertas, hoy }: Props) {
         </section>
       ) : null}
 
-      <ListaAvisosDeEntrega avisos={entrega} hoy={hoy ?? hoyEnColombia()} />
+      <ListaAvisosDeEntrega avisos={entrega} ahora={ahora} />
     </>
   );
 }

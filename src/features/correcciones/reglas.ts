@@ -166,19 +166,33 @@ export function puedeCrearCorreccion({
 }
 
 /**
- * Por dónde puede entrar una corrección: cualquier etapa que hoy se marca,
- * hasta "lista para despachar". Las de cierre (etiquetas, documentos, factura)
- * vienen después y no tienen sentido como punto de entrada. La base lo repite
- * (`orden_etapa_inicial_valida`).
+ * Por dónde puede entrar una corrección: las etapas desde las que puede llegar
+ * al final sin avances previos. La lista es explícita, no derivada: una etapa
+ * nueva del flujo no debe ofrecerse hasta que alguien verifique que la orden
+ * puede completarla.
+ *
+ * Quedan fuera dos etapas que atascarían la orden, porque la corrección nace
+ * sin avances:
+ * - `tela_programada`: `programar_tela` exige la ficha técnica vigente.
+ * - `llegada_marcacion`: exige un lote recibido, y despachar un lote exige el
+ *   recogido y bordado vigente.
+ * Y las de cierre (etiquetas, documentos, factura), que vienen después de
+ * "lista para despachar". La base lo repite (`orden_etapa_inicial_valida`).
  */
-export const ETAPAS_DE_ENTRADA: readonly CheckpointId[] = CHECKPOINTS.filter(
-  (checkpoint) =>
-    checkpoint.disponible &&
-    posicion(checkpoint.id) <= posicion("lista_despacho"),
-).map((checkpoint) => checkpoint.id);
+export const ETAPAS_DE_ENTRADA = [
+  "cotizacion_enviada",
+  "cotizacion_aprobada",
+  "programada_diseno",
+  "ficha_adjunta",
+  "corte_completado",
+  "recogido_bordado",
+  "lista_despacho",
+] as const satisfies readonly CheckpointId[];
 
 /** ¿Es una etapa por la que puede entrar una corrección? */
-export function esEtapaDeEntrada(valor: string): valor is CheckpointId {
+export function esEtapaDeEntrada(
+  valor: string,
+): valor is (typeof ETAPAS_DE_ENTRADA)[number] {
   return ETAPAS_DE_ENTRADA.some((etapa) => etapa === valor);
 }
 

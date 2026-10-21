@@ -160,9 +160,18 @@ begin
     return new;
   end if;
 
-  -- Una factura ya escrita no se cambia: un error se corrige con una orden de
-  -- corrección (HU-18), no reescribiendo.
-  if old.numero_factura is not null then
+  -- Una factura ya escrita no se cambia mientras la orden la tenga reportada
+  -- (avance `factura_generada` vigente) o esté cerrada: un error se corrige con
+  -- una orden de corrección (HU-18). Si una devolución anuló el avance de la
+  -- factura, el número quedó huérfano y se puede escribir el correcto; el
+  -- avance anulado conserva la observación de la factura vieja.
+  if old.numero_factura is not null and exists (
+    select 1
+    from public.avance_seccion
+    where orden_id = new.id
+      and checkpoint in ('factura_generada', 'cerrada')
+      and anulado_por is null
+  ) then
     raise exception 'El número de factura ya quedó registrado y no se cambia'
       using errcode = 'UE015';
   end if;
@@ -184,7 +193,7 @@ end;
 $$;
 
 comment on function public.proteger_numero_de_factura is
-  'HU-13: el número de factura no se cambia una vez escrito ni con la orden cerrada.';
+  'HU-13: el número de factura no se cambia mientras la orden tenga la factura reportada (avance vigente) o esté cerrada.';
 
 create trigger orden_protege_numero_de_factura
   before update of numero_factura on public.orden
