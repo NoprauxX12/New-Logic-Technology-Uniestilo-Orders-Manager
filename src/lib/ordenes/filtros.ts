@@ -180,6 +180,8 @@ function cumpleRapido(
     case "en_riesgo":
       return orden.semaforo === "en_riesgo";
     case "esta_semana": {
+      // Una orden entregada ya salió: no es una entrega por hacer.
+      if (orden.semaforo === "entregada") return false;
       const dias = diasHasta(orden.fechaEntrega, ahora);
       return dias >= 0 && dias <= DIAS_ENTREGA_SEMANA;
     }
@@ -194,9 +196,17 @@ function buscar(
   return normalizar(q) ? filtrarOrdenes(ordenes, q) : [...ordenes];
 }
 
-const RANGO_SEMAFORO = { atrasada: 0, en_riesgo: 1, a_tiempo: 2 } as const;
+const RANGO_SEMAFORO = {
+  atrasada: 0,
+  en_riesgo: 1,
+  a_tiempo: 2,
+  entregada: 3,
+} as const;
 
-/** Atrasadas primero, luego en riesgo, luego por fecha de entrega ascendente. */
+/**
+ * Atrasadas primero, luego en riesgo, a tiempo y, al final, las entregadas;
+ * dentro de cada grupo por fecha de entrega ascendente.
+ */
 export function ordenarPorUrgencia(
   ordenes: readonly OrdenEnTablero[],
 ): OrdenEnTablero[] {

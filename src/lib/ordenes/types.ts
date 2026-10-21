@@ -68,8 +68,12 @@ export type OrdenResumen = {
   devoluciones: Devolucion[];
 };
 
-/** Semáforo derivado en aplicación (no columna editable). */
-export type SemaforoOrden = "a_tiempo" | "en_riesgo" | "atrasada";
+/**
+ * Semáforo derivado en aplicación (no columna editable). `entregada` es una
+ * orden con el avance `cerrada` vigente: ya salió, así que la fecha no la
+ * vuelve atrasada ni en riesgo.
+ */
+export type SemaforoOrden = "a_tiempo" | "en_riesgo" | "atrasada" | "entregada";
 
 /**
  * `no_aplico`: la orden pasó de largo esta etapa porque, cuando iba por ahí, la

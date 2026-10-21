@@ -4,12 +4,14 @@ const ETIQUETA: Record<SemaforoOrden, string> = {
   a_tiempo: "A tiempo",
   en_riesgo: "En riesgo",
   atrasada: "Atrasada",
+  entregada: "Entregada",
 };
 
 const CLASE: Record<SemaforoOrden, string> = {
   a_tiempo: "bg-emerald-50 text-emerald-800 ring-emerald-200",
   en_riesgo: "bg-amber-50 text-amber-900 ring-amber-200",
   atrasada: "bg-rose-50 text-rose-800 ring-rose-200",
+  entregada: "bg-zinc-100 text-zinc-700 ring-zinc-200",
 };
 
 export function BadgeSemaforo({ semaforo }: { semaforo: SemaforoOrden }) {

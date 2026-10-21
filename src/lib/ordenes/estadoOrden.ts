@@ -233,7 +233,11 @@ function enriquecer(fila: OrdenFila, enlaces: Enlaces): OrdenEnTablero {
 
   return {
     ...cabecera,
-    semaforo: derivarSemaforo(cabecera.fechaEntrega),
+    semaforo: derivarSemaforo(
+      cabecera.fechaEntrega,
+      new Date(),
+      avances.some((avance) => avance.seccion === "cerrada"),
+    ),
     etapas,
     etapasCompletadas: completadas,
     etapasTotales: totales,

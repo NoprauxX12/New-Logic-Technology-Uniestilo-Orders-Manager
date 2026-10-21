@@ -14,7 +14,7 @@ import {
 import { armarEtapas, contarProgreso } from "@/lib/ordenes/reglas";
 import type { AvanceSeccion, OrdenEnTablero } from "@/lib/ordenes/types";
 
-const AHORA = new Date("2026-10-10T12:00:00");
+const AHORA = new Date("2026-10-10T17:00:00Z");
 
 function diaDeOctubre(i: number): string {
   return `2026-10-${String(i + 1).padStart(2, "0")}T10:00:00Z`;
@@ -183,6 +183,49 @@ describe("ordenarPorUrgencia", () => {
       "pronto",
       "tarde",
     ]);
+  });
+});
+
+describe("órdenes entregadas (cerradas) en el tablero", () => {
+  const lista = [
+    ordenStub({
+      id: "cerrada",
+      semaforo: "entregada",
+      fechaEntrega: "2026-09-01",
+    }),
+    ordenStub({ id: "atr", semaforo: "atrasada", fechaEntrega: "2026-10-08" }),
+    ordenStub({ id: "tiempo", fechaEntrega: "2026-12-01" }),
+    ordenStub({
+      id: "cerrada-semana",
+      semaforo: "entregada",
+      fechaEntrega: "2026-10-12",
+    }),
+  ];
+  const sin = { q: "", filtro: null, donde: null } as const;
+  const ids = (l: OrdenEnTablero[]) => l.map((o) => o.id);
+
+  it("van al final de la lista por urgencia, aunque su fecha sea vieja", () => {
+    expect(ids(ordenarPorUrgencia(lista))).toEqual([
+      "atr",
+      "tiempo",
+      "cerrada",
+      "cerrada-semana",
+    ]);
+  });
+
+  it("no cuentan como atrasadas ni en riesgo ni entrega esta semana", () => {
+    expect(
+      ids(filtrarTablero(lista, { ...sin, filtro: "atrasadas" }, AHORA)),
+    ).toEqual(["atr"]);
+    expect(
+      ids(filtrarTablero(lista, { ...sin, filtro: "esta_semana" }, AHORA)),
+    ).toEqual([]);
+    expect(contarFiltros(lista, "", AHORA).filtro).toEqual({
+      atrasadas: 1,
+      en_riesgo: 0,
+      esta_semana: 0,
+    });
+    expect(ids(filtrarPorEstado(lista, "atrasadas"))).toEqual(["atr"]);
   });
 });
 
