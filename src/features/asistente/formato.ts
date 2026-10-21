@@ -81,7 +81,7 @@ function etapaActual(orden: OrdenEnTablero): string {
 function describirLoQueSigue(
   orden: OrdenEnTablero,
 ): OrdenParaModelo["loQueSigue"] {
-  const siguiente = loQueSigue(marcados(orden));
+  const siguiente = loQueSigue(marcados(orden), orden.etapaInicial);
   if (!siguiente) return null;
   return {
     etapa: siguiente.checkpoint.etiqueta,

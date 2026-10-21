@@ -262,3 +262,43 @@ insert into public.alerta (tipo, orden_id, destinatario_id, creada_por, detalle,
   ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f5', '00000000-0000-0000-0000-0000000000a1', null, 'La orden OC-5005 de Clínica del Norte se venció hace 3 días (' || to_char(current_date - 3, 'DD/MM') || ') y está en Terminación', 'pendiente', now() - interval '1 day', null, null, null),
   -- Una ya atendida, de una orden que después se cerró (no recibe más avisos).
   ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f7', '00000000-0000-0000-0000-0000000000a1', null, 'La orden OC-5007 de Colegio San Ignacio entrega en 3 días y está en el cierre de la orden', 'atendida', now() - interval '25 days', now() - interval '24 days', null, null);
+
+-- ---------------------------------------------------------------------------
+-- HU-18: devolución durante el flujo y orden de corrección
+-- ---------------------------------------------------------------------------
+-- OC-5010 va en producción y tiene una devolución en su historial: el corte
+-- salió con la manga corta, administración la devolvió a "Corte completado" y
+-- corte lo rehízo. El primer corte queda en la bitácora como anulado (con su
+-- quién y cuándo originales) y el track muestra la devolución con su motivo.
+-- Le toca ahora recogido y bordado. Va en la hoja 2, cuarto turno.
+--
+-- OC-5007-C1 es una orden de corrección de OC-5007 (cerrada): 30 camisas con
+-- defecto, que entran por el corte. Todavía no tiene avances; las etapas
+-- anteriores se ven como "No aplicó".
+
+insert into public.orden (
+  id, numero_orden_compra, cliente_id, fecha_ingreso, fecha_entrega,
+  observaciones, numero_orden_programacion, posicion_programacion,
+  numero_factura, orden_original_id, etapa_inicial, creado_por
+) values
+  ('00000000-0000-0000-0000-0000000000fa', 'OC-5010', '00000000-0000-0000-0000-0000000000c2', current_date - 24, current_date + 8, 'Uniformes del turno de la noche', 2, 4, null, null, null, '00000000-0000-0000-0000-0000000000a1'),
+  ('00000000-0000-0000-0000-0000000000fb', 'OC-5007-C1', '00000000-0000-0000-0000-0000000000c1', current_date - 3, current_date + 14, 'Corrección de OC-5007. Motivo: 30 camisas llegaron con la costura del cuello abierta', null, null, null, '00000000-0000-0000-0000-0000000000f7', 'corte_completado', '00000000-0000-0000-0000-0000000000a1');
+
+insert into public.item_orden (orden_id, descripcion, cantidad, tallas, tallaje, valor, observaciones) values
+  ('00000000-0000-0000-0000-0000000000fa', 'Camisas de dotación azul oscuro', 150, 'M:50, L:60, XL:40', 'superior_hombre', 9600000.00, null),
+  ('00000000-0000-0000-0000-0000000000fb', 'Camisas escolares blancas', 30, 'XS:10, S:20', 'otro', 0, 'Prenda defectuosa de OC-5007');
+
+-- La devolución se registra primero: los avances anulados apuntan a ella.
+insert into public.reproceso (id, orden_id, checkpoint_destino, motivo, creado_por, creado_en) values
+  ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000fa', 'corte_completado', 'El corte salió con la manga 2 cm más corta que la ficha. Hay que repetirlo.', '00000000-0000-0000-0000-0000000000a1', now() - interval '8 days');
+
+insert into public.avance_seccion (orden_id, checkpoint, usuario_id, fecha_hora, observaciones, anulado_por) values
+  ('00000000-0000-0000-0000-0000000000fa', 'cotizacion_enviada',  '00000000-0000-0000-0000-0000000000a2', now() - interval '23 days', null, null),
+  ('00000000-0000-0000-0000-0000000000fa', 'cotizacion_aprobada', '00000000-0000-0000-0000-0000000000a2', now() - interval '22 days', null, null),
+  ('00000000-0000-0000-0000-0000000000fa', 'programada_diseno',   '00000000-0000-0000-0000-0000000000a2', now() - interval '20 days', 'Programación 2', null),
+  ('00000000-0000-0000-0000-0000000000fa', 'ficha_adjunta',       '00000000-0000-0000-0000-0000000000a3', now() - interval '18 days', null, null),
+  ('00000000-0000-0000-0000-0000000000fa', 'tela_programada',     '00000000-0000-0000-0000-0000000000a2', now() - interval '15 days', null, null),
+  -- El primer corte: anulado por la devolución de hace 8 días.
+  ('00000000-0000-0000-0000-0000000000fa', 'corte_completado',    '00000000-0000-0000-0000-0000000000a4', now() - interval '10 days', null, '00000000-0000-0000-0000-0000000000d1'),
+  -- El corte rehecho, ya vigente.
+  ('00000000-0000-0000-0000-0000000000fa', 'corte_completado',    '00000000-0000-0000-0000-0000000000a4', now() - interval '5 days',  'Repetido con la manga de la ficha', null);

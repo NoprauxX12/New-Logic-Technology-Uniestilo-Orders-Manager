@@ -37,6 +37,10 @@ function ordenStub(
     estadoTalleres: "Todavía no ha salido a ningún taller.",
     lotesEnTaller: 0,
     tieneFicha: false,
+    etapaInicial: null,
+    ordenOriginal: null,
+    correcciones: [],
+    devoluciones: [],
     etapas: [],
     ...parcial,
   };
@@ -256,6 +260,83 @@ describe("describirQuienMarco", () => {
     );
     expect(describirQuienMarco("Luis", "lista_despacho")).toBe(
       "Luis (Terminación)",
+    );
+  });
+});
+
+describe("armarEtapas · devoluciones y órdenes de corrección (HU-18)", () => {
+  function avanceDe(
+    seccion: AvanceSeccion["seccion"],
+    dia: number,
+  ): AvanceSeccion {
+    return {
+      seccion,
+      usuarioId: "u1",
+      usuarioNombre: "Camila Ríos",
+      fechaHora: `2026-09-${String(dia).padStart(2, "0")}T10:00:00Z`,
+    };
+  }
+
+  const VIGENTES = [
+    avanceDe("cotizacion_enviada", 1),
+    avanceDe("cotizacion_aprobada", 2),
+  ];
+  const ANULADO = {
+    ...avanceDe("programada_diseno", 3),
+    devolucionId: "d1",
+  };
+
+  it("un avance anulado no completa la etapa: queda pendiente y con su historial", () => {
+    const etapa = armarEtapas(VIGENTES, [ANULADO]).find(
+      (e) => e.seccion === "programada_diseno",
+    );
+
+    expect(etapa?.estado).toBe("pendiente");
+    expect(etapa?.avance).toBeNull();
+    expect(etapa?.anulados).toEqual([ANULADO]);
+  });
+
+  it("el avance no cuenta el anulado: la barra de progreso retrocede", () => {
+    const con = contarProgreso(
+      armarEtapas([...VIGENTES, avanceDe("programada_diseno", 3)]),
+    );
+    const sin = contarProgreso(armarEtapas(VIGENTES, [ANULADO]));
+
+    expect(sin.completadas).toBe(con.completadas - 1);
+  });
+
+  it("si la etapa se vuelve a marcar, queda completada y conserva lo anulado", () => {
+    const etapa = armarEtapas(
+      [...VIGENTES, avanceDe("programada_diseno", 9)],
+      [ANULADO],
+    ).find((e) => e.seccion === "programada_diseno");
+
+    expect(etapa?.estado).toBe("completada");
+    expect(etapa?.avance?.fechaHora).toBe("2026-09-09T10:00:00Z");
+    expect(etapa?.anulados).toHaveLength(1);
+  });
+
+  it("las etapas anteriores a la de entrada de una corrección no aplican", () => {
+    const etapas = armarEtapas([], [], "corte_completado");
+    const posicion = etapas.findIndex((e) => e.seccion === "corte_completado");
+
+    for (const etapa of etapas.slice(0, posicion)) {
+      expect(etapa.estado).toBe("no_aplico");
+    }
+    expect(etapas[posicion].estado).toBe("pendiente");
+  });
+
+  it("una corrección sin avances no cuenta las etapas que no le aplican", () => {
+    const progreso = contarProgreso(armarEtapas([], [], "corte_completado"));
+    const completo = contarProgreso(armarEtapas([]));
+
+    expect(progreso.totales).toBeLessThan(completo.totales);
+    expect(progreso.completadas).toBe(0);
+  });
+
+  it("quien reportó una etapa se lee con el rol de la etapa, no el de quien devolvió", () => {
+    expect(describirQuienMarco("Diana Restrepo", "corte_completado")).toBe(
+      "Diana Restrepo (Corte)",
     );
   });
 });

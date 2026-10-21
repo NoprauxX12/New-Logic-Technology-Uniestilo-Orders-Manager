@@ -63,6 +63,7 @@ src/
     auth/                 Sesión y acceso por rol (accesoPorRuta.ts, guardia.ts): HU-16, HU-17
     alertas/              HU-06, HU-07, HU-20 (post-MVP)
     asistente/            Asistente de solo lectura para administración: HU-15 (docs/adr/0009)
+    correcciones/         Devolver una orden a una etapa y crear órdenes de corrección, solo admin: HU-18 (docs/adr/0011)
     documentos/           Etiquetas y documentos de despacho: HU-13
     usuarios/             Cuentas de las personas (crear, editar, desactivar, borrar), solo admin: HU-24 (docs/adr/0008)
   components/
@@ -73,7 +74,7 @@ src/
                           admin.ts (secret key, solo para Supabase Auth)
     auth/                 getUsuarioActual(): la única respuesta a "quién está actuando"
     talleres/             Estado derivado de los lotes; lo usan talleres y tablero
-    ordenes/              Estado derivado de una orden (avances, semáforo, etapas); lo usan tablero y asistente
+    ordenes/              Estado derivado de una orden (avances vigentes, semáforo, etapas); lo usan tablero y asistente
     ai/                   Interfaz propia sobre el LLM: config, proveedor y responderConHerramientas()
     utils/                Helpers puros: fechas, moneda, cn()
   types/                  database.types.ts (generado) y tipos de dominio
@@ -121,7 +122,7 @@ Salen del diseño de arquitectura y de los RNF. Un PR que las rompa no se mezcla
 
 1. **El estado de una orden se deriva, no se guarda.** No existe una columna `estado` editable: el estado es la agregación de las filas de `avance_seccion`. El tablero (HU-14) se construye leyendo esos avances.
 2. **Toda mutación de avance pasa por el motor de workflow** (`src/features/workflow`). Ninguna action inserta en `avance_seccion` por su cuenta. El motor verifica que el checkpoint sea el siguiente válido en la secuencia, que el rol del usuario sea el dueño de esa sección y que no se repita uno ya marcado.
-3. **La auditoría es inmutable (RNF-05).** Un avance registra `usuario_id` y `fecha_hora` y nunca se edita ni se borra. Un error se corrige con un registro nuevo o con una orden de corrección (HU-18).
+3. **La auditoría es inmutable (RNF-05).** Un avance registra `usuario_id` y `fecha_hora` y nunca se edita ni se borra. Un error se corrige con un registro nuevo, devolviendo la orden a una etapa o con una orden de corrección (HU-18). La única excepción controlada es `avance_seccion.anulado_por`: `devolver_orden_a_etapa` lo pasa de nulo a un `reproceso` (el avance sigue ahí con su quién y su cuándo, pero deja de estar vigente) y un trigger rechaza cualquier otro UPDATE o DELETE. **Toda lectura de avances que decida algo filtra los vigentes** con `AVANCE_VIGENTE` (`src/lib/ordenes/vigentes.ts`) en TypeScript y `anulado_por is null` en SQL (`docs/adr/0011`).
 4. **La secuencia de checkpoints y el rol dueño de cada uno viven en un solo lugar:** `src/features/workflow/checkpoints.ts`. UI, actions y políticas RLS se derivan de ahí. Si cambia el flujo, cambia ese archivo y una migración.
 5. **Autorización en dos capas.** La UI muestra a cada rol solo lo suyo; RLS lo garantiza en la base aunque la UI falle (RNF-04). Ninguna tabla se crea sin políticas RLS. Cada página llama a `exigirAcceso(ruta)` antes de leer nada, y el mapa ruta → roles vive en `src/features/auth/accesoPorRuta.ts` (`docs/adr/0007`).
 6. **Quién actúa sale de la sesión, nunca del formulario.** Las actions usan `getUsuarioActual()` y las funciones de Postgres `auth.uid()`. Ningún `usuario_id`, `enviado_por` ni `recibido_por` se recibe como dato (RNF-05).
@@ -167,7 +168,8 @@ El séptimo rol, `terminacion` (Marcela), es una sección distinta de marcación
 - Las políticas de `avance_seccion` usan `rol_dueno(checkpoint)`, copia SQL del mapa de `checkpoints.ts` verificada por `rlsPorRol.test.ts`. Si cambia el flujo, cambian los dos.
 - Esquema con migraciones: `npx supabase migration new <nombre>` → escribir el SQL → `npx supabase db reset` en local → PR. Nombres descriptivos en snake_case: `crear_orden_e_items`, `rls_avance_seccion`.
 - Tras cambiar el esquema: `npm run db:types` y subir `database.types.ts` en el mismo PR.
-- Realtime solo para el tablero (HU-14), que escucha `avance_seccion` y `lote_taller`; el resto son lecturas normales.
+- Realtime solo para el tablero (HU-14), que escucha `avance_seccion`, `lote_taller`, `ficha_tecnica`, `alerta` y `reproceso`; el resto son lecturas normales.
+- Pruebas de la base con pgTAP en `supabase/tests/` (las de HU-18 son `hu18_*.sql`): cubren lo que Vitest no alcanza, como las funciones de Postgres y los triggers.
 - Archivos (fichas técnicas, documentos de despacho) en Storage bajo `<bucket>/<orden_id>/<archivo>`; en la base solo la ruta y los metadatos.
 
 ## Testing

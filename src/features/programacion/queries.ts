@@ -6,6 +6,7 @@ import {
   totalDePrendas,
 } from "@/features/programacion/reglas";
 import type { CheckpointId } from "@/features/workflow/checkpoints";
+import { AVANCE_VIGENTE } from "@/lib/ordenes/vigentes";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -124,6 +125,7 @@ export async function listarOrdenesPorProgramar(): Promise<
   const { data, error } = await supabase
     .from("orden")
     .select(SELECCION)
+    .is(AVANCE_VIGENTE, null)
     .is("posicion_programacion", null)
     .order("fecha_ingreso", { ascending: true });
 
@@ -158,6 +160,7 @@ export async function listarHojasDeProgramacion(): Promise<
   const { data, error } = await supabase
     .from("orden")
     .select(SELECCION)
+    .is(AVANCE_VIGENTE, null)
     .not("posicion_programacion", "is", null)
     .order("numero_orden_programacion", { ascending: false })
     .order("posicion_programacion", { ascending: true });

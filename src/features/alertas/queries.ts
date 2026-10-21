@@ -8,6 +8,7 @@ import {
 } from "@/features/alertas/reglas";
 import type { CheckpointId, Rol } from "@/features/workflow/checkpoints";
 import { getUsuarioActual } from "@/lib/auth/usuarioActual";
+import { AVANCE_VIGENTE } from "@/lib/ordenes/vigentes";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -97,6 +98,7 @@ export async function listarOrdenesParaTelas(
        avance_seccion ( checkpoint ),
        alerta ( tipo, estado, detalle, fecha_creacion, tela_llegada_en )`,
     )
+    .is(AVANCE_VIGENTE, null)
     .order("fecha_entrega", { ascending: true });
 
   if (error) {
@@ -156,6 +158,7 @@ export async function obtenerSituacionParaAviso(
        alerta ( tipo, estado, detalle, fecha_creacion, tela_llegada_en )`,
     )
     .eq("id", ordenId)
+    .is(AVANCE_VIGENTE, null)
     .maybeSingle();
 
   if (error) {

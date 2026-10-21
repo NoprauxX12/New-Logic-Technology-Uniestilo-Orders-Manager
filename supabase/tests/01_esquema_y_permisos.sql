@@ -175,6 +175,7 @@ select is_empty(
 select is(
   pg_temp.funciones_de('authenticated', false),
   array[
+    'crear_orden_de_correccion', 'devolver_orden_a_etapa',
     'nit_normalizado', 'orden_espera_tela', 'ordenes_esperando_tela',
     'programar_ordenes_a_diseno', 'programar_tela', 'registrar_orden',
     'reportar_factura', 'rol_actual', 'rol_dueno'
@@ -218,8 +219,9 @@ select is(
      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.prosecdef),
   array[
-    'generar_alertas_proximidad_entrega', 'orden_espera_tela',
-    'ordenes_esperando_tela', 'programar_ordenes_a_diseno', 'rol_actual'
+    'devolver_orden_a_etapa', 'generar_alertas_proximidad_entrega',
+    'orden_espera_tela', 'ordenes_esperando_tela',
+    'programar_ordenes_a_diseno', 'rol_actual'
   ],
   'las únicas funciones SECURITY DEFINER son las documentadas'
 );

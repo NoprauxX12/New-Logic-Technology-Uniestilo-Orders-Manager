@@ -1,5 +1,6 @@
 import "server-only";
 
+import { AVANCE_VIGENTE } from "@/lib/ordenes/vigentes";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database.types";
 
@@ -28,6 +29,7 @@ export async function obtenerOrdenesParaTela(): Promise<OrdenParaTela[]> {
       avance_seccion ( checkpoint )
       `,
     )
+    .is(AVANCE_VIGENTE, null)
     .order("fecha_entrega", { ascending: true });
 
   if (error) {

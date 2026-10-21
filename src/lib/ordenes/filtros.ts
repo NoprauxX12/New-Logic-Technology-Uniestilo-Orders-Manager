@@ -155,6 +155,7 @@ export function dondeEsta(orden: OrdenEnTablero): Donde | null {
     orden.etapas
       .filter((etapa) => etapa.estado === "completada")
       .map((etapa) => etapa.seccion),
+    orden.etapaInicial,
   );
   switch (sigue?.checkpoint.id) {
     case "corte_completado":

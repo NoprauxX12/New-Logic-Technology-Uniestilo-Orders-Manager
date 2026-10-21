@@ -29,6 +29,14 @@ const FILTRO_ALERTA = {
   table: "alerta" as const,
 };
 
+// HU-18: devolver una orden a una etapa anterior inserta un reproceso; los
+// avances que anula cambian con un UPDATE que el canal de avances no escucha.
+const FILTRO_REPROCESO = {
+  event: "INSERT" as const,
+  schema: "public" as const,
+  table: "reproceso" as const,
+};
+
 /**
  * Se suscribe a un avance nuevo, a los cambios en los lotes a taller, a una
  * ficha técnica nueva y a las alertas de tela. Devuelve la función para cerrar
@@ -45,6 +53,7 @@ export function suscribirAvancesTablero(
     .on("postgres_changes", FILTRO_LOTES, alCambiar)
     .on("postgres_changes", FILTRO_FICHA, alCambiar)
     .on("postgres_changes", FILTRO_ALERTA, alCambiar)
+    .on("postgres_changes", FILTRO_REPROCESO, alCambiar)
     .subscribe();
 
   return () => {
