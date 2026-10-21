@@ -26,17 +26,18 @@ Node 22 (`.nvmrc`) y npm. No usar pnpm, yarn ni bun: un solo lockfile.
 
 ## Comandos
 
-| Comando                             | Qué hace                                                                        |
-| ----------------------------------- | ------------------------------------------------------------------------------- |
-| `npm run dev`                       | Servidor de desarrollo en http://localhost:3000                                 |
-| `npm run build`                     | Build de producción (lo mismo que corre Vercel)                                 |
-| `npm run lint` / `npm run lint:fix` | ESLint (next/core-web-vitals + typescript, sin reglas que choquen con Prettier) |
-| `npm run format` / `format:check`   | Prettier sobre todo el repo                                                     |
-| `npm run typecheck`                 | `next typegen` + `tsc --noEmit`                                                 |
-| `npm test`                          | Vitest en modo watch                                                            |
-| `npm run test:run`                  | Vitest una sola vez (lo que corre CI)                                           |
-| `npm run check`                     | format:check + lint + typecheck + test:run. **Correrlo antes de abrir un PR**   |
-| `npm run db:types`                  | Regenera `src/types/database.types.ts` desde la base local de Supabase          |
+| Comando                             | Qué hace                                                                           |
+| ----------------------------------- | ---------------------------------------------------------------------------------- |
+| `npm run dev`                       | Servidor de desarrollo en http://localhost:3000                                    |
+| `npm run build`                     | Build de producción (lo mismo que corre Vercel)                                    |
+| `npm run lint` / `npm run lint:fix` | ESLint (next/core-web-vitals + typescript, sin reglas que choquen con Prettier)    |
+| `npm run format` / `format:check`   | Prettier sobre todo el repo                                                        |
+| `npm run typecheck`                 | `next typegen` + `tsc --noEmit`                                                    |
+| `npm test`                          | Vitest en modo watch                                                               |
+| `npm run test:run`                  | Vitest una sola vez (lo que corre CI)                                              |
+| `npm run check`                     | format:check + lint + typecheck + test:run. **Correrlo antes de abrir un PR**      |
+| `npm run db:types`                  | Regenera `src/types/database.types.ts` desde la base local de Supabase             |
+| `npm run test:db`                   | Pruebas pgTAP de `supabase/tests/` contra la base local (RLS, triggers, funciones) |
 
 Un solo test: `npx vitest run src/features/workflow/transitions.test.ts`, o por nombre: `npx vitest run -t "no permite repetir"`.
 
@@ -172,6 +173,7 @@ El séptimo rol, `terminacion` (Marcela), es una sección distinta de marcación
 ## Testing
 
 - Unitarios con Vitest + Testing Library, al lado del código (`*.test.ts(x)` dentro de `src/`).
+- La base se prueba con pgTAP en `supabase/tests/` (`npm run test:db`): RLS por rol, triggers, restricciones y funciones. Una tabla, política, trigger o función nueva trae su prueba ahí.
 - Obligatorio probar: las reglas puras del workflow (transiciones válidas, rol permitido, no repetir checkpoint) y los esquemas de validación. Ahí vive el riesgo del dominio.
 - Componentes: se prueban los que tienen lógica (formularios, guardas por rol). Los Server Components `async` no se prueban con Vitest; para flujos completos se agregará Playwright después del Sprint 1.
 - CI corre `npm run check` en cada PR. Un PR con CI en rojo no se revisa.
