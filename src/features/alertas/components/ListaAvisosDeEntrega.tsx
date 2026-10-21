@@ -1,22 +1,24 @@
 import { BotonYaLoVi } from "@/features/alertas/components/BotonYaLoVi";
 import type { AvisoDeEntrega } from "@/features/alertas/queries";
-import { diasParaEntrega, frasePlazoEntrega } from "@/features/alertas/reglas";
+import { frasePlazoEntrega } from "@/features/alertas/reglas";
+import { diasHasta } from "@/lib/ordenes/reglas";
 
 /**
  * HU-20 · Bloque "Avisos": las entregas que se acercan, con un botón grande
  * para marcar cada una como vista. Si no hay ninguna, no ocupa espacio.
  *
- * El plazo ("Entrega hoy", "Se venció hace 2 días") se calcula al mirar y no
- * se lee del detalle guardado, que quedó escrito el día que se generó el aviso.
+ * El plazo ("Entrega hoy", "Se venció hace 2 días") se calcula al mirar. El
+ * `detalle` guardado en la alerta no se muestra: quedó escrito el día que se
+ * generó ("entrega en 3 días") y hoy podría decir otra cosa.
  */
 
 type Props = {
   avisos: readonly AvisoDeEntrega[];
-  /** El día de hoy en Colombia, `YYYY-MM-DD`. */
-  hoy: string;
+  /** El momento desde el que se cuenta el plazo; por defecto, ahora. */
+  ahora?: Date;
 };
 
-export function ListaAvisosDeEntrega({ avisos, hoy }: Props) {
+export function ListaAvisosDeEntrega({ avisos, ahora }: Props) {
   if (avisos.length === 0) return null;
 
   return (
@@ -27,7 +29,7 @@ export function ListaAvisosDeEntrega({ avisos, hoy }: Props) {
       <h2 className="text-lg font-semibold text-zinc-900">Avisos</h2>
       <ul className="flex flex-col gap-3">
         {avisos.map((aviso) => {
-          const dias = diasParaEntrega(aviso.fechaEntrega, hoy);
+          const dias = diasHasta(aviso.fechaEntrega, ahora);
           const urgente = dias <= 0;
 
           return (
@@ -48,7 +50,6 @@ export function ListaAvisosDeEntrega({ avisos, hoy }: Props) {
                   {frasePlazoEntrega(dias)} · {aviso.numeroOrdenCompra}
                 </p>
                 <p className="text-sm text-zinc-700">{aviso.razonSocial}</p>
-                <p className="text-base text-zinc-900">{aviso.detalle}</p>
               </div>
               <BotonYaLoVi alertaId={aviso.id} />
             </li>

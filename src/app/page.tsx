@@ -67,9 +67,6 @@ export default async function HomePage({ searchParams }: Props) {
 async function PanelDePersona({ usuario }: { usuario: UsuarioActual }) {
   const vista = vistaDeRol(usuario.rol);
   const avisos = await listarAvisosDeEntrega();
-  const hoy = new Date().toLocaleDateString("en-CA", {
-    timeZone: "America/Bogota",
-  });
 
   return (
     <div className="flex flex-col items-center gap-4">
@@ -82,7 +79,7 @@ async function PanelDePersona({ usuario }: { usuario: UsuarioActual }) {
         <p className="max-w-md text-base text-zinc-600">{vista.aviso}</p>
       ) : null}
 
-      <ListaAvisosDeEntrega avisos={avisos} hoy={hoy} />
+      <ListaAvisosDeEntrega avisos={avisos} />
 
       <div className="flex flex-wrap justify-center gap-3">
         {vista.botones.map((boton) => (

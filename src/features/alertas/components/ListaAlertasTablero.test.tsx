@@ -6,6 +6,7 @@ import type { AlertaTelaEnTablero } from "@/features/alertas/queries";
 
 vi.mock("@/features/alertas/actions", () => ({
   atenderAlertaDeTela: vi.fn(),
+  atenderAvisoDeEntrega: vi.fn(),
 }));
 
 const ALERTA: AlertaTelaEnTablero = {
@@ -39,5 +40,27 @@ describe("ListaAlertasTablero", () => {
     expect(
       screen.getByRole("button", { name: "Marcar como resuelta" }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("ListaAlertasTablero · avisos de entrega", () => {
+  it("muestra el plazo vivo y no el detalle guardado, que pudo quedar viejo", () => {
+    render(
+      <ListaAlertasTablero
+        ahora={new Date("2026-10-20T17:00:00Z")}
+        alertas={[
+          {
+            tipo: "proximidad_entrega",
+            id: "00000000-0000-0000-0000-0000000000b2",
+            numeroOrdenCompra: "OC-5004",
+            razonSocial: "Transportes La Mesa",
+            fechaEntrega: "2026-10-20",
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Entrega hoy · OC-5004")).toBeInTheDocument();
+    expect(screen.queryByText(/entrega en 3 días/i)).toBeNull();
   });
 });
