@@ -33,3 +33,26 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:run
       - run: npm run build
+
+  base-de-datos:
+    # Job aparte y en paralelo: no alarga el CI de la aplicación. Aplica TODAS las
+    # migraciones y el seed desde cero (si una falla, falla aquí) y corre las
+    # pruebas pgTAP de supabase/tests.
+    name: Base de datos
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          # La misma versión que fija package.json ("supabase").
+          version: 2.116.0
+      - name: Levantar Supabase local
+        # Sin los servicios que las pruebas no usan: Studio, imgproxy, funciones
+        # edge, logs, correo y pooler. Quedan Postgres, Auth y Storage, que
+        # crean los esquemas auth y storage de los que dependen las migraciones.
+        run: supabase start -x studio,imgproxy,edge-runtime,vector,logflare,mailpit,postgres-meta,supavisor
+      - name: Aplicar migraciones y seed desde cero
+        run: supabase db reset
+      - name: Pruebas pgTAP
+        run: supabase test db

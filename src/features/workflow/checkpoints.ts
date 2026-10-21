@@ -44,9 +44,8 @@ export type Checkpoint = {
   /**
    * Si el sistema ya permite marcarlo.
    *
-   * El flujo del taller tiene nueve etapas y hoy hay cinco construidas: las
-   * otras cuatro son de historias de otros sprints y todavía no tienen
-   * pantalla. Sin esta marca, una orden recién registrada se quedaría
+   * El flujo del taller tiene trece etapas. Una historia que todavía no
+   * se construye deja la suya en `false` hasta que tenga pantalla. Sin esta marca, una orden recién registrada se quedaría
    * trancada para siempre en la primera etapa, porque el motor exigiría marcar
    * algo que nadie puede marcar.
    *
@@ -68,12 +67,20 @@ export type Checkpoint = {
  */
 export const CHECKPOINTS = [
   {
+    id: "cotizacion_enviada",
+    etiqueta: "Cotización enviada",
+    rolDueno: "secretaria",
+    hu: "HU-02",
+    disponible: true,
+    ruta: "/ordenes/cotizacion",
+  },
+  {
     id: "cotizacion_aprobada",
     etiqueta: "Cotización aprobada",
     rolDueno: "secretaria",
     hu: "HU-02",
-    disponible: false,
-    ruta: null,
+    disponible: true,
+    ruta: "/ordenes/cotizacion",
   },
   {
     id: "programada_diseno",
@@ -126,13 +133,10 @@ export const CHECKPOINTS = [
     ruta: "/ordenes/marcacion",
   },
   {
-    // PENDIENTE (CLAUDE.md): HU-19 la marca "terminación (Marcela)", que no es
-    // ninguno de los seis roles del modelo. Queda en `marcacion` de forma
-    // provisional para no bloquear el sprint. Cuando el equipo decida, se
-    // cambia aquí y —si resulta ser un rol nuevo— en una migración del enum.
+    // HU-19 la marca terminación (Marcela), una sección distinta de marcación.
     id: "lista_despacho",
     etiqueta: "Lista para despachar",
-    rolDueno: "marcacion",
+    rolDueno: "terminacion",
     hu: "HU-19",
     disponible: true,
     ruta: "/ordenes/despacho",
@@ -187,6 +191,7 @@ export const ETIQUETAS_ROL: Record<Rol, string> = {
   corte: "Corte",
   logistica: "Logística",
   marcacion: "Marcación",
+  terminacion: "Terminación",
 };
 
 const POR_ID = new Map<CheckpointId, Checkpoint>(

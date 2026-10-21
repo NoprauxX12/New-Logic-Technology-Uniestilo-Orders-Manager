@@ -86,13 +86,27 @@ describe("vistaDeRol · roles con pantalla propia", () => {
     expect(vista.botones[0].etiqueta).toMatch(/llegada a marcación/i);
   });
 
-  it("marcación también marca la salida a despacho (HU-19), en su propia pantalla", () => {
-    const vista = vistaDeRol("marcacion");
+  it("terminación marca la salida a despacho (HU-19), en su propia pantalla", () => {
+    const vista = vistaDeRol("terminacion");
     const ruta = buscarCheckpoint("lista_despacho").ruta;
 
     expect(ruta).not.toBeNull();
-    expect(vista.botones.map((b) => b.ruta)).toContain(ruta);
-    expect(vista.botones[1].etiqueta).toMatch(/lista para despachar/i);
+    expect(vista.botones.map((b) => b.ruta)).toEqual([ruta]);
+    expect(vista.botones[0].etiqueta).toMatch(/lista para despachar/i);
+  });
+
+  it("marcación ya no marca la salida a despacho: solo su llegada", () => {
+    const rutas = vistaDeRol("marcacion").botones.map((b) => b.ruta);
+
+    expect(rutas).toEqual(["/ordenes/marcacion"]);
+  });
+
+  it("secretaría empieza por las cotizaciones (HU-02), antes de programar a diseño", () => {
+    const rutas = vistaDeRol("secretaria").botones.map((b) => b.ruta);
+
+    expect(rutas[0]).toBe(buscarCheckpoint("cotizacion_enviada").ruta);
+    expect(rutas[0]).toBe("/ordenes/cotizacion");
+    expect(rutas[1]).toBe("/ordenes/programacion");
   });
 
   it("secretaría programa a diseño y cierra órdenes, sus dos pantallas", () => {

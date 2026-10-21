@@ -7,6 +7,8 @@ import {
   type ResultadoAlerta,
 } from "@/features/alertas/reglas";
 import type { CheckpointId, Rol } from "@/features/workflow/checkpoints";
+import { getUsuarioActual } from "@/lib/auth/usuarioActual";
+import { AVANCE_VIGENTE } from "@/lib/ordenes/vigentes";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -96,6 +98,7 @@ export async function listarOrdenesParaTelas(
        avance_seccion ( checkpoint ),
        alerta ( tipo, estado, detalle, fecha_creacion, tela_llegada_en )`,
     )
+    .is(AVANCE_VIGENTE, null)
     .order("fecha_entrega", { ascending: true });
 
   if (error) {
@@ -155,6 +158,7 @@ export async function obtenerSituacionParaAviso(
        alerta ( tipo, estado, detalle, fecha_creacion, tela_llegada_en )`,
     )
     .eq("id", ordenId)
+    .is(AVANCE_VIGENTE, null)
     .maybeSingle();
 
   if (error) {
@@ -191,6 +195,7 @@ export async function obtenerAdministradores(): Promise<Administrador[]> {
 
 /** Una alerta de tela pendiente, como la ve administración en el tablero. */
 export type AlertaTelaEnTablero = {
+  tipo: "falta_tela";
   id: string;
   detalle: string;
   fechaCreacion: string;
@@ -200,14 +205,24 @@ export type AlertaTelaEnTablero = {
 };
 
 /**
- * HU-07 · Las alertas de tela que siguen pendientes.
+ * HU-07 y HU-20 · Las alertas pendientes del tablero de administración: las de
+ * tela de todos y las de entrega de la propia cuenta.
  *
  * Atendida no sale: marcarla resuelta la saca del tablero sin borrar la fila.
- * Las de proximidad de entrega (HU-20) no son esta historia.
+ * (El nombre se conserva porque el tablero la importa con él.)
  */
 export async function listarAlertasDeTelaPendientes(): Promise<
-  AlertaTelaEnTablero[]
+  AlertaDelTablero[]
 > {
+  const [tela, entrega] = await Promise.all([
+    listarAlertasDeTela(),
+    listarAvisosDeEntrega(),
+  ]);
+
+  return [...tela, ...entrega];
+}
+
+async function listarAlertasDeTela(): Promise<AlertaTelaEnTablero[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -229,6 +244,7 @@ export async function listarAlertasDeTelaPendientes(): Promise<
   }
 
   return data.map((alerta) => ({
+    tipo: "falta_tela" as const,
     id: alerta.id,
     detalle: alerta.detalle,
     fechaCreacion: alerta.fecha_creacion,
@@ -236,4 +252,62 @@ export async function listarAlertasDeTelaPendientes(): Promise<
     razonSocial: alerta.orden?.cliente?.razon_social ?? "Sin cliente",
     enviadaPor: alerta.creador?.nombre ?? "Secretaría",
   }));
+}
+
+/** Una alerta de entrega próxima, pendiente, para quien la recibió (HU-20). */
+export type AvisoDeEntrega = {
+  tipo: "proximidad_entrega";
+  id: string;
+  numeroOrdenCompra: string;
+  razonSocial: string;
+  /** `YYYY-MM-DD`, para calcular el plazo al momento de mirar. */
+  fechaEntrega: string;
+};
+
+export type AlertaDelTablero = AlertaTelaEnTablero | AvisoDeEntrega;
+
+/**
+ * HU-20 · Los avisos de entrega pendientes de la persona que mira.
+ *
+ * Se filtra por la sesión además de por RLS: administración ve todas las
+ * alertas, pero cada quien atiende solo las suyas. Las más urgentes (entrega
+ * más cercana) van primero.
+ */
+export async function listarAvisosDeEntrega(): Promise<AvisoDeEntrega[]> {
+  const usuario = await getUsuarioActual();
+
+  if (!usuario) return [];
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("alerta")
+    .select(
+      `id,
+       orden ( numero_orden_compra, fecha_entrega, cliente ( razon_social ) )`,
+    )
+    .eq("tipo", "proximidad_entrega")
+    .eq("estado", "pendiente")
+    .eq("destinatario_id", usuario.id);
+
+  if (error) {
+    console.error("[HU-20] No se pudieron leer los avisos de entrega", error);
+    throw new Error("No se pudieron leer los avisos de entrega.");
+  }
+
+  return data
+    .flatMap((alerta) =>
+      alerta.orden
+        ? [
+            {
+              tipo: "proximidad_entrega" as const,
+              id: alerta.id,
+              numeroOrdenCompra: alerta.orden.numero_orden_compra,
+              razonSocial: alerta.orden.cliente?.razon_social ?? "Sin cliente",
+              fechaEntrega: alerta.orden.fecha_entrega,
+            },
+          ]
+        : [],
+    )
+    .sort((uno, otro) => uno.fechaEntrega.localeCompare(otro.fechaEntrega));
 }

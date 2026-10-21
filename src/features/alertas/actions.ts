@@ -16,6 +16,7 @@ import {
 import {
   destinatarioDeAlertaTela,
   puedeAtenderAlerta,
+  puedeAtenderAlertaDeEntrega,
   puedeAvisarFaltaDeTela,
   puedeMarcarLlegadaDeTela,
 } from "@/features/alertas/reglas";
@@ -375,4 +376,79 @@ export async function atenderAlertaDeTela(
   revalidatePath("/ordenes/telas");
 
   return { ok: true, mensaje: "Alerta resuelta." };
+}
+
+/**
+ * HU-20 · "Ya lo vi": el destinatario marca atendido su aviso de entrega.
+ *
+ * Cada quien atiende solo el suyo: la regla lo comprueba con la sesión, y la
+ * base lo repite (RLS y el filtro por destinatario). La fila no se borra.
+ */
+export async function atenderAvisoDeEntrega(
+  _estadoPrevio: EstadoAtencionAlerta,
+  formData: FormData,
+): Promise<EstadoAtencionAlerta> {
+  const validacion = atenderAlertaSchema.safeParse({
+    alertaId: formData.get("alertaId"),
+  });
+
+  if (!validacion.success) {
+    return {
+      ok: false,
+      mensaje: "No se pudo identificar el aviso. Vuelve a abrir la pantalla.",
+    };
+  }
+
+  const usuario = await getUsuarioActual();
+
+  if (!usuario) {
+    return { ok: false, mensaje: "Inicia sesión para marcar el aviso." };
+  }
+
+  const supabase = await createClient();
+
+  const { data: alerta } = await supabase
+    .from("alerta")
+    .select("destinatario_id, estado")
+    .eq("id", validacion.data.alertaId)
+    .eq("tipo", "proximidad_entrega")
+    .maybeSingle();
+
+  if (!alerta) return { ok: false, mensaje: "No encontramos ese aviso." };
+
+  const permiso = puedeAtenderAlertaDeEntrega({
+    destinatarioId: alerta.destinatario_id,
+    usuarioId: usuario.id,
+  });
+
+  if (!permiso.permitido) return { ok: false, mensaje: permiso.mensaje };
+
+  const { data, error } = await supabase
+    .from("alerta")
+    .update({
+      estado: "atendida",
+      fecha_atencion: new Date().toISOString(),
+    })
+    .eq("id", validacion.data.alertaId)
+    .eq("tipo", "proximidad_entrega")
+    .eq("destinatario_id", usuario.id)
+    .eq("estado", "pendiente")
+    .select("id");
+
+  if (error) {
+    console.error("[HU-20] No se pudo marcar el aviso", error);
+    return {
+      ok: false,
+      mensaje: "No se pudo marcar el aviso. Vuelve a intentarlo.",
+    };
+  }
+
+  revalidatePath("/");
+  revalidatePath("/tablero");
+
+  if (data.length === 0) {
+    return { ok: false, mensaje: "Ese aviso ya estaba marcado." };
+  }
+
+  return { ok: true, mensaje: "Listo." };
 }

@@ -26,17 +26,18 @@ Node 22 (`.nvmrc`) y npm. No usar pnpm, yarn ni bun: un solo lockfile.
 
 ## Comandos
 
-| Comando                             | Qué hace                                                                        |
-| ----------------------------------- | ------------------------------------------------------------------------------- |
-| `npm run dev`                       | Servidor de desarrollo en http://localhost:3000                                 |
-| `npm run build`                     | Build de producción (lo mismo que corre Vercel)                                 |
-| `npm run lint` / `npm run lint:fix` | ESLint (next/core-web-vitals + typescript, sin reglas que choquen con Prettier) |
-| `npm run format` / `format:check`   | Prettier sobre todo el repo                                                     |
-| `npm run typecheck`                 | `next typegen` + `tsc --noEmit`                                                 |
-| `npm test`                          | Vitest en modo watch                                                            |
-| `npm run test:run`                  | Vitest una sola vez (lo que corre CI)                                           |
-| `npm run check`                     | format:check + lint + typecheck + test:run. **Correrlo antes de abrir un PR**   |
-| `npm run db:types`                  | Regenera `src/types/database.types.ts` desde la base local de Supabase          |
+| Comando                             | Qué hace                                                                           |
+| ----------------------------------- | ---------------------------------------------------------------------------------- |
+| `npm run dev`                       | Servidor de desarrollo en http://localhost:3000                                    |
+| `npm run build`                     | Build de producción (lo mismo que corre Vercel)                                    |
+| `npm run lint` / `npm run lint:fix` | ESLint (next/core-web-vitals + typescript, sin reglas que choquen con Prettier)    |
+| `npm run format` / `format:check`   | Prettier sobre todo el repo                                                        |
+| `npm run typecheck`                 | `next typegen` + `tsc --noEmit`                                                    |
+| `npm test`                          | Vitest en modo watch                                                               |
+| `npm run test:run`                  | Vitest una sola vez (lo que corre CI)                                              |
+| `npm run check`                     | format:check + lint + typecheck + test:run. **Correrlo antes de abrir un PR**      |
+| `npm run db:types`                  | Regenera `src/types/database.types.ts` desde la base local de Supabase             |
+| `npm run test:db`                   | Pruebas pgTAP de `supabase/tests/` contra la base local (RLS, triggers, funciones) |
 
 Un solo test: `npx vitest run src/features/workflow/transitions.test.ts`, o por nombre: `npx vitest run -t "no permite repetir"`.
 
@@ -62,6 +63,7 @@ src/
     auth/                 Sesión y acceso por rol (accesoPorRuta.ts, guardia.ts): HU-16, HU-17
     alertas/              HU-06, HU-07, HU-20 (post-MVP)
     asistente/            Asistente de solo lectura para administración: HU-15 (docs/adr/0009)
+    correcciones/         Devolver una orden a una etapa y crear órdenes de corrección, solo admin: HU-18 (docs/adr/0011)
     documentos/           Etiquetas y documentos de despacho: HU-13
     usuarios/             Cuentas de las personas (crear, editar, desactivar, borrar), solo admin: HU-24 (docs/adr/0008)
   components/
@@ -72,7 +74,7 @@ src/
                           admin.ts (secret key, solo para Supabase Auth)
     auth/                 getUsuarioActual(): la única respuesta a "quién está actuando"
     talleres/             Estado derivado de los lotes; lo usan talleres y tablero
-    ordenes/              Estado derivado de una orden (avances, semáforo, etapas); lo usan tablero y asistente
+    ordenes/              Estado derivado de una orden (avances vigentes, semáforo, etapas); lo usan tablero y asistente
     ai/                   Interfaz propia sobre el LLM: config, proveedor y responderConHerramientas()
     utils/                Helpers puros: fechas, moneda, cn()
   types/                  database.types.ts (generado) y tipos de dominio
@@ -120,7 +122,7 @@ Salen del diseño de arquitectura y de los RNF. Un PR que las rompa no se mezcla
 
 1. **El estado de una orden se deriva, no se guarda.** No existe una columna `estado` editable: el estado es la agregación de las filas de `avance_seccion`. El tablero (HU-14) se construye leyendo esos avances.
 2. **Toda mutación de avance pasa por el motor de workflow** (`src/features/workflow`). Ninguna action inserta en `avance_seccion` por su cuenta. El motor verifica que el checkpoint sea el siguiente válido en la secuencia, que el rol del usuario sea el dueño de esa sección y que no se repita uno ya marcado.
-3. **La auditoría es inmutable (RNF-05).** Un avance registra `usuario_id` y `fecha_hora` y nunca se edita ni se borra. Un error se corrige con un registro nuevo o con una orden de corrección (HU-18).
+3. **La auditoría es inmutable (RNF-05).** Un avance registra `usuario_id` y `fecha_hora` y nunca se edita ni se borra. Un error se corrige con un registro nuevo, devolviendo la orden a una etapa o con una orden de corrección (HU-18). La única excepción controlada es `avance_seccion.anulado_por`: `devolver_orden_a_etapa` lo pasa de nulo a un `reproceso` (el avance sigue ahí con su quién y su cuándo, pero deja de estar vigente) y un trigger rechaza cualquier otro UPDATE o DELETE. **Toda lectura de avances que decida algo filtra los vigentes** con `AVANCE_VIGENTE` (`src/lib/ordenes/vigentes.ts`) en TypeScript y `anulado_por is null` en SQL (`docs/adr/0011`).
 4. **La secuencia de checkpoints y el rol dueño de cada uno viven en un solo lugar:** `src/features/workflow/checkpoints.ts`. UI, actions y políticas RLS se derivan de ahí. Si cambia el flujo, cambia ese archivo y una migración.
 5. **Autorización en dos capas.** La UI muestra a cada rol solo lo suyo; RLS lo garantiza en la base aunque la UI falle (RNF-04). Ninguna tabla se crea sin políticas RLS. Cada página llama a `exigirAcceso(ruta)` antes de leer nada, y el mapa ruta → roles vive en `src/features/auth/accesoPorRuta.ts` (`docs/adr/0007`).
 6. **Quién actúa sale de la sesión, nunca del formulario.** Las actions usan `getUsuarioActual()` y las funciones de Postgres `auth.uid()`. Ningún `usuario_id`, `enviado_por` ni `recibido_por` se recibe como dato (RNF-05).
@@ -131,16 +133,17 @@ Salen del diseño de arquitectura y de los RNF. Un PR que las rompa no se mezcla
 
 Roles (enum `rol`) y lo que marca cada uno:
 
-| Rol          | Marca                                                                              |
-| ------------ | ---------------------------------------------------------------------------------- |
-| `admin`      | Registra órdenes, crea las cuentas (HU-24), ve todo el tablero, resuelve alertas   |
-| `secretaria` | Cotización, programación a diseño y de tela, validación de insumos, cierre (HU-13) |
-| `diseno`     | Ficha técnica (HU-04)                                                              |
-| `corte`      | Corte completado (HU-08)                                                           |
-| `logistica`  | Recogido/bordado (HU-09), despacho a taller (HU-10), recepción del taller (HU-11)  |
-| `marcacion`  | Llegada a marcación (HU-12)                                                        |
+| Rol           | Marca                                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------------- |
+| `admin`       | Registra órdenes, crea las cuentas (HU-24), ve todo el tablero, resuelve alertas                              |
+| `secretaria`  | Cotización enviada y aprobada (HU-02), programación a diseño y de tela, validación de insumos, cierre (HU-13) |
+| `diseno`      | Ficha técnica (HU-04)                                                                                         |
+| `corte`       | Corte completado (HU-08)                                                                                      |
+| `logistica`   | Recogido/bordado (HU-09), despacho a taller (HU-10), recepción del taller (HU-11)                             |
+| `marcacion`   | Llegada a marcación (HU-12)                                                                                   |
+| `terminacion` | Lista para despachar (HU-19)                                                                                  |
 
-HU-19 (lista para despachar) la marca "terminación"; ver pendientes al final.
+El séptimo rol, `terminacion` (Marcela), es una sección distinta de marcación (Sandra): marca la orden lista para despachar y con eso le queda a secretaría para el cierre.
 
 ## Backlog (HU → sprint)
 
@@ -165,12 +168,14 @@ HU-19 (lista para despachar) la marca "terminación"; ver pendientes al final.
 - Las políticas de `avance_seccion` usan `rol_dueno(checkpoint)`, copia SQL del mapa de `checkpoints.ts` verificada por `rlsPorRol.test.ts`. Si cambia el flujo, cambian los dos.
 - Esquema con migraciones: `npx supabase migration new <nombre>` → escribir el SQL → `npx supabase db reset` en local → PR. Nombres descriptivos en snake_case: `crear_orden_e_items`, `rls_avance_seccion`.
 - Tras cambiar el esquema: `npm run db:types` y subir `database.types.ts` en el mismo PR.
-- Realtime solo para el tablero (HU-14), que escucha `avance_seccion` y `lote_taller`; el resto son lecturas normales.
+- Realtime solo para el tablero (HU-14), que escucha `avance_seccion`, `lote_taller`, `ficha_tecnica`, `alerta` y `reproceso`; el resto son lecturas normales.
+- Pruebas de la base con pgTAP en `supabase/tests/` (las de HU-18 son `hu18_*.sql`): cubren lo que Vitest no alcanza, como las funciones de Postgres y los triggers.
 - Archivos (fichas técnicas, documentos de despacho) en Storage bajo `<bucket>/<orden_id>/<archivo>`; en la base solo la ruta y los metadatos.
 
 ## Testing
 
 - Unitarios con Vitest + Testing Library, al lado del código (`*.test.ts(x)` dentro de `src/`).
+- La base se prueba con pgTAP en `supabase/tests/` (`npm run test:db`): RLS por rol, triggers, restricciones y funciones. Una tabla, política, trigger o función nueva trae su prueba ahí.
 - Obligatorio probar: las reglas puras del workflow (transiciones válidas, rol permitido, no repetir checkpoint) y los esquemas de validación. Ahí vive el riesgo del dominio.
 - Componentes: se prueban los que tienen lógica (formularios, guardas por rol). Los Server Components `async` no se prueban con Vitest; para flujos completos se agregará Playwright después del Sprint 1.
 - CI corre `npm run check` en cada PR. Un PR con CI en rojo no se revisa.
@@ -191,7 +196,7 @@ Un HU está terminado cuando cumple sus criterios de aceptación, tiene tests de
 
 Las decisiones cerradas están en `docs/adr/`. Abierto con el equipo o la PO:
 
-- HU-19 la marca "terminación (Marcela)", pero el modelo tiene 6 roles y `terminacion` no es uno. Definir si es un rol nuevo o si lo marca `marcacion`.
+- ~~HU-19 la marca "terminación (Marcela)", pero el modelo tiene 6 roles.~~ Resuelto: `terminacion` es un rol propio (enum `rol`, `rol_dueno` en SQL y `checkpoints.ts`).
 - El documento de arquitectura asigna la autenticación a HU-21; el backlog la pone en HU-16/HU-17 y HU-21 es el asistente. Unificar.
 - ~~El Sprint 1 exige "queda registro de quién marcó" pero el login (HU-16) es Sprint 2. Hace falta al menos un login básico en Sprint 1.~~ Resuelto: login real con Supabase Auth y el rol como claim del JWT (`docs/adr/0006`). ~~Falta HU-17.~~ Resuelto: RLS por rol y acceso por pantalla (`docs/adr/0007`). El PR #37 quedó reemplazado y debe cerrarse.
 - Segundo factor (MFA). Propuesta: TOTP obligatorio para `admin` y `secretaria` exigiendo `aal2` en el proxy y en las políticas sensibles; passkeys para todos cuando Supabase las saque de beta. Antes hace falta SMTP propio para recuperar contraseñas.

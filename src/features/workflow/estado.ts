@@ -4,7 +4,10 @@ import {
   type Checkpoint,
   type CheckpointId,
 } from "@/features/workflow/checkpoints";
-import { siguienteCheckpoint } from "@/features/workflow/transiciones";
+import {
+  siguienteCheckpoint,
+  type EtapaInicial,
+} from "@/features/workflow/transiciones";
 
 /**
  * El estado de una orden no se guarda en ninguna columna: se deriva de sus
@@ -27,8 +30,9 @@ export type LoQueSigue = {
  */
 export function loQueSigue(
   marcados: readonly CheckpointId[],
+  etapaInicial?: EtapaInicial,
 ): LoQueSigue | null {
-  const siguiente = siguienteCheckpoint(marcados);
+  const siguiente = siguienteCheckpoint(marcados, etapaInicial);
   if (!siguiente) return null;
 
   const checkpoint = buscarCheckpoint(siguiente);

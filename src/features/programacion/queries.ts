@@ -6,6 +6,7 @@ import {
   totalDePrendas,
 } from "@/features/programacion/reglas";
 import type { CheckpointId } from "@/features/workflow/checkpoints";
+import { AVANCE_VIGENTE } from "@/lib/ordenes/vigentes";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -39,6 +40,8 @@ export type OrdenPorProgramar = {
   totalPrendas: number;
   /** Todo lo que lleva marcado, para que las reglas decidan. */
   marcados: CheckpointId[];
+  /** HU-18: por qué etapa entró, si es una orden de corrección. */
+  etapaInicial: CheckpointId | null;
 };
 
 export type OrdenEnLaHoja = OrdenPorProgramar & {
@@ -63,6 +66,7 @@ const SELECCION = `id,
    fecha_entrega,
    numero_orden_programacion,
    posicion_programacion,
+   etapa_inicial,
    cliente ( razon_social ),
    item_orden ( id, descripcion, cantidad ),
    avance_seccion ( checkpoint, fecha_hora, usuario ( nombre ) )`;
@@ -74,6 +78,7 @@ type FilaOrden = {
   fecha_entrega: string;
   numero_orden_programacion: number | null;
   posicion_programacion: number | null;
+  etapa_inicial: CheckpointId | null;
   cliente: { razon_social: string } | null;
   item_orden: { id: string; descripcion: string; cantidad: number }[];
   avance_seccion: {
@@ -99,6 +104,7 @@ function aOrden(fila: FilaOrden): OrdenPorProgramar {
     referencias,
     totalPrendas: totalDePrendas(referencias),
     marcados: fila.avance_seccion.map((avance) => avance.checkpoint),
+    etapaInicial: fila.etapa_inicial,
   };
 }
 
@@ -124,6 +130,7 @@ export async function listarOrdenesPorProgramar(): Promise<
   const { data, error } = await supabase
     .from("orden")
     .select(SELECCION)
+    .is(AVANCE_VIGENTE, null)
     .is("posicion_programacion", null)
     .order("fecha_ingreso", { ascending: true });
 
@@ -138,7 +145,9 @@ export async function listarOrdenesPorProgramar(): Promise<
   return data
     .map(aOrden)
     .filter(
-      (orden) => puedeProgramar(orden.marcados, ROL_DE_PROGRAMACION).permitido,
+      (orden) =>
+        puedeProgramar(orden.marcados, ROL_DE_PROGRAMACION, orden.etapaInicial)
+          .permitido,
     );
 }
 
@@ -158,6 +167,7 @@ export async function listarHojasDeProgramacion(): Promise<
   const { data, error } = await supabase
     .from("orden")
     .select(SELECCION)
+    .is(AVANCE_VIGENTE, null)
     .not("posicion_programacion", "is", null)
     .order("numero_orden_programacion", { ascending: false })
     .order("posicion_programacion", { ascending: true });

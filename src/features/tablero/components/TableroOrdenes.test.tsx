@@ -1,9 +1,21 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { BadgeSemaforo } from "@/features/tablero/components/BadgeSemaforo";
 import { EstadoVacioTablero } from "@/features/tablero/components/EstadoVacioTablero";
 import { TableroOrdenes } from "@/features/tablero/components/TableroOrdenes";
+import type { ConteosTablero } from "@/lib/ordenes/filtros";
+import { SIN_FILTROS } from "@/lib/ordenes/filtros";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: vi.fn() }),
+  usePathname: () => "/tablero",
+}));
+
+const CONTEOS_VACIOS: ConteosTablero = {
+  filtro: { atrasadas: 0, en_riesgo: 0, esta_semana: 0 },
+  donde: { corte: 0, bordado: 0, taller: 0, marcacion: 0 },
+};
 
 describe("EstadoVacioTablero", () => {
   it("muestra mensaje útil cuando no hay órdenes", () => {
@@ -31,6 +43,9 @@ describe("TableroOrdenes", () => {
     render(
       <TableroOrdenes
         ordenes={[]}
+        totalOrdenes={0}
+        filtros={SIN_FILTROS}
+        conteos={CONTEOS_VACIOS}
         resumen={{
           totalOrdenes: 0,
           enProduccion: 0,
@@ -47,6 +62,9 @@ describe("TableroOrdenes", () => {
     render(
       <TableroOrdenes
         ordenes={[]}
+        totalOrdenes={0}
+        filtros={SIN_FILTROS}
+        conteos={CONTEOS_VACIOS}
         resumen={{
           totalOrdenes: 0,
           enProduccion: 0,
@@ -65,6 +83,9 @@ describe("TableroOrdenes", () => {
     render(
       <TableroOrdenes
         ordenes={[]}
+        totalOrdenes={0}
+        filtros={SIN_FILTROS}
+        conteos={CONTEOS_VACIOS}
         resumen={{
           totalOrdenes: 0,
           enProduccion: 0,
@@ -75,5 +96,28 @@ describe("TableroOrdenes", () => {
     );
 
     expect(screen.queryByText(/revisar prioridad/i)).not.toBeInTheDocument();
+  });
+
+  it("avisa que ninguna orden coincide y ofrece quitar los filtros", () => {
+    render(
+      <TableroOrdenes
+        ordenes={[]}
+        totalOrdenes={5}
+        filtros={{ q: "zzz", filtro: null, donde: null }}
+        conteos={CONTEOS_VACIOS}
+        resumen={{
+          totalOrdenes: 5,
+          enProduccion: 0,
+          atrasadas: 0,
+          enRiesgo: 0,
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Ninguna orden coincide")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Quitar filtros" }),
+    ).toHaveAttribute("href", "/tablero");
+    expect(screen.getByText("0 de 5 órdenes")).toBeInTheDocument();
   });
 });

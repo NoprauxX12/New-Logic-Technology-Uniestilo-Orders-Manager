@@ -1,7 +1,6 @@
 import {
   buscarCheckpoint,
   CHECKPOINTS,
-  CHECKPOINTS_DISPONIBLES,
   ETIQUETAS_ROL,
   type CheckpointId,
   type Rol,
@@ -21,8 +20,17 @@ import {
  * levantar nada, que es donde vive el riesgo del dominio.
  *
  * La base respalda una de las tres por su cuenta: el índice único sobre
- * `(orden_id, checkpoint)` impide el duplicado aunque esta validación falle.
+ * `(orden_id, checkpoint)` de los avances vigentes impide el duplicado aunque
+ * esta validación falle.
+ *
+ * `marcados` son siempre los avances VIGENTES: los que una devolución anuló
+ * (HU-18) no cuentan, y por eso la orden vuelve a la etapa de destino sin
+ * ningún caso especial aquí. Una orden de corrección entra al flujo por su
+ * `etapaInicial` (HU-18): las etapas anteriores no le aplican.
  */
+
+/** La etapa por la que una orden de corrección entra al flujo; null si recorre todo. */
+export type EtapaInicial = CheckpointId | null | undefined;
 
 export type MotivoRechazo =
   | "ya_marcado"
@@ -36,20 +44,83 @@ export type ResultadoMarcado =
   | { permitido: false; motivo: MotivoRechazo; mensaje: string };
 
 /**
+ * Qué lugar ocupa, en la secuencia, la etapa más avanzada que la orden ya
+ * tiene marcada. `-1` si todavía no tiene ninguna.
+ */
+function posicionDelAvance(marcados: readonly CheckpointId[]): number {
+  const yaEsta = new Set(marcados);
+  return CHECKPOINTS.reduce(
+    (ultima, checkpoint, posicion) =>
+      yaEsta.has(checkpoint.id) ? posicion : ultima,
+    -1,
+  );
+}
+
+/**
+ * Desde qué lugar de la secuencia aplican las etapas de esta orden: el de su
+ * etapa inicial, o el primero si recorre el flujo completo.
+ */
+function posicionDeEntrada(etapaInicial: EtapaInicial): number {
+  if (!etapaInicial) return 0;
+  return Math.max(
+    0,
+    CHECKPOINTS.findIndex((checkpoint) => checkpoint.id === etapaInicial),
+  );
+}
+
+/**
+ * Las etapas que esta orden se saltó sin que nadie hiciera nada mal: quedaron
+ * atrás de su avance sin marcarse, porque cuando la orden pasó por ahí esa
+ * etapa todavía no se podía marcar en el sistema. Es lo que le pasa a una orden
+ * que ya iba en corte el día que se enciende la programación a diseño.
+ *
+ * No son pendientes: no se pueden marcar, no cuentan en el avance y el tablero
+ * las muestra como "No aplicó".
+ */
+export function etapasQueNoAplicaron(
+  marcados: readonly CheckpointId[],
+  etapaInicial?: EtapaInicial,
+): CheckpointId[] {
+  const yaEsta = new Set(marcados);
+  const limite = Math.max(
+    posicionDelAvance(marcados),
+    posicionDeEntrada(etapaInicial),
+  );
+
+  return CHECKPOINTS.filter(
+    (checkpoint, posicion) => posicion < limite && !yaEsta.has(checkpoint.id),
+  ).map((checkpoint) => checkpoint.id);
+}
+
+/**
  * El checkpoint que sigue: el primero que todavía no se ha marcado, contando
- * solo las etapas que ya tienen pantalla. Devuelve `null` cuando la orden ya
- * recorrió todo lo que hoy se puede marcar.
+ * solo las etapas que ya tienen pantalla y que están por delante del avance de
+ * la orden. Devuelve `null` cuando la orden ya recorrió todo lo que hoy se
+ * puede marcar.
  *
  * Se saltan las que no están disponibles a propósito: sus historias son de
- * otros sprints, y exigirlas dejaría trancada cualquier orden nueva.
+ * otros sprints, y exigirlas dejaría trancada cualquier orden nueva. Por la
+ * misma razón se ignoran las que quedaron atrás del avance de la orden: una
+ * etapa que se enciende con la orden ya en curso no la puede trancar, y como
+ * solo se marca la siguiente, tampoco se puede marcar después de haberla
+ * pasado. Una orden nueva sí las recorre todas.
  */
 export function siguienteCheckpoint(
   marcados: readonly CheckpointId[],
+  etapaInicial?: EtapaInicial,
 ): CheckpointId | null {
   const yaEsta = new Set(marcados);
+  const ultima = posicionDelAvance(marcados);
+  const entrada = posicionDeEntrada(etapaInicial);
+
   return (
-    CHECKPOINTS_DISPONIBLES.find((checkpoint) => !yaEsta.has(checkpoint.id))
-      ?.id ?? null
+    CHECKPOINTS.find(
+      (checkpoint, posicion) =>
+        posicion > ultima &&
+        posicion >= entrada &&
+        checkpoint.disponible &&
+        !yaEsta.has(checkpoint.id),
+    )?.id ?? null
   );
 }
 
@@ -68,6 +139,8 @@ type Peticion = {
   marcados: readonly CheckpointId[];
   /** El rol de quien está marcando. */
   rol: Rol;
+  /** HU-18: por dónde entró la orden, si es una orden de corrección. */
+  etapaInicial?: EtapaInicial;
   /**
    * Si logística ya confirmó la recepción de algún lote (HU-11). Solo lo mira
    * la etapa que declara el requisito `recepcion_de_taller`; si no se informa,
@@ -92,6 +165,7 @@ export function puedeMarcar({
   checkpoint,
   marcados,
   rol,
+  etapaInicial,
   recepcionConfirmada = false,
   esperandoTela = false,
 }: Peticion): ResultadoMarcado {
@@ -114,7 +188,15 @@ export function puedeMarcar({
     };
   }
 
-  const siguiente = siguienteCheckpoint(marcados);
+  if (etapasQueNoAplicaron(marcados, etapaInicial).includes(checkpoint)) {
+    return {
+      permitido: false,
+      motivo: "fuera_de_secuencia",
+      mensaje: `"${etiqueta}" ya no aplica en esta orden: va más adelante.`,
+    };
+  }
+
+  const siguiente = siguienteCheckpoint(marcados, etapaInicial);
   if (siguiente !== checkpoint) {
     const falta = siguiente ? buscarCheckpoint(siguiente).etiqueta : null;
     return {

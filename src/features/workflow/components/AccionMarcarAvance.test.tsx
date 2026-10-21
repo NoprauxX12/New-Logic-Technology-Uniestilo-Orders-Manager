@@ -72,7 +72,7 @@ describe("AccionMarcarAvance · qué ve quien abre la orden", () => {
 
     const boton = screen.getByRole("button", { name: ACCION });
     expect(boton).toBeDisabled();
-    expect(boton).toHaveAccessibleDescription(/Marcación/);
+    expect(boton).toHaveAccessibleDescription(/Terminación/);
   });
 
   it("no ofrece nada cuando la orden ya está lista para despachar", () => {

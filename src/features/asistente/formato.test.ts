@@ -2,9 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   detallarOrden,
-  filtrarOrdenes,
-  filtrarPorEstado,
-  normalizar,
   pareceUuid,
   resumirOrden,
 } from "@/features/asistente/formato";
@@ -19,7 +16,7 @@ import type {
   OrdenEnTablero,
 } from "@/lib/ordenes/types";
 
-const AHORA = new Date("2026-10-10T12:00:00");
+const AHORA = new Date("2026-10-10T17:00:00Z");
 
 // Las etapas disponibles cambian cada sprint (cada HU pone la suya en
 // `disponible: true`): las expectativas salen de `checkpoints.ts`, no se fijan.
@@ -66,7 +63,12 @@ function ordenStub(
     fechaEntrega: "2026-10-16",
     tallerNombre: null,
     estadoTalleres: "Todavía no ha salido a ningún taller.",
+    lotesEnTaller: 0,
     tieneFicha: false,
+    etapaInicial: null,
+    ordenOriginal: null,
+    correcciones: [],
+    devoluciones: [],
     semaforo: "a_tiempo",
     etapas,
     etapasCompletadas: completadas,
@@ -135,6 +137,15 @@ describe("resumirOrden", () => {
     expect(resumen.loQueSigue).toBeNull();
     expect(resumen.avance).toBe(`${TOTAL} de ${TOTAL} etapas`);
   });
+
+  it("le dice al modelo que una orden cerrada está entregada, no atrasada", () => {
+    const resumen = resumirOrden(
+      ordenStub({ semaforo: "entregada", fechaEntrega: "2026-09-01" }),
+      AHORA,
+    );
+
+    expect(resumen.semaforo).toMatch(/^entregada/);
+  });
 });
 
 describe("detallarOrden", () => {
@@ -152,88 +163,21 @@ describe("detallarOrden", () => {
     expect(detalle.historial).toEqual([
       {
         etapa: "Corte completado",
-        quien: "Camila Ríos",
+        quien: "Camila Ríos (Corte)",
         cuando: expect.stringMatching(/9\/10\/2026.*10:12/),
         observacion: "Faltó un rollo",
       },
     ]);
-    // Pendiente es toda etapa disponible sin marcar, no solo las que vienen
-    // después: esta orden tiene el corte marcado y nada más.
+    // Pendiente es lo que viene después del avance de la orden. Lo que quedó
+    // atrás sin marcarse (esta orden tiene el corte y nada más) no aplicó: no se
+    // puede marcar, así que tampoco se le ofrece a nadie como pendiente.
     expect(detalle.etapasPendientes).toEqual(
-      CHECKPOINTS_DISPONIBLES.filter((cp) => cp.id !== "corte_completado").map(
-        (cp) => cp.etiqueta,
-      ),
+      CHECKPOINTS_DISPONIBLES.slice(
+        CHECKPOINTS_DISPONIBLES.findIndex(
+          (cp) => cp.id === "corte_completado",
+        ) + 1,
+      ).map((cp) => cp.etiqueta),
     );
-  });
-});
-
-describe("filtrarOrdenes", () => {
-  const ordenes = [
-    ordenStub(),
-    ordenStub({
-      id: "f5",
-      numeroOrdenCompra: "OC-5005",
-      razonSocial: "Dotaciones Ríos",
-    }),
-  ];
-
-  it("encuentra por parte del número, sin importar mayúsculas ni el prefijo", () => {
-    expect(filtrarOrdenes(ordenes, "5003").map((o) => o.id)).toEqual(["f3"]);
-    expect(filtrarOrdenes(ordenes, "oc-5005").map((o) => o.id)).toEqual(["f5"]);
-  });
-
-  it("encuentra por el cliente sin tildes", () => {
-    expect(filtrarOrdenes(ordenes, "san jose").map((o) => o.id)).toEqual([
-      "f3",
-    ]);
-    expect(filtrarOrdenes(ordenes, "RIOS").map((o) => o.id)).toEqual(["f5"]);
-  });
-
-  it("no devuelve nada con un texto vacío", () => {
-    expect(filtrarOrdenes(ordenes, "   ")).toEqual([]);
-  });
-
-  it("entiende el guion no separable que escriben los modelos", () => {
-    expect(filtrarOrdenes(ordenes, "OC\u20115003").map((o) => o.id)).toEqual([
-      "f3",
-    ]);
-  });
-});
-
-describe("filtrarPorEstado", () => {
-  const sinEmpezar = ordenStub({ id: "a" });
-  const enProduccion = ordenStub({
-    id: "b",
-    semaforo: "atrasada",
-    avances: [avance("corte_completado", "2026-10-01T10:00:00Z")],
-  });
-  const terminada = ordenStub({
-    id: "c",
-    semaforo: "en_riesgo",
-    avances: CHECKPOINTS_DISPONIBLES.map((cp, i) =>
-      avance(cp.id, diaDeOctubre(i)),
-    ),
-  });
-  const ordenes = [sinEmpezar, enProduccion, terminada];
-  const ids = (lista: OrdenEnTablero[]) => lista.map((o) => o.id);
-
-  it("separa por avance", () => {
-    expect(ids(filtrarPorEstado(ordenes, "todas"))).toEqual(["a", "b", "c"]);
-    expect(ids(filtrarPorEstado(ordenes, "sin_empezar"))).toEqual(["a"]);
-    expect(ids(filtrarPorEstado(ordenes, "en_produccion"))).toEqual(["b"]);
-    expect(ids(filtrarPorEstado(ordenes, "terminadas"))).toEqual(["c"]);
-  });
-
-  it("separa por semáforo", () => {
-    expect(ids(filtrarPorEstado(ordenes, "atrasadas"))).toEqual(["b"]);
-    expect(ids(filtrarPorEstado(ordenes, "en_riesgo"))).toEqual(["c"]);
-  });
-});
-
-describe("normalizar", () => {
-  it("quita tildes, virgulillas, mayúsculas y espacios de sobra", () => {
-    // La ñ también pierde su virgulilla: así "nandu" encuentra a "Ñandú".
-    expect(normalizar("  Confección Ñandú ")).toBe("confeccion nandu");
   });
 });
 

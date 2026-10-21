@@ -53,7 +53,7 @@ Tipos: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `ci`, `build
 - ¿Cumple los criterios de aceptación del HU?
 - ¿Respeta las reglas del dominio de `CLAUDE.md` (estado derivado, motor de workflow, auditoría inmutable, RLS)?
 - ¿La migración trae políticas RLS y `database.types.ts` regenerado?
-- ¿Hay tests de las reglas nuevas?
+- ¿Hay tests de las reglas nuevas? Una tabla, política, trigger o función nueva trae su prueba pgTAP en `supabase/tests/` (`npm run test:db`, ver README).
 - ¿Se ve bien en celular?
 - ¿Hay algo que una persona del taller no entendería?
 

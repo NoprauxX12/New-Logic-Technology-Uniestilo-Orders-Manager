@@ -154,3 +154,40 @@ export function destinatarioDeAlertaTela(
 
   return primero.id;
 }
+
+/**
+ * HU-20 · Con cuántos días de anticipación se avisa que una entrega se acerca.
+ *
+ * Un solo lugar en la aplicación. La base repite el número como valor por
+ * defecto de `generar_alertas_proximidad_entrega`, y `reglas.test.ts` lee la
+ * migración para comprobar que coincidan.
+ */
+export const DIAS_ALERTA_ENTREGA = 3;
+
+/** El plazo en palabras del taller, calculado al momento de mirar. */
+export function frasePlazoEntrega(dias: number): string {
+  if (dias < 0) {
+    const atraso = -dias;
+    return `Se venció hace ${atraso} ${atraso === 1 ? "día" : "días"}`;
+  }
+
+  if (dias === 0) return "Entrega hoy";
+  if (dias === 1) return "Entrega mañana";
+
+  return `Entrega en ${dias} días`;
+}
+
+/** Solo el destinatario marca "Ya lo vi"; quién es sale de la sesión. */
+export function puedeAtenderAlertaDeEntrega({
+  destinatarioId,
+  usuarioId,
+}: {
+  destinatarioId: string;
+  usuarioId: string;
+}): ResultadoAlerta {
+  if (destinatarioId !== usuarioId) {
+    return { permitido: false, mensaje: "Este aviso es de otra persona." };
+  }
+
+  return { permitido: true };
+}

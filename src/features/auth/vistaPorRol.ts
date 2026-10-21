@@ -32,8 +32,9 @@ const VISTAS: Record<Rol, VistaDeRol> = {
   },
   secretaria: {
     botones: [
-      // En el orden del flujo: primero se programa a diseño, después la tela y
-      // al final se cierra.
+      // En el orden del flujo: primero la cotización, luego se programa a
+      // diseño, después la tela y al final se cierra.
+      { etiqueta: "Cotizaciones", ruta: "/ordenes/cotizacion" },
       { etiqueta: "Programar a diseño", ruta: "/ordenes/programacion" },
       { etiqueta: "Programar tela", ruta: "/ordenes/tela" },
       // HU-06: avisar a administración que falta tela.
@@ -78,8 +79,12 @@ const VISTAS: Record<Rol, VistaDeRol> = {
         etiqueta: `Marcar ${buscarCheckpoint("llegada_marcacion").etiqueta.toLowerCase()}`,
         ruta: "/ordenes/marcacion",
       },
+    ],
+    aviso: null,
+  },
+  terminacion: {
+    botones: [
       {
-        // HU-19 la marca marcación de forma provisional (ver pendientes).
         etiqueta: `Marcar ${buscarCheckpoint("lista_despacho").etiqueta.toLowerCase()}`,
         ruta: "/ordenes/despacho",
       },

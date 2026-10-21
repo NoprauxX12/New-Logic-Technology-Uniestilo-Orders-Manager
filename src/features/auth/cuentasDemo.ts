@@ -1,7 +1,7 @@
 import type { Rol } from "@/features/workflow/checkpoints";
 
 /**
- * Las seis cuentas del seed (`supabase/seed.sql`), para el acceso rápido del
+ * Las siete cuentas del seed (`supabase/seed.sql`), para el acceso rápido del
  * login en local. Si cambia el seed, cambia esto. La contraseña no está aquí:
  * la conoce solo la action, en el servidor.
  */
@@ -18,4 +18,9 @@ export const CUENTAS_DEMO: readonly CuentaDemo[] = [
   { nombre: "Jorge", email: "corte@uniestilo.test", rol: "corte" },
   { nombre: "Luis", email: "logistica@uniestilo.test", rol: "logistica" },
   { nombre: "Sandra", email: "marcacion@uniestilo.test", rol: "marcacion" },
+  {
+    nombre: "Marcela",
+    email: "terminacion@uniestilo.test",
+    rol: "terminacion",
+  },
 ];

@@ -16,6 +16,7 @@ import type { CheckpointId } from "@/features/workflow/checkpoints";
  */
 
 const HASTA_LISTA_DESPACHO: CheckpointId[] = [
+  "cotizacion_enviada",
   "cotizacion_aprobada",
   "programada_diseno",
   "ficha_adjunta",

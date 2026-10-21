@@ -29,3 +29,11 @@ export function formatearDia(momentoIso: string): string {
     year: "numeric",
   });
 }
+
+/**
+ * El día de hoy en Colombia (`2026-10-21`), no el del servidor, que en Vercel
+ * está en UTC: a las nueve de la noche en Marinilla ya es "mañana" allá.
+ */
+export function hoyEnBogota(ahora = new Date()): string {
+  return ahora.toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
+}

@@ -107,6 +107,7 @@ export type Database = {
       }
       avance_seccion: {
         Row: {
+          anulado_por: string | null
           checkpoint: Database["public"]["Enums"]["checkpoint"]
           fecha_hora: string
           id: string
@@ -115,6 +116,7 @@ export type Database = {
           usuario_id: string
         }
         Insert: {
+          anulado_por?: string | null
           checkpoint: Database["public"]["Enums"]["checkpoint"]
           fecha_hora?: string
           id?: string
@@ -123,6 +125,7 @@ export type Database = {
           usuario_id: string
         }
         Update: {
+          anulado_por?: string | null
           checkpoint?: Database["public"]["Enums"]["checkpoint"]
           fecha_hora?: string
           id?: string
@@ -131,6 +134,13 @@ export type Database = {
           usuario_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "avance_seccion_anulado_por_fkey"
+            columns: ["anulado_por"]
+            isOneToOne: false
+            referencedRelation: "reproceso"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "avance_seccion_orden_id_fkey"
             columns: ["orden_id"]
@@ -335,6 +345,7 @@ export type Database = {
           cliente_id: string
           creado_en: string
           creado_por: string | null
+          etapa_inicial: Database["public"]["Enums"]["checkpoint"] | null
           fecha_entrega: string
           fecha_ingreso: string
           id: string
@@ -349,6 +360,7 @@ export type Database = {
           cliente_id: string
           creado_en?: string
           creado_por?: string | null
+          etapa_inicial?: Database["public"]["Enums"]["checkpoint"] | null
           fecha_entrega: string
           fecha_ingreso: string
           id?: string
@@ -363,6 +375,7 @@ export type Database = {
           cliente_id?: string
           creado_en?: string
           creado_por?: string | null
+          etapa_inicial?: Database["public"]["Enums"]["checkpoint"] | null
           fecha_entrega?: string
           fecha_ingreso?: string
           id?: string
@@ -384,6 +397,48 @@ export type Database = {
           {
             foreignKeyName: "orden_orden_original_id_fkey"
             columns: ["orden_original_id"]
+            isOneToOne: false
+            referencedRelation: "orden"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reproceso: {
+        Row: {
+          checkpoint_destino: Database["public"]["Enums"]["checkpoint"]
+          creado_en: string
+          creado_por: string
+          id: string
+          motivo: string
+          orden_id: string
+        }
+        Insert: {
+          checkpoint_destino: Database["public"]["Enums"]["checkpoint"]
+          creado_en?: string
+          creado_por?: string
+          id?: string
+          motivo: string
+          orden_id: string
+        }
+        Update: {
+          checkpoint_destino?: Database["public"]["Enums"]["checkpoint"]
+          creado_en?: string
+          creado_por?: string
+          id?: string
+          motivo?: string
+          orden_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reproceso_creado_por_fkey"
+            columns: ["creado_por"]
+            isOneToOne: false
+            referencedRelation: "usuario"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reproceso_orden_id_fkey"
+            columns: ["orden_id"]
             isOneToOne: false
             referencedRelation: "orden"
             referencedColumns: ["id"]
@@ -422,7 +477,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      crear_orden_de_correccion: {
+        Args: {
+          p_etapa_inicial: Database["public"]["Enums"]["checkpoint"]
+          p_fecha_entrega: string
+          p_items: Json
+          p_motivo: string
+          p_orden_original_id: string
+        }
+        Returns: string
+      }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      devolver_orden_a_etapa: {
+        Args: {
+          p_checkpoint_destino: Database["public"]["Enums"]["checkpoint"]
+          p_motivo: string
+          p_orden_id: string
+        }
+        Returns: string
+      }
+      generar_alertas_proximidad_entrega: {
+        Args: { p_dias?: number }
+        Returns: number
+      }
       nit_normalizado: { Args: { p_nit: string }; Returns: string }
       orden_espera_tela: { Args: { p_orden_id: string }; Returns: boolean }
       ordenes_esperando_tela: { Args: never; Returns: string[] }
@@ -460,6 +537,7 @@ export type Database = {
     }
     Enums: {
       checkpoint:
+        | "cotizacion_enviada"
         | "cotizacion_aprobada"
         | "programada_diseno"
         | "ficha_adjunta"
@@ -480,6 +558,7 @@ export type Database = {
         | "corte"
         | "logistica"
         | "marcacion"
+        | "terminacion"
       tipo_alerta: "falta_tela" | "proximidad_entrega"
     }
     CompositeTypes: {
@@ -612,6 +691,7 @@ export const Constants = {
   public: {
     Enums: {
       checkpoint: [
+        "cotizacion_enviada",
         "cotizacion_aprobada",
         "programada_diseno",
         "ficha_adjunta",
@@ -626,7 +706,15 @@ export const Constants = {
         "cerrada",
       ],
       estado_alerta: ["pendiente", "atendida"],
-      rol: ["admin", "secretaria", "diseno", "corte", "logistica", "marcacion"],
+      rol: [
+        "admin",
+        "secretaria",
+        "diseno",
+        "corte",
+        "logistica",
+        "marcacion",
+        "terminacion",
+      ],
       tipo_alerta: ["falta_tela", "proximidad_entrega"],
     },
   },
