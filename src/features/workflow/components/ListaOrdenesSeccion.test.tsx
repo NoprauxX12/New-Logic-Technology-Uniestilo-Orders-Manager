@@ -33,6 +33,7 @@ function orden(parcial: Partial<OrdenParaSeccion>): OrdenParaSeccion {
     yaMarcada: false,
     fechaMarcado: null,
     veredicto: { permitido: true },
+    fichas: [],
     ...parcial,
   };
 }

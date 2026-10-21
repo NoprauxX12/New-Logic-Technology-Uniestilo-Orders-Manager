@@ -40,20 +40,12 @@ describe("vistaDeRol · cobertura", () => {
   });
 });
 
-describe("vistaDeRol · roles sin pantalla propia", () => {
-  it("diseño solo ve un aviso mientras HU-04 no exista: el tablero es de administración (HU-17)", () => {
-    const vista = vistaDeRol("diseno");
-
-    expect(vista.aviso).not.toBeNull();
-    expect(vista.botones).toEqual([]);
-  });
-});
-
 describe("vistaDeRol · roles con pantalla propia", () => {
   it("no llevan aviso: su historia ya está construida", () => {
     for (const rol of [
       "admin",
       "secretaria",
+      "diseno",
       "corte",
       "logistica",
       "marcacion",
@@ -62,10 +54,22 @@ describe("vistaDeRol · roles con pantalla propia", () => {
     }
   });
 
-  it("logística va a sus órdenes para despachar y recibir lotes", () => {
+  it("diseño va a adjuntar la ficha técnica, con la etiqueta de checkpoints.ts", () => {
+    const vista = vistaDeRol("diseno");
+    const ruta = buscarCheckpoint("ficha_adjunta").ruta;
+
+    expect(ruta).not.toBeNull();
+    expect(vista.botones[0].ruta).toBe(ruta);
+    expect(vista.botones[0].etiqueta).toMatch(/adjuntar ficha técnica/i);
+  });
+
+  it("logística marca el recogido y bordado y después despacha y recibe lotes", () => {
     const vista = vistaDeRol("logistica");
 
-    expect(vista.botones[0].ruta).toBe("/ordenes/talleres");
+    expect(vista.botones.map((boton) => boton.ruta)).toEqual([
+      "/ordenes/recogido-bordado",
+      "/ordenes/talleres",
+    ]);
   });
 
   it("corte va a marcar su etapa, con la etiqueta de checkpoints.ts", () => {
@@ -82,19 +86,40 @@ describe("vistaDeRol · roles con pantalla propia", () => {
     expect(vista.botones[0].etiqueta).toMatch(/llegada a marcación/i);
   });
 
-  it("marcación también marca la salida a despacho (HU-19), en su propia pantalla", () => {
-    const vista = vistaDeRol("marcacion");
+  it("terminación marca la salida a despacho (HU-19), en su propia pantalla", () => {
+    const vista = vistaDeRol("terminacion");
     const ruta = buscarCheckpoint("lista_despacho").ruta;
 
     expect(ruta).not.toBeNull();
-    expect(vista.botones.map((b) => b.ruta)).toContain(ruta);
-    expect(vista.botones[1].etiqueta).toMatch(/lista para despachar/i);
+    expect(vista.botones.map((b) => b.ruta)).toEqual([ruta]);
+    expect(vista.botones[0].etiqueta).toMatch(/lista para despachar/i);
   });
 
-  it("secretaría va al cierre", () => {
-    const vista = vistaDeRol("secretaria");
+  it("marcación ya no marca la salida a despacho: solo su llegada", () => {
+    const rutas = vistaDeRol("marcacion").botones.map((b) => b.ruta);
 
-    expect(vista.botones[0].ruta).toBe("/ordenes/cierre");
+    expect(rutas).toEqual(["/ordenes/marcacion"]);
+  });
+
+  it("secretaría empieza por las cotizaciones (HU-02), antes de programar a diseño", () => {
+    const rutas = vistaDeRol("secretaria").botones.map((b) => b.ruta);
+
+    expect(rutas[0]).toBe(buscarCheckpoint("cotizacion_enviada").ruta);
+    expect(rutas[0]).toBe("/ordenes/cotizacion");
+    expect(rutas[1]).toBe("/ordenes/programacion");
+  });
+
+  it("secretaría programa a diseño y cierra órdenes, sus dos pantallas", () => {
+    const rutas = vistaDeRol("secretaria").botones.map((b) => b.ruta);
+
+    expect(rutas).toContain("/ordenes/programacion");
+    expect(rutas).toContain("/ordenes/cierre");
+  });
+
+  it("secretaría también valida telas y avisa cuando falta (HU-06)", () => {
+    const rutas = vistaDeRol("secretaria").botones.map((b) => b.ruta);
+
+    expect(rutas).toContain("/ordenes/telas");
   });
 
   it("admin puede ver el tablero, registrar órdenes y crear cuentas", () => {

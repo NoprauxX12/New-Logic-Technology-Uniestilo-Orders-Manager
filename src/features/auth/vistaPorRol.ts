@@ -4,12 +4,9 @@ import type { Rol } from "@/lib/auth/usuarioActual";
 /**
  * HU-16 · A dónde manda el botón de cada rol al entrar.
  *
- * Diseño (HU-04) todavía no tiene pantalla propia: su historia es de otro
- * sprint. Mientras tanto ve un aviso. No se le manda al tablero porque con
- * HU-17 el tablero es solo de administración.
- *
- * Las etiquetas de corte y marcación salen de `checkpoints.ts` y no se repiten
- * a mano (regla 4): son el mismo texto que ya usa `AccionMarcarAvance`.
+ * Las etiquetas de las etapas salen de `checkpoints.ts` y no se repiten a
+ * mano (regla 4): son el mismo texto que ya usa `AccionMarcarAvance`.
+ * El tablero es solo de administración (HU-17).
  */
 
 export type BotonVista = {
@@ -34,13 +31,26 @@ const VISTAS: Record<Rol, VistaDeRol> = {
     aviso: null,
   },
   secretaria: {
-    botones: [{ etiqueta: "Cerrar órdenes", ruta: "/ordenes/cierre" }],
+    botones: [
+      // En el orden del flujo: primero la cotización, luego se programa a
+      // diseño, después la tela y al final se cierra.
+      { etiqueta: "Cotizaciones", ruta: "/ordenes/cotizacion" },
+      { etiqueta: "Programar a diseño", ruta: "/ordenes/programacion" },
+      { etiqueta: "Programar tela", ruta: "/ordenes/tela" },
+      // HU-06: avisar a administración que falta tela.
+      { etiqueta: "Validar telas", ruta: "/ordenes/telas" },
+      { etiqueta: "Cerrar órdenes", ruta: "/ordenes/cierre" },
+    ],
     aviso: null,
   },
   diseno: {
-    botones: [],
-    aviso:
-      "Tu pantalla para adjuntar la ficha técnica todavía no existe. Cuando esté lista, aparecerá aquí.",
+    botones: [
+      {
+        etiqueta: "Adjuntar ficha técnica",
+        ruta: "/ordenes/diseno",
+      },
+    ],
+    aviso: null,
   },
   corte: {
     botones: [
@@ -53,6 +63,12 @@ const VISTAS: Record<Rol, VistaDeRol> = {
   },
   logistica: {
     botones: [
+      // En el orden del flujo: lo cortado se recoge y borda (HU-09) antes de
+      // despacharlo a un taller (HU-10).
+      {
+        etiqueta: `Marcar ${buscarCheckpoint("recogido_bordado").etiqueta.toLowerCase()}`,
+        ruta: "/ordenes/recogido-bordado",
+      },
       { etiqueta: "Despachar y recibir lotes", ruta: "/ordenes/talleres" },
     ],
     aviso: null,
@@ -63,8 +79,12 @@ const VISTAS: Record<Rol, VistaDeRol> = {
         etiqueta: `Marcar ${buscarCheckpoint("llegada_marcacion").etiqueta.toLowerCase()}`,
         ruta: "/ordenes/marcacion",
       },
+    ],
+    aviso: null,
+  },
+  terminacion: {
+    botones: [
       {
-        // HU-19 la marca marcación de forma provisional (ver pendientes).
         etiqueta: `Marcar ${buscarCheckpoint("lista_despacho").etiqueta.toLowerCase()}`,
         ruta: "/ordenes/despacho",
       },

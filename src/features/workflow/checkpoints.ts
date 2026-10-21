@@ -32,17 +32,20 @@ export type Checkpoint = {
   ruta: string | null;
   /**
    * Una condición que no es un checkpoint pero que debe cumplirse antes de
-   * marcar este. Hoy solo existe una: la llegada a marcación (HU-12) exige que
-   * logística haya confirmado la recepción de un lote (HU-11). El motor la
-   * verifica con lo que la action lee de la base.
+   * marcar este. El motor la verifica con lo que la action lee de la base.
+   *
+   * - `recepcion_de_taller`: la llegada a marcación (HU-12) exige que logística
+   *   haya confirmado la recepción de un lote (HU-11).
+   * - `tela_en_empresa`: el corte (HU-08) exige que la orden no esté esperando
+   *   tela. Una alerta de falta de tela (HU-06) frena la orden hasta que
+   *   secretaría marca que la tela llegó (HU-22).
    */
-  requisito?: "recepcion_de_taller";
+  requisito?: "recepcion_de_taller" | "tela_en_empresa";
   /**
    * Si el sistema ya permite marcarlo.
    *
-   * El flujo del taller tiene nueve etapas, pero el Sprint 1 solo construye
-   * cuatro: las otras cinco son de historias del Sprint 2 y 3 y todavía no
-   * tienen pantalla. Sin esta marca, una orden recién registrada se quedaría
+   * El flujo del taller tiene trece etapas. Una historia que todavía no
+   * se construye deja la suya en `false` hasta que tenga pantalla. Sin esta marca, una orden recién registrada se quedaría
    * trancada para siempre en la primera etapa, porque el motor exigiría marcar
    * algo que nadie puede marcar.
    *
@@ -64,42 +67,51 @@ export type Checkpoint = {
  */
 export const CHECKPOINTS = [
   {
+    id: "cotizacion_enviada",
+    etiqueta: "Cotización enviada",
+    rolDueno: "secretaria",
+    hu: "HU-02",
+    disponible: true,
+    ruta: "/ordenes/cotizacion",
+  },
+  {
     id: "cotizacion_aprobada",
     etiqueta: "Cotización aprobada",
     rolDueno: "secretaria",
     hu: "HU-02",
-    disponible: false,
-    ruta: null,
+    disponible: true,
+    ruta: "/ordenes/cotizacion",
   },
   {
     id: "programada_diseno",
     etiqueta: "Programada a diseño",
     rolDueno: "secretaria",
     hu: "HU-03",
-    disponible: false,
-    ruta: null,
+    disponible: true,
+    ruta: "/ordenes/programacion",
   },
   {
     id: "ficha_adjunta",
     etiqueta: "Ficha técnica adjunta",
     rolDueno: "diseno",
     hu: "HU-04",
-    disponible: false,
-    ruta: null,
+    disponible: true,
+    ruta: "/ordenes/diseno",
   },
   {
     id: "tela_programada",
     etiqueta: "Tela programada",
     rolDueno: "secretaria",
     hu: "HU-05",
-    disponible: false,
-    ruta: null,
+    disponible: true,
+    ruta: "/ordenes/tela",
   },
   {
     id: "corte_completado",
     etiqueta: "Corte completado",
     rolDueno: "corte",
     hu: "HU-08",
+    requisito: "tela_en_empresa",
     disponible: true,
     ruta: "/ordenes/corte",
   },
@@ -108,8 +120,8 @@ export const CHECKPOINTS = [
     etiqueta: "Recogido y bordado",
     rolDueno: "logistica",
     hu: "HU-09",
-    disponible: false,
-    ruta: null,
+    disponible: true,
+    ruta: "/ordenes/recogido-bordado",
   },
   {
     id: "llegada_marcacion",
@@ -121,13 +133,10 @@ export const CHECKPOINTS = [
     ruta: "/ordenes/marcacion",
   },
   {
-    // PENDIENTE (CLAUDE.md): HU-19 la marca "terminación (Marcela)", que no es
-    // ninguno de los seis roles del modelo. Queda en `marcacion` de forma
-    // provisional para no bloquear el sprint. Cuando el equipo decida, se
-    // cambia aquí y —si resulta ser un rol nuevo— en una migración del enum.
+    // HU-19 la marca terminación (Marcela), una sección distinta de marcación.
     id: "lista_despacho",
     etiqueta: "Lista para despachar",
-    rolDueno: "marcacion",
+    rolDueno: "terminacion",
     hu: "HU-19",
     disponible: true,
     ruta: "/ordenes/despacho",
@@ -182,6 +191,7 @@ export const ETIQUETAS_ROL: Record<Rol, string> = {
   corte: "Corte",
   logistica: "Logística",
   marcacion: "Marcación",
+  terminacion: "Terminación",
 };
 
 const POR_ID = new Map<CheckpointId, Checkpoint>(

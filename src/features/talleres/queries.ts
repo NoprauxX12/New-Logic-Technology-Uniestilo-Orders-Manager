@@ -1,6 +1,8 @@
 import "server-only";
 
+import { CHECKPOINT_REQUERIDO } from "@/features/talleres/reglas";
 import type { CheckpointId } from "@/features/workflow/checkpoints";
+import { AVANCE_VIGENTE } from "@/lib/ordenes/vigentes";
 import { createClient } from "@/lib/supabase/server";
 import { describirEstadoDeTalleres } from "@/lib/talleres/estadoLotes";
 
@@ -70,6 +72,7 @@ export async function obtenerOrdenParaDespacho(
        )`,
     )
     .eq("id", ordenId)
+    .is(AVANCE_VIGENTE, null)
     .maybeSingle();
 
   if (error) {
@@ -118,8 +121,10 @@ export type OrdenParaTalleres = {
 };
 
 /**
- * Las órdenes con las que logística puede trabajar: las que ya tienen el corte
- * completado y todavía no se cerraron. Desde aquí se entra al detalle de cada
+ * Las órdenes con las que logística puede trabajar: las que ya están recogidas
+ * y bordadas, o que ya tienen algún lote, y todavía no se cerraron. El lote
+ * cuenta aparte para que un lote que salió antes de existir HU-09 se pueda
+ * seguir recibiendo (HU-11). Desde aquí se entra al detalle de cada
  * una para despachar (HU-10) o recibir (HU-11).
  */
 export async function listarOrdenesParaTalleres(): Promise<
@@ -137,6 +142,7 @@ export async function listarOrdenesParaTalleres(): Promise<
        avance_seccion ( checkpoint ),
        lote_taller ( recibido_completo )`,
     )
+    .is(AVANCE_VIGENTE, null)
     .order("fecha_entrega", { ascending: true });
 
   if (error) {
@@ -147,9 +153,9 @@ export async function listarOrdenesParaTalleres(): Promise<
   return data
     .filter((orden) => {
       const marcados = orden.avance_seccion.map((avance) => avance.checkpoint);
-      return (
-        marcados.includes("corte_completado") && !marcados.includes("cerrada")
-      );
+      const listaParaTaller =
+        marcados.includes(CHECKPOINT_REQUERIDO) || orden.lote_taller.length > 0;
+      return listaParaTaller && !marcados.includes("cerrada");
     })
     .map((orden) => ({
       id: orden.id,

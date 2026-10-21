@@ -1,13 +1,15 @@
 import Link from "next/link";
 
 import { BadgeSemaforo } from "@/features/tablero/components/BadgeSemaforo";
-import type { EtapaTablero, OrdenEnTablero } from "@/features/tablero/types";
+import { etapaDevuelta } from "@/lib/ordenes/reglas";
+import type { EtapaTablero, OrdenEnTablero } from "@/lib/ordenes/types";
 import type { CheckpointId } from "@/features/workflow/checkpoints";
 import { loQueSigue } from "@/features/workflow/estado";
 
 /** Etiquetas cortas para la fila del tablero (el nombre completo va en title + detalle). */
 const ETIQUETA_CORTA: Record<CheckpointId, string> = {
-  cotizacion_aprobada: "Cotizac.",
+  cotizacion_enviada: "Cotiz. env.",
+  cotizacion_aprobada: "Cotiz. apr.",
   programada_diseno: "Diseño",
   ficha_adjunta: "Ficha",
   tela_programada: "Tela",
@@ -26,24 +28,85 @@ function formatoCorto(iso: string) {
   return d.toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit" });
 }
 
-function NodoEtapa({ etapa }: { etapa: EtapaTablero }) {
+type Tramo = "hecho" | "pendiente" | "no_aplico";
+
+/**
+ * El tramo de línea que llega a la etapa `i`: verde hasta la última etapa
+ * completada, gris después, y gris punteado si llega a una que no aplicó.
+ */
+function tramoHacia(etapas: EtapaTablero[], i: number): Tramo {
+  const ultima = etapas.reduce(
+    (idx, etapa, n) => (etapa.estado === "completada" ? n : idx),
+    -1,
+  );
+  if (etapas[i].estado === "no_aplico") return "no_aplico";
+  return i <= ultima ? "hecho" : "pendiente";
+}
+
+const CLASE_TRAMO: Record<Tramo, string> = {
+  hecho: "border-t-2 border-solid border-emerald-500",
+  pendiente: "border-t-2 border-solid border-zinc-200",
+  no_aplico: "border-t-2 border-dashed border-zinc-300",
+};
+
+function NodoEtapa({
+  etapa,
+  devuelta,
+  izquierda,
+  derecha,
+}: {
+  etapa: EtapaTablero;
+  /** HU-18: es la etapa a la que se devolvió la orden y aún no se rehace. */
+  devuelta: boolean;
+  /** Tramo que llega desde la etapa anterior; null en la primera. */
+  izquierda: Tramo | null;
+  /** Tramo que sale hacia la etapa siguiente; null en la última. */
+  derecha: Tramo | null;
+}) {
   const completada = etapa.estado === "completada";
+  const noAplico = etapa.estado === "no_aplico";
   return (
     <li
       className="flex w-14 shrink-0 flex-col items-center gap-1"
-      title={etapa.etiqueta}
+      title={
+        noAplico
+          ? `${etapa.etiqueta} (no aplicó)`
+          : devuelta
+            ? `${etapa.etiqueta} (devuelta)`
+            : etapa.etiqueta
+      }
     >
-      <span
-        className={[
-          "flex size-7 items-center justify-center rounded-full text-xs",
-          completada
-            ? "bg-emerald-100 text-emerald-800"
-            : "bg-zinc-100 text-zinc-400 ring-1 ring-zinc-200",
-        ].join(" ")}
-        aria-label={`${etapa.etiqueta}: ${completada ? "completada" : "pendiente"}`}
-      >
-        {completada ? "✓" : ""}
-      </span>
+      {/* Cada mitad de línea mide la mitad del nodo (w-1/2): juntas
+          forman una sola línea que pasa por el centro de los círculos (size-7). */}
+      <div className="relative flex h-7 w-full items-center justify-center">
+        {izquierda ? (
+          <span
+            aria-hidden="true"
+            className={`absolute top-1/2 left-0 w-1/2 -translate-y-1/2 ${CLASE_TRAMO[izquierda]}`}
+          />
+        ) : null}
+        {derecha ? (
+          <span
+            aria-hidden="true"
+            className={`absolute top-1/2 right-0 w-1/2 -translate-y-1/2 ${CLASE_TRAMO[derecha]}`}
+          />
+        ) : null}
+        <span
+          className={[
+            "relative flex size-7 items-center justify-center rounded-full text-xs",
+            completada
+              ? "bg-emerald-100 text-emerald-800 ring-1 ring-emerald-500"
+              : devuelta
+                ? "bg-amber-100 text-amber-900 ring-1 ring-amber-500"
+                : noAplico
+                  ? "ring-dashed bg-zinc-50 text-zinc-400 ring-1 ring-zinc-200"
+                  : "bg-zinc-100 text-zinc-400 ring-1 ring-zinc-200",
+          ].join(" ")}
+          aria-label={`${etapa.etiqueta}: ${completada ? "completada" : devuelta ? "devuelta" : noAplico ? "no aplicó" : "pendiente"}`}
+        >
+          {completada ? "✓" : devuelta ? "↩" : noAplico ? "–" : ""}
+        </span>
+      </div>
       <span className="w-full text-center text-[10px] leading-tight text-zinc-500">
         {ETIQUETA_CORTA[etapa.seccion]}
       </span>
@@ -65,6 +128,13 @@ export function FilaOrden({ orden }: { orden: OrdenEnTablero }) {
     orden.etapas
       .filter((etapa) => etapa.estado === "completada")
       .map((etapa) => etapa.seccion),
+    orden.etapaInicial,
+  );
+
+  // HU-18: la etapa a la que se devolvió la orden y que todavía no se rehace.
+  const seccionDevuelta = etapaDevuelta(orden.etapas, orden.devoluciones);
+  const devuelta = orden.etapas.find(
+    (etapa) => etapa.seccion === seccionDevuelta,
   );
 
   return (
@@ -76,6 +146,16 @@ export function FilaOrden({ orden }: { orden: OrdenEnTablero }) {
               {orden.numeroOrdenCompra}
             </h2>
             <BadgeSemaforo semaforo={orden.semaforo} />
+            {orden.ordenOriginal ? (
+              <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-900">
+                Corrección de {orden.ordenOriginal.numeroOrdenCompra}
+              </span>
+            ) : null}
+            {devuelta ? (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+                Devuelta a {devuelta.etiqueta}
+              </span>
+            ) : null}
           </div>
           <p className="text-sm text-zinc-700">{orden.razonSocial}</p>
           <p className="text-sm text-zinc-500">
@@ -93,6 +173,11 @@ export function FilaOrden({ orden }: { orden: OrdenEnTablero }) {
               Orden terminada
             </p>
           )}
+          {orden.tieneFicha ? (
+            <p className="text-xs font-medium text-emerald-800">
+              Ficha técnica adjunta
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -101,8 +186,14 @@ export function FilaOrden({ orden }: { orden: OrdenEnTablero }) {
         className="mt-4 flex gap-0 overflow-x-auto border-t border-zinc-100 pt-4 pb-1"
         aria-label="Avance por etapa"
       >
-        {orden.etapas.map((etapa) => (
-          <NodoEtapa key={etapa.seccion} etapa={etapa} />
+        {orden.etapas.map((etapa, i, etapas) => (
+          <NodoEtapa
+            key={etapa.seccion}
+            etapa={etapa}
+            devuelta={etapa.seccion === seccionDevuelta}
+            izquierda={i > 0 ? tramoHacia(etapas, i) : null}
+            derecha={i < etapas.length - 1 ? tramoHacia(etapas, i + 1) : null}
+          />
         ))}
       </ol>
 

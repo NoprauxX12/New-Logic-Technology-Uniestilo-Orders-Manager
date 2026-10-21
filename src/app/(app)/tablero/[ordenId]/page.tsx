@@ -1,11 +1,19 @@
 import { notFound } from "next/navigation";
 
 import { exigirAcceso } from "@/features/auth/guardia";
+import { FormularioDevolverOrden } from "@/features/correcciones/components/FormularioDevolverOrden";
+import { FormularioOrdenCorreccion } from "@/features/correcciones/components/FormularioOrdenCorreccion";
+import { obtenerOrdenParaCorreccion } from "@/features/correcciones/queries";
+import {
+  puedeCrearCorreccion,
+  puedeDevolver,
+} from "@/features/correcciones/reglas";
 import { DetalleOrdenView } from "@/features/tablero/components/DetalleOrdenView";
 import { TableroEnVivo } from "@/features/tablero/components/TableroEnVivo";
-import { obtenerDetalleOrden } from "@/features/tablero/queries";
+import { obtenerDetalleOrden } from "@/lib/ordenes/estadoOrden";
 import { AccionMarcarAvance } from "@/features/workflow/components/AccionMarcarAvance";
 import { puedeMarcar } from "@/features/workflow/transiciones";
+import { hoyEnBogota } from "@/lib/utils/fechas";
 
 type Props = {
   params: Promise<{ ordenId: string }>;
@@ -37,13 +45,38 @@ export default async function DetalleOrdenPage({ params }: Props) {
         checkpoint: "lista_despacho",
         marcados,
         rol: usuario.rol,
+        etapaInicial: orden.etapaInicial,
       })}
     />
   );
 
+  // HU-18: ante un defecto, administración devuelve la orden a una etapa si va
+  // en producción, o crea su orden de corrección si ya está cerrada. La página
+  // es solo de administración (`exigirAcceso`); las reglas lo repiten.
+  const sePuedeDevolver = puedeDevolver({ marcados, rol: usuario.rol });
+  const sePuedeCorregir = puedeCrearCorreccion({ marcados, rol: usuario.rol });
+  const paraCorregir = sePuedeCorregir.permitido
+    ? await obtenerOrdenParaCorreccion(orden.id)
+    : null;
+
+  const correccion = (
+    <>
+      {sePuedeDevolver.permitido ? (
+        <FormularioDevolverOrden
+          ordenId={orden.id}
+          marcados={marcados}
+          etapaInicial={orden.etapaInicial}
+        />
+      ) : null}
+      {paraCorregir ? (
+        <FormularioOrdenCorreccion orden={paraCorregir} hoy={hoyEnBogota()} />
+      ) : null}
+    </>
+  );
+
   return (
     <TableroEnVivo>
-      <DetalleOrdenView orden={orden} accion={accion} />
+      <DetalleOrdenView orden={orden} accion={accion} correccion={correccion} />
     </TableroEnVivo>
   );
 }

@@ -16,10 +16,32 @@ const FILTRO_LOTES = {
   table: "lote_taller" as const,
 };
 
+const FILTRO_FICHA = {
+  event: "INSERT" as const,
+  schema: "public" as const,
+  table: "ficha_tecnica" as const,
+};
+
+// HU-07: un aviso de tela entra al tablero y sale cuando se marca resuelto.
+const FILTRO_ALERTA = {
+  event: "*" as const,
+  schema: "public" as const,
+  table: "alerta" as const,
+};
+
+// HU-18: devolver una orden a una etapa anterior inserta un reproceso; los
+// avances que anula cambian con un UPDATE que el canal de avances no escucha.
+const FILTRO_REPROCESO = {
+  event: "INSERT" as const,
+  schema: "public" as const,
+  table: "reproceso" as const,
+};
+
 /**
- * Se suscribe a un avance nuevo y a los cambios en los lotes a taller. Devuelve
- * la función para cerrar el canal. El tablero no muta aquí: solo avisa para que
- * se vuelvan a leer las órdenes.
+ * Se suscribe a un avance nuevo, a los cambios en los lotes a taller, a una
+ * ficha técnica nueva y a las alertas de tela. Devuelve la función para cerrar
+ * el canal. El tablero no muta aquí: solo avisa para que se vuelvan a leer
+ * las órdenes.
  */
 export function suscribirAvancesTablero(
   supabase: SupabaseClient<Database>,
@@ -29,6 +51,9 @@ export function suscribirAvancesTablero(
     .channel("tablero-avances")
     .on("postgres_changes", FILTRO_AVANCE, alCambiar)
     .on("postgres_changes", FILTRO_LOTES, alCambiar)
+    .on("postgres_changes", FILTRO_FICHA, alCambiar)
+    .on("postgres_changes", FILTRO_ALERTA, alCambiar)
+    .on("postgres_changes", FILTRO_REPROCESO, alCambiar)
     .subscribe();
 
   return () => {

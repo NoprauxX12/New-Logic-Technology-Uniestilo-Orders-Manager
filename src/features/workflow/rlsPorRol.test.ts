@@ -28,6 +28,28 @@ function leerMigracionRls(): string {
   return readFileSync(join(MIGRACIONES, archivo), "utf8");
 }
 
+/**
+ * La definición vigente de `rol_dueno`: la de la última migración que la
+ * redefine. Cambiar el dueño de una etapa es una migración nueva con
+ * `create or replace`, no una edición de la original (las ya aplicadas no se
+ * tocan), así que la copia que cuenta es la más reciente.
+ */
+function leerMigracionDeRolDueno(): string {
+  const archivos = readdirSync(MIGRACIONES)
+    .filter((nombre) => nombre.endsWith(".sql"))
+    .sort()
+    .filter((nombre) =>
+      /function public\.rol_dueno/i.test(
+        readFileSync(join(MIGRACIONES, nombre), "utf8"),
+      ),
+    );
+
+  const ultima = archivos.at(-1);
+  if (!ultima) throw new Error("Ninguna migración define `rol_dueno`");
+
+  return readFileSync(join(MIGRACIONES, ultima), "utf8");
+}
+
 /** Las parejas `when 'checkpoint' then 'rol'` del `case` de `rol_dueno`. */
 function mapaEnSql(sql: string): Record<string, string> {
   const cuerpo = sql.match(
@@ -49,7 +71,7 @@ function mapaEnSql(sql: string): Record<string, string> {
 }
 
 describe("rol_dueno (SQL) · igual que checkpoints.ts", () => {
-  const sql = leerMigracionRls();
+  const sql = leerMigracionDeRolDueno();
   const mapa = mapaEnSql(sql);
 
   it("cubre todos los checkpoints de la secuencia", () => {

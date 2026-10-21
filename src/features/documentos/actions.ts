@@ -42,6 +42,8 @@ const DUPLICADO = "23505";
 const ORDEN_COMPLETADA = "UE004";
 /** La orden no existe. */
 const ORDEN_INEXISTENTE = "UE005";
+/** La factura ya estaba escrita y no se cambia (trigger). */
+const FACTURA_YA_REPORTADA = "UE015";
 /** RLS rechazó la fila: el rol o la firma no corresponden. */
 const RLS_RECHAZO = "42501";
 
@@ -57,6 +59,7 @@ function mensajeConocido(codigo: string | undefined): string | null {
     case ORDEN_INEXISTENTE:
       return "No encontramos esa orden.";
     case DUPLICADO:
+    case FACTURA_YA_REPORTADA:
       return "Eso ya estaba reportado.";
     case RLS_RECHAZO:
       return "El cierre lo reporta la secretaría.";

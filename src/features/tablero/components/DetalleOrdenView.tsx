@@ -1,9 +1,18 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { FichasAdjuntas } from "@/components/FichasAdjuntas";
 import { BadgeSemaforo } from "@/features/tablero/components/BadgeSemaforo";
-import type { DetalleOrden, EtapaTablero } from "@/features/tablero/types";
-import { buscarCheckpoint } from "@/features/workflow/checkpoints";
+import { describirQuienMarco, etapaDevuelta } from "@/lib/ordenes/reglas";
+import type {
+  DetalleOrden,
+  Devolucion,
+  EtapaTablero,
+} from "@/lib/ordenes/types";
+import {
+  buscarCheckpoint,
+  ETIQUETAS_ROL,
+} from "@/features/workflow/checkpoints";
 
 function formatoFechaHora(iso: string) {
   return new Date(iso).toLocaleString("es-CO", {
@@ -16,12 +25,68 @@ function formatoFechaHora(iso: string) {
   });
 }
 
-function CardEtapa({ etapa }: { etapa: EtapaTablero }) {
+/**
+ * Cada vez que la etapa estuvo marcada y una devolución la anuló (HU-18): quién
+ * la había marcado y cuándo, y quién la devolvió, cuándo y por qué. Es la
+ * bitácora original, que no se borra, contada junto a la etapa.
+ */
+function HistorialDeDevoluciones({
+  etapa,
+  devoluciones,
+}: {
+  etapa: EtapaTablero;
+  devoluciones: Devolucion[];
+}) {
+  if (etapa.anulados.length === 0) return null;
+
+  return (
+    <ul className="mt-2 flex flex-col gap-2">
+      {etapa.anulados.map((anulado) => {
+        const devolucion = devoluciones.find(
+          (candidata) => candidata.id === anulado.devolucionId,
+        );
+        return (
+          <li
+            key={`${anulado.devolucionId}-${anulado.fechaHora}`}
+            className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950"
+          >
+            <p className="font-medium">
+              Devuelta
+              {devolucion
+                ? ` el ${formatoFechaHora(devolucion.fechaHora)} por ${devolucion.porNombre} (${ETIQUETAS_ROL.admin})`
+                : ""}
+            </p>
+            {devolucion ? <p>Motivo: {devolucion.motivo}</p> : null}
+            <p className="text-amber-900">
+              Se había marcado el {formatoFechaHora(anulado.fechaHora)} por{" "}
+              {describirQuienMarco(anulado.usuarioNombre, etapa.seccion)}.
+            </p>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function CardEtapa({
+  etapa,
+  devuelta,
+  devoluciones,
+  esCorreccion,
+}: {
+  etapa: EtapaTablero;
+  /** HU-18: es la etapa a la que se devolvió la orden y aún no se rehace. */
+  devuelta: boolean;
+  devoluciones: Devolucion[];
+  esCorreccion: boolean;
+}) {
   const completada = etapa.estado === "completada";
+  const noAplico = etapa.estado === "no_aplico";
   // De dónde salen el enlace y el "todavía no disponible": la fuente única de
   // la secuencia (regla 4), para no mantener aparte un mapa de etapa → página.
   const { ruta, disponible } = buscarCheckpoint(etapa.seccion);
-  const sePuedeIrAMarcar = !completada && disponible && ruta !== null;
+  const sePuedeIrAMarcar =
+    !completada && !noAplico && disponible && ruta !== null;
 
   return (
     <li className="rounded-xl border border-zinc-200 bg-white p-4">
@@ -32,14 +97,20 @@ function CardEtapa({ etapa }: { etapa: EtapaTablero }) {
             "rounded-full px-2 py-0.5 text-xs font-medium",
             completada
               ? "bg-emerald-50 text-emerald-800"
-              : "bg-zinc-100 text-zinc-600",
+              : devuelta
+                ? "bg-amber-100 text-amber-900"
+                : "bg-zinc-100 text-zinc-600",
           ].join(" ")}
         >
           {completada
             ? "Completada"
-            : disponible
-              ? "Pendiente"
-              : "Todavía no disponible"}
+            : devuelta
+              ? "Devuelta"
+              : noAplico
+                ? "No aplicó"
+                : disponible
+                  ? "Pendiente"
+                  : "Todavía no disponible"}
         </span>
       </div>
 
@@ -47,9 +118,15 @@ function CardEtapa({ etapa }: { etapa: EtapaTablero }) {
         <p className="mt-2 text-sm text-zinc-600">
           Reportado por{" "}
           <span className="font-medium text-zinc-800">
-            {etapa.avance.usuarioNombre}
+            {describirQuienMarco(etapa.avance.usuarioNombre, etapa.seccion)}
           </span>{" "}
           · {formatoFechaHora(etapa.avance.fechaHora)}
+        </p>
+      ) : noAplico ? (
+        <p className="mt-2 text-sm text-zinc-500">
+          {esCorreccion
+            ? "Esta orden de corrección entra al proceso más adelante: esta etapa no le toca."
+            : "La orden ya iba más adelante cuando esta etapa empezó a marcarse en el sistema."}
         </p>
       ) : disponible ? (
         <p className="mt-2 text-sm text-zinc-500">Aún no marcada.</p>
@@ -58,6 +135,8 @@ function CardEtapa({ etapa }: { etapa: EtapaTablero }) {
           Esta parte del proceso todavía no se marca en el sistema.
         </p>
       )}
+
+      <HistorialDeDevoluciones etapa={etapa} devoluciones={devoluciones} />
 
       {sePuedeIrAMarcar ? (
         <Link
@@ -85,10 +164,56 @@ type Props = {
    * marcado: quien compone decide qué acción va aquí.
    */
   accion?: ReactNode;
+  /**
+   * HU-18: lo que administración puede hacer ante un defecto —devolver la orden
+   * a una etapa, o crear su orden de corrección si ya está cerrada—. También
+   * llega como slot: el tablero no depende de la feature de correcciones.
+   */
+  correccion?: ReactNode;
 };
 
-export function DetalleOrdenView({ orden, accion }: Props) {
+function EnlacesDeCorreccion({ orden }: { orden: DetalleOrden }) {
+  if (!orden.ordenOriginal && orden.correcciones.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-1 text-sm text-zinc-700">
+      {orden.ordenOriginal ? (
+        <p>
+          Corrección de{" "}
+          <Link
+            href={`/tablero/${orden.ordenOriginal.id}`}
+            className="font-medium text-stone-800 underline"
+          >
+            {orden.ordenOriginal.numeroOrdenCompra}
+          </Link>
+          {orden.etapaInicial
+            ? ` · entra por «${buscarCheckpoint(orden.etapaInicial).etiqueta}»`
+            : ""}
+        </p>
+      ) : null}
+      {orden.correcciones.length > 0 ? (
+        <p>
+          Correcciones:{" "}
+          {orden.correcciones.map((correccion, posicion) => (
+            <span key={correccion.id}>
+              {posicion > 0 ? ", " : ""}
+              <Link
+                href={`/tablero/${correccion.id}`}
+                className="font-medium text-stone-800 underline"
+              >
+                {correccion.numeroOrdenCompra}
+              </Link>
+            </span>
+          ))}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+export function DetalleOrdenView({ orden, accion, correccion }: Props) {
   const pct = Math.round((orden.etapasCompletadas / orden.etapasTotales) * 100);
+  const seccionDevuelta = etapaDevuelta(orden.etapas, orden.devoluciones);
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8">
@@ -114,6 +239,7 @@ export function DetalleOrdenView({ orden, accion }: Props) {
           Entrega {orden.fechaEntrega}
           {orden.tallerNombre ? ` · ${orden.tallerNombre}` : ""}
         </p>
+        <EnlacesDeCorreccion orden={orden} />
 
         <div className="pt-3">
           <div className="mb-1 flex justify-between text-xs text-zinc-500">
@@ -133,6 +259,46 @@ export function DetalleOrdenView({ orden, accion }: Props) {
 
       {accion}
 
+      {correccion}
+
+      <section aria-labelledby="ficha-tecnica-titulo">
+        <h2
+          id="ficha-tecnica-titulo"
+          className="mb-3 text-lg font-semibold text-zinc-900"
+        >
+          Ficha técnica
+        </h2>
+        <div className="rounded-xl border border-zinc-200 bg-white p-4">
+          <FichasAdjuntas fichas={orden.fichas} conMeta />
+        </div>
+      </section>
+
+      {orden.devoluciones.length > 0 ? (
+        <section aria-labelledby="devoluciones-titulo">
+          <h2
+            id="devoluciones-titulo"
+            className="mb-3 text-lg font-semibold text-zinc-900"
+          >
+            Devoluciones
+          </h2>
+          <ul className="flex flex-col gap-2">
+            {orden.devoluciones.map((devolucion) => (
+              <li
+                key={devolucion.id}
+                className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+              >
+                <p className="font-medium">
+                  Se devolvió a «{buscarCheckpoint(devolucion.destino).etiqueta}
+                  » el {formatoFechaHora(devolucion.fechaHora)} por{" "}
+                  {devolucion.porNombre} ({ETIQUETAS_ROL.admin})
+                </p>
+                <p>Motivo: {devolucion.motivo}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section aria-labelledby="linea-tiempo-titulo">
         <h2
           id="linea-tiempo-titulo"
@@ -142,7 +308,13 @@ export function DetalleOrdenView({ orden, accion }: Props) {
         </h2>
         <ol className="flex flex-col gap-3">
           {orden.etapas.map((etapa) => (
-            <CardEtapa key={etapa.seccion} etapa={etapa} />
+            <CardEtapa
+              key={etapa.seccion}
+              etapa={etapa}
+              devuelta={etapa.seccion === seccionDevuelta}
+              devoluciones={orden.devoluciones}
+              esCorreccion={orden.etapaInicial !== null}
+            />
           ))}
         </ol>
       </section>

@@ -22,7 +22,7 @@ function orden(parcial: Partial<OrdenParaTalleres>): OrdenParaTalleres {
 }
 
 describe("ListaOrdenesTalleres", () => {
-  it("avisa cuando no hay órdenes con el corte hecho", () => {
+  it("avisa cuando no hay órdenes listas para el taller", () => {
     render(<ListaOrdenesTalleres ordenes={[]} />);
 
     expect(screen.getByText(/no hay órdenes/i)).toBeInTheDocument();

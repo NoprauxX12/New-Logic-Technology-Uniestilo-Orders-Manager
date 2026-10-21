@@ -8,11 +8,12 @@ import type { CheckpointId } from "@/features/workflow/checkpoints";
 
 /**
  * HU-10 · Las reglas del despacho. Aquí está el riesgo del dominio: que se
- * mande al taller una orden sin cortar, y que el estado que se muestra no
+ * mande al taller una orden sin recoger ni bordar, y que el estado que se muestra no
  * corresponda con los lotes que hay.
  */
 
 const HASTA_CORTE: CheckpointId[] = [
+  "cotizacion_enviada",
   "cotizacion_aprobada",
   "programada_diseno",
   "ficha_adjunta",
@@ -20,22 +21,17 @@ const HASTA_CORTE: CheckpointId[] = [
   "corte_completado",
 ];
 
-const SIN_CORTE: CheckpointId[] = [
-  "cotizacion_aprobada",
-  "programada_diseno",
-  "ficha_adjunta",
-  "tela_programada",
-];
+const HASTA_RECOGIDO: CheckpointId[] = [...HASTA_CORTE, "recogido_bordado"];
 
 describe("puedeDespachar", () => {
-  it("deja despachar cuando el corte está completado", () => {
-    expect(puedeDespachar(HASTA_CORTE, "logistica")).toEqual({
+  it("deja despachar cuando la orden está recogida y bordada", () => {
+    expect(puedeDespachar(HASTA_RECOGIDO, "logistica")).toEqual({
       permitido: true,
     });
   });
 
   it("no deja que otro rol despache, y dice a quién le toca", () => {
-    const resultado = puedeDespachar(HASTA_CORTE, "corte");
+    const resultado = puedeDespachar(HASTA_RECOGIDO, "corte");
 
     expect(resultado.permitido).toBe(false);
     expect(resultado.permitido === false && resultado.mensaje).toContain(
@@ -43,12 +39,12 @@ describe("puedeDespachar", () => {
     );
   });
 
-  it("no deja despachar si el corte no está completado", () => {
-    const resultado = puedeDespachar(SIN_CORTE, "logistica");
+  it("no deja despachar con el corte hecho pero sin recogido y bordado (HU-09)", () => {
+    const resultado = puedeDespachar(HASTA_CORTE, "logistica");
 
     expect(resultado.permitido).toBe(false);
     expect(resultado.permitido === false && resultado.mensaje).toContain(
-      "Corte completado",
+      "Recogido y bordado",
     );
   });
 
@@ -60,8 +56,8 @@ describe("puedeDespachar", () => {
 
   it("deja despachar otro lote aunque ya haya salido uno", () => {
     // Regla 6: una orden se reparte entre varios talleres. La regla mira el
-    // corte, no cuántos lotes se hayan mandado antes.
-    expect(puedeDespachar(HASTA_CORTE, "logistica")).toEqual({
+    // etapa previa, no cuántos lotes se hayan mandado antes.
+    expect(puedeDespachar(HASTA_RECOGIDO, "logistica")).toEqual({
       permitido: true,
     });
   });

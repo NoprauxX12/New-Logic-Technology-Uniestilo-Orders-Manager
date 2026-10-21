@@ -47,6 +47,8 @@ const VIOLACION_DE_UNICIDAD = "23505";
 const RLS_RECHAZO = "42501";
 /** La orden ya está completada (trigger de HU-13). */
 const ORDEN_COMPLETADA = "UE004";
+/** La orden espera tela y no se puede cortar (trigger de HU-22). */
+const ESPERANDO_TELA = "UE006";
 
 export async function marcarAvance(
   _estadoPrevio: EstadoMarcado,
@@ -108,7 +110,9 @@ async function ejecutarMarcado({
     checkpoint,
     marcados: situacion.marcados,
     rol: usuario.rol,
+    etapaInicial: situacion.etapaInicial,
     recepcionConfirmada: situacion.recepcionConfirmada,
+    esperandoTela: situacion.esperandoTela,
   });
 
   if (!veredicto.permitido) {
@@ -141,6 +145,16 @@ async function ejecutarMarcado({
     };
   }
 
+  // La tela se marcó como faltante entre la lectura y la escritura: el
+  // trigger lo atajó. Se refresca la pantalla para que lo muestre.
+  if (error && error.code === ESPERANDO_TELA) {
+    if (ruta) revalidatePath(ruta);
+    return {
+      ok: false,
+      mensaje: `La orden está esperando tela. ${ETIQUETAS_ROL.secretaria} tiene que marcar que llegó.`,
+    };
+  }
+
   if (error && error.code !== VIOLACION_DE_UNICIDAD) {
     console.error("[workflow] No se pudo marcar el avance", error);
     return { ok: false, mensaje: "No se pudo marcar. Vuelve a intentarlo." };
@@ -159,7 +173,10 @@ async function ejecutarMarcado({
     };
   }
 
-  const sigue = loQueSigue([...situacion.marcados, checkpoint]);
+  const sigue = loQueSigue(
+    [...situacion.marcados, checkpoint],
+    situacion.etapaInicial,
+  );
 
   return {
     ok: true,

@@ -28,6 +28,29 @@ describe("suscribirAvancesTablero", () => {
     );
   });
 
+  it("escucha las devoluciones de HU-18: un reproceso nuevo cambia lo que el tablero muestra", () => {
+    const canal = {
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockReturnThis(),
+    };
+    const supabase = {
+      channel: vi.fn().mockReturnValue(canal),
+      removeChannel: vi.fn(),
+    };
+    const alCambiar = vi.fn();
+
+    suscribirAvancesTablero(
+      supabase as unknown as SupabaseClient<Database>,
+      alCambiar,
+    );
+
+    expect(canal.on).toHaveBeenCalledWith(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "reproceso" },
+      alCambiar,
+    );
+  });
+
   it("escucha INSERT en avance_seccion y cierra el canal al desuscribir", () => {
     const canal = {
       on: vi.fn().mockReturnThis(),
@@ -52,6 +75,20 @@ describe("suscribirAvancesTablero", () => {
         schema: "public",
         table: "avance_seccion",
       },
+      alCambiar,
+    );
+    expect(canal.on).toHaveBeenCalledWith(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "ficha_tecnica",
+      },
+      alCambiar,
+    );
+    expect(canal.on).toHaveBeenCalledWith(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "alerta" },
       alCambiar,
     );
     expect(canal.subscribe).toHaveBeenCalledOnce();

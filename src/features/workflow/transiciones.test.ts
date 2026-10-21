@@ -10,6 +10,7 @@ import {
 } from "@/features/workflow/checkpoints";
 import {
   checkpointsCompletados,
+  etapasQueNoAplicaron,
   puedeMarcar,
   siguienteCheckpoint,
 } from "@/features/workflow/transiciones";
@@ -33,6 +34,7 @@ import {
  * sincronizados la base y la fuente única de la secuencia.
  */
 const TODOS: Record<CheckpointId, true> = {
+  cotizacion_enviada: true,
   cotizacion_aprobada: true,
   programada_diseno: true,
   ficha_adjunta: true,
@@ -370,5 +372,245 @@ describe("puedeMarcar · requisito de recepción del taller (HU-12)", () => {
     expect(resultado.permitido).toBe(false);
     if (resultado.permitido) return;
     expect(resultado.motivo).toBe("fuera_de_secuencia");
+  });
+});
+
+/**
+ * HU-22 · El corte tiene un requisito que no es un checkpoint: la orden no
+ * puede estar esperando tela. Una alerta de falta de tela (HU-06) la frena
+ * hasta que secretaría marca que la tela llegó.
+ */
+describe("puedeMarcar · requisito de tela en la empresa (HU-22)", () => {
+  const { rolDueno } = buscarCheckpoint("corte_completado");
+  const previos = primerasDisponibles(DISPONIBLES.indexOf("corte_completado"));
+
+  it("checkpoints.ts declara que el corte exige la tela en la empresa", () => {
+    expect(buscarCheckpoint("corte_completado").requisito).toBe(
+      "tela_en_empresa",
+    );
+  });
+
+  it("no deja marcar el corte mientras la orden espera tela, y dice a quién le toca", () => {
+    const resultado = puedeMarcar({
+      checkpoint: "corte_completado",
+      marcados: previos,
+      rol: rolDueno,
+      esperandoTela: true,
+    });
+
+    expect(resultado.permitido).toBe(false);
+    if (resultado.permitido) return;
+    expect(resultado.motivo).toBe("requisito_pendiente");
+    expect(resultado.mensaje).toMatch(/esperando tela.*Secretaría/);
+  });
+
+  it("deja marcar el corte cuando la tela ya llegó", () => {
+    expect(
+      puedeMarcar({
+        checkpoint: "corte_completado",
+        marcados: previos,
+        rol: rolDueno,
+        esperandoTela: false,
+      }),
+    ).toEqual({ permitido: true });
+  });
+
+  it("si no se informa, asume que la orden no espera tela", () => {
+    expect(
+      puedeMarcar({
+        checkpoint: "corte_completado",
+        marcados: previos,
+        rol: rolDueno,
+      }),
+    ).toEqual({ permitido: true });
+  });
+
+  it("esperar tela no frena las demás etapas", () => {
+    const previosMarcacion = primerasDisponibles(
+      DISPONIBLES.indexOf("llegada_marcacion"),
+    );
+
+    expect(
+      puedeMarcar({
+        checkpoint: "llegada_marcacion",
+        marcados: previosMarcacion,
+        rol: buscarCheckpoint("llegada_marcacion").rolDueno,
+        recepcionConfirmada: true,
+        esperandoTela: true,
+      }),
+    ).toEqual({ permitido: true });
+  });
+
+  it("el rol se dice antes que la tela: a corte le toca, aunque falte tela", () => {
+    const resultado = puedeMarcar({
+      checkpoint: "corte_completado",
+      marcados: previos,
+      rol: "secretaria",
+      esperandoTela: true,
+    });
+
+    expect(resultado.permitido === false && resultado.motivo).toBe(
+      "rol_no_autorizado",
+    );
+  });
+});
+
+describe("HU-09 · recogido y bordado", () => {
+  // Todo lo que una orden lleva marcado justo antes del recogido. Sale de las
+  // etapas disponibles y no de una lista escrita a mano, para que siga valiendo
+  // cuando otra historia encienda una etapa anterior.
+  const hastaElCorte = primerasDisponibles(
+    DISPONIBLES.indexOf("recogido_bordado"),
+  );
+
+  it("permite a logística marcar después del corte", () => {
+    expect(
+      puedeMarcar({
+        checkpoint: "recogido_bordado",
+        marcados: hastaElCorte,
+        rol: "logistica",
+      }),
+    ).toEqual({ permitido: true });
+  });
+
+  it("impide pasar a marcación sin recogido y bordado", () => {
+    expect(
+      puedeMarcar({
+        checkpoint: "llegada_marcacion",
+        marcados: hastaElCorte,
+        rol: "marcacion",
+        recepcionConfirmada: true,
+      }),
+    ).toMatchObject({
+      permitido: false,
+      motivo: "fuera_de_secuencia",
+    });
+  });
+});
+
+/**
+ * Órdenes en curso. Cada vez que una historia enciende una etapa en medio del
+ * flujo (HU-03 programación, HU-04 ficha…), las órdenes que ya la pasaron no
+ * pueden quedar trancadas esperando algo que nadie les va a pedir. Se prueba
+ * con el corte como avance porque es la etapa disponible más temprana que casi
+ * siempre sigue siéndolo, y los casos salen de `CHECKPOINTS`.
+ */
+describe("órdenes en curso · etapas que se encienden tarde", () => {
+  const posicionDelCorte = CHECKPOINTS.findIndex(
+    (cp) => cp.id === "corte_completado",
+  );
+  const antesDelCorte = CHECKPOINTS.slice(0, posicionDelCorte);
+  const despuesDelCorte = CHECKPOINTS.slice(posicionDelCorte + 1);
+  const siguienteDespuesDelCorte = despuesDelCorte.find((cp) => cp.disponible);
+
+  it("una orden nueva recorre todas las etapas disponibles, desde la primera", () => {
+    expect(etapasQueNoAplicaron([])).toEqual([]);
+    expect(siguienteCheckpoint([])).toBe(CHECKPOINTS_DISPONIBLES[0].id);
+  });
+
+  it("una orden con el corte y sin las etapas anteriores sigue en lo que viene después", () => {
+    expect(siguienteCheckpoint(["corte_completado"])).toBe(
+      siguienteDespuesDelCorte?.id,
+    );
+  });
+
+  it("lo que quedó atrás sin marcar no aplicó", () => {
+    expect(etapasQueNoAplicaron(["corte_completado"])).toEqual(
+      antesDelCorte.map((cp) => cp.id),
+    );
+  });
+
+  it("una etapa marcada no se cuenta como que no aplicó, ni lo que está adelante", () => {
+    const marcados: CheckpointId[] = [antesDelCorte[0].id, "corte_completado"];
+
+    expect(etapasQueNoAplicaron(marcados)).not.toContain(antesDelCorte[0].id);
+    expect(etapasQueNoAplicaron(marcados)).not.toContain("corte_completado");
+    for (const adelante of despuesDelCorte) {
+      expect(etapasQueNoAplicaron(marcados)).not.toContain(adelante.id);
+    }
+  });
+
+  it("no se puede marcar una etapa que la orden ya pasó, y se dice por qué", () => {
+    const disponibleAtras = antesDelCorte.find((cp) => cp.disponible);
+    if (!disponibleAtras) return;
+
+    const resultado = puedeMarcar({
+      checkpoint: disponibleAtras.id,
+      marcados: ["corte_completado"],
+      rol: disponibleAtras.rolDueno,
+    });
+
+    expect(resultado.permitido).toBe(false);
+    if (resultado.permitido) return;
+    expect(resultado.motivo).toBe("fuera_de_secuencia");
+    expect(resultado.mensaje).toMatch(/ya no aplica/);
+  });
+
+  it("la orden en curso sigue pudiendo marcar lo que le toca", () => {
+    if (!siguienteDespuesDelCorte) return;
+
+    expect(
+      puedeMarcar({
+        checkpoint: siguienteDespuesDelCorte.id,
+        marcados: ["corte_completado"],
+        rol: siguienteDespuesDelCorte.rolDueno,
+        recepcionConfirmada: true,
+      }),
+    ).toEqual({ permitido: true });
+  });
+
+  it("una orden con todo marcado en orden no tiene nada que no aplicara", () => {
+    const todas = CHECKPOINTS.map((cp) => cp.id);
+
+    expect(etapasQueNoAplicaron(todas)).toEqual([]);
+    expect(siguienteCheckpoint(todas)).toBeNull();
+  });
+});
+
+describe("HU-19 · lista para despachar es de terminación", () => {
+  const hastaMarcacion = CHECKPOINTS.slice(
+    0,
+    CHECKPOINTS.findIndex((cp) => cp.id === "lista_despacho"),
+  ).map((cp) => cp.id);
+
+  it("la marca terminación", () => {
+    expect(buscarCheckpoint("lista_despacho").rolDueno).toBe("terminacion");
+    expect(ETIQUETAS_ROL.terminacion).toBe("Terminación");
+  });
+
+  it("terminación la puede marcar después de marcación", () => {
+    expect(
+      puedeMarcar({
+        checkpoint: "lista_despacho",
+        marcados: hastaMarcacion,
+        rol: "terminacion",
+      }),
+    ).toEqual({ permitido: true });
+  });
+
+  it("marcación ya no la puede marcar, y el mensaje dice a quién le toca", () => {
+    const resultado = puedeMarcar({
+      checkpoint: "lista_despacho",
+      marcados: hastaMarcacion,
+      rol: "marcacion",
+    });
+
+    expect(resultado.permitido).toBe(false);
+    if (resultado.permitido) return;
+    expect(resultado.motivo).toBe("rol_no_autorizado");
+    expect(resultado.mensaje).toContain("Terminación");
+  });
+
+  it("no se puede marcar antes de que la orden llegue a marcación (criterio de HU-19)", () => {
+    const sinMarcacion = hastaMarcacion.filter(
+      (id) => id !== "llegada_marcacion",
+    );
+    const resultado = puedeMarcar({
+      checkpoint: "lista_despacho",
+      marcados: sinMarcacion,
+      rol: "terminacion",
+    });
+
+    expect(resultado.permitido).toBe(false);
   });
 });
