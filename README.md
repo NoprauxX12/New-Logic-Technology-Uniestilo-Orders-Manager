@@ -59,19 +59,21 @@ Hay una persona por rol, con su cuenta de autenticación ya creada y la contrase
 | `marcacion`   | `00000000-0000-0000-0000-0000000000a6` | `marcacion@uniestilo.test`   | Llegada a marcación                       |
 | `terminacion` | `00000000-0000-0000-0000-0000000000a7` | `terminacion@uniestilo.test` | Lista para despachar                      |
 
-Y hay nueve órdenes, cada una parada en un punto distinto del flujo, para que nadie tenga que hacerle clic a medio proceso solo para llegar a su pantalla:
+Y hay once órdenes, cada una parada en un punto distinto del flujo, para que nadie tenga que hacerle clic a medio proceso solo para llegar a su pantalla:
 
-| Orden     | Avances | Le sigue             | Sirve para                                                 |
-| --------- | ------- | -------------------- | ---------------------------------------------------------- |
-| `OC-5001` | 0       | Cotización enviada   | El comienzo del flujo (HU-02): enviar, aprobar y programar |
-| `OC-5002` | 5       | Corte completado     | HU-08; trae una alerta de tela abierta                     |
-| `OC-5003` | 6       | Recogido y bordado   | HU-09; después, despacharla a taller (HU-10)               |
-| `OC-5004` | 7       | Llegada a marcación  | HU-12; un lote incompleto y otro en el taller              |
-| `OC-5005` | 8       | Lista para despachar | HU-19. Va atrasada: sirve para el semáforo                 |
-| `OC-5006` | 9       | Etiquetas            | HU-13                                                      |
-| `OC-5007` | 13      | —                    | Flujo completo, para el tablero y el histórico             |
-| `OC-5008` | 2       | Programada a diseño  | HU-03: cotización enviada y aprobada, lista para programar |
-| `OC-5009` | 2       | Programada a diseño  | HU-03: igual que la anterior                               |
+| Orden        | Avances | Le sigue             | Sirve para                                                                        |
+| ------------ | ------- | -------------------- | --------------------------------------------------------------------------------- |
+| `OC-5001`    | 0       | Cotización enviada   | El comienzo del flujo (HU-02): enviar, aprobar y programar                        |
+| `OC-5002`    | 5       | Corte completado     | HU-08; trae una alerta de tela abierta                                            |
+| `OC-5003`    | 6       | Recogido y bordado   | HU-09; después, despacharla a taller (HU-10)                                      |
+| `OC-5004`    | 7       | Llegada a marcación  | HU-12; un lote incompleto y otro en el taller                                     |
+| `OC-5005`    | 8       | Lista para despachar | HU-19. Va atrasada: sirve para el semáforo                                        |
+| `OC-5006`    | 9       | Etiquetas            | HU-13                                                                             |
+| `OC-5007`    | 13      | —                    | Flujo completo, para el tablero y el histórico                                    |
+| `OC-5008`    | 2       | Programada a diseño  | HU-03: cotización enviada y aprobada, lista para programar                        |
+| `OC-5009`    | 2       | Programada a diseño  | HU-03: igual que la anterior                                                      |
+| `OC-5010`    | 6 (+1)  | Recogido y bordado   | HU-18: el corte se devolvió y se rehízo; el primero queda anulado en el historial |
+| `OC-5007-C1` | 0       | Corte completado     | HU-18: orden de corrección de `OC-5007`; las etapas anteriores no le aplican      |
 
 HU-10 despacha un lote nuevo desde cualquier orden que ya esté recogida y bordada (`OC-5004` en adelante, u `OC-5003` después de marcar HU-09); HU-11 confirma el lote que el seed dejó abierto en `OC-5004`.
 
