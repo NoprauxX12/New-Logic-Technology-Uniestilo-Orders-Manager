@@ -22,15 +22,23 @@
 alter table public.orden
   add column etapa_inicial public.checkpoint;
 
--- Solo las correcciones entran a mitad del flujo, y solo por una etapa que se
--- marca antes del cierre (las de cierre van después de "lista para despachar").
+-- Solo las correcciones entran a mitad del flujo, y solo por una etapa desde la
+-- que pueden llegar al final sin avances previos. Quedan fuera las de cierre
+-- (van después de "lista para despachar") y dos que atascarían la orden:
+-- "tela_programada" (`programar_tela` exige la ficha técnica vigente) y
+-- "llegada_marcacion" (exige un lote recibido, y despachar exige el recogido y
+-- bordado vigente).
 alter table public.orden
   add constraint orden_etapa_inicial_valida
     check (
       etapa_inicial is null
       or (
         orden_original_id is not null
-        and etapa_inicial <= 'lista_despacho'
+        and etapa_inicial in (
+          'cotizacion_enviada', 'cotizacion_aprobada', 'programada_diseno',
+          'ficha_adjunta', 'corte_completado', 'recogido_bordado',
+          'lista_despacho'
+        )
       )
     );
 
@@ -96,7 +104,11 @@ begin
       using errcode = 'UE010';
   end if;
 
-  if p_etapa_inicial is null or p_etapa_inicial > 'lista_despacho' then
+  if p_etapa_inicial is null or p_etapa_inicial not in (
+      'cotizacion_enviada', 'cotizacion_aprobada', 'programada_diseno',
+      'ficha_adjunta', 'corte_completado', 'recogido_bordado',
+      'lista_despacho'
+    ) then
     raise exception 'Elige una etapa de entrada válida para la corrección'
       using errcode = 'UE010';
   end if;

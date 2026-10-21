@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(22);
+select plan(26);
 
 create function pg_temp.como(p_usuario text) returns void
 language plpgsql as $$
@@ -122,6 +122,20 @@ select throws_ok(
 
 select throws_ok(
   $$select public.crear_orden_de_correccion(
+      '00000000-0000-0000-0000-0000000000f7', current_date + 10, 'Defecto', 'tela_programada',
+      jsonb_build_array(jsonb_build_object('item_id', (select id from prenda), 'cantidad', 5, 'tallas', 'S:5')))$$,
+  'UE010', null, 'la tela programada no sirve de entrada: la corrección no tiene la ficha vigente'
+);
+
+select throws_ok(
+  $$select public.crear_orden_de_correccion(
+      '00000000-0000-0000-0000-0000000000f7', current_date + 10, 'Defecto', 'llegada_marcacion',
+      jsonb_build_array(jsonb_build_object('item_id', (select id from prenda), 'cantidad', 5, 'tallas', 'S:5')))$$,
+  'UE010', null, 'la llegada a marcación no sirve de entrada: no hay lote que recibir sin el recogido'
+);
+
+select throws_ok(
+  $$select public.crear_orden_de_correccion(
       '00000000-0000-0000-0000-0000000000f7', current_date - 1, 'Defecto', 'corte_completado',
       jsonb_build_array(jsonb_build_object('item_id', (select id from prenda), 'cantidad', 5, 'tallas', 'S:5')))$$,
   'UE010', null, 'la entrega no puede ser anterior a hoy'
@@ -198,6 +212,16 @@ select throws_ok(
 select throws_ok(
   $$update public.orden set etapa_inicial = 'cerrada' where numero_orden_compra = 'OC-5007-C1'$$,
   '23514', null, 'la etapa inicial no puede ser de cierre'
+);
+
+select throws_ok(
+  $$update public.orden set etapa_inicial = 'tela_programada' where numero_orden_compra = 'OC-5007-C1'$$,
+  '23514', null, 'la restricción de la base también rechaza la tela programada como entrada'
+);
+
+select throws_ok(
+  $$update public.orden set etapa_inicial = 'llegada_marcacion' where numero_orden_compra = 'OC-5007-C1'$$,
+  '23514', null, 'y la llegada a marcación'
 );
 
 select is(
