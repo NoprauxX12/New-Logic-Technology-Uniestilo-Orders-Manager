@@ -145,7 +145,7 @@ returns uuid language plpgsql as $$
 begin
   insert into public.orden (id, numero_orden_compra, cliente_id, fecha_ingreso, fecha_entrega, creado_por)
   values (pg_temp.id(p_n), 'PT-' || p_n, '00000000-0000-0000-0000-0000000000c1',
-          current_date, p_entrega, '00000000-0000-0000-0000-0000000000a1');
+          least(current_date, p_entrega), p_entrega, '00000000-0000-0000-0000-0000000000a1');
   insert into public.item_orden (orden_id, descripcion, cantidad, tallas, valor)
   values (pg_temp.id(p_n), 'Prenda de prueba', 10, 'M:10', 1000);
   return pg_temp.id(p_n);
