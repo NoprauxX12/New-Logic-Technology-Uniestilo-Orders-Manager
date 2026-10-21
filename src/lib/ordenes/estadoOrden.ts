@@ -89,29 +89,28 @@ async function leerOrdenes(ordenId?: string) {
 
 type OrdenFila = Awaited<ReturnType<typeof leerOrdenes>>[number];
 
+type FilaEnlace = {
+  id: string;
+  numero_orden_compra: string;
+  orden_original_id: string | null;
+};
+
 /**
  * El número de cada orden y a cuál corrige (HU-18), para mostrar el enlace en
- * los dos sentidos. Se lee aparte porque el enlace es una relación de la tabla
- * consigo misma y así el tipo de las demás filas no depende de cómo la resuelve
- * la API. Son pocas filas: una orden por pedido de un taller de ~15 personas.
+ * los dos sentidos. Se arma aparte de las demás filas porque el enlace es una
+ * relación de la tabla consigo misma y así su tipo no depende de cómo la
+ * resuelve la API.
  */
-async function leerEnlaces(): Promise<{
+function armarEnlaces(filas: readonly FilaEnlace[]): {
   numeros: Map<string, string>;
   correccionesDe: Map<string, EnlaceOrden[]>;
-}> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("orden")
-    .select("id, numero_orden_compra, orden_original_id")
-    .order("numero_orden_compra", { ascending: true });
-
-  if (error) {
-    throw new Error(`No se pudieron leer los enlaces: ${error.message}`);
-  }
-
-  const numeros = new Map(data.map((o) => [o.id, o.numero_orden_compra]));
+} {
+  const ordenadas = [...filas].sort((a, b) =>
+    a.numero_orden_compra.localeCompare(b.numero_orden_compra),
+  );
+  const numeros = new Map(ordenadas.map((o) => [o.id, o.numero_orden_compra]));
   const correccionesDe = new Map<string, EnlaceOrden[]>();
-  for (const orden of data) {
+  for (const orden of ordenadas) {
     if (!orden.orden_original_id) continue;
     correccionesDe.set(orden.orden_original_id, [
       ...(correccionesDe.get(orden.orden_original_id) ?? []),
@@ -121,7 +120,30 @@ async function leerEnlaces(): Promise<{
   return { numeros, correccionesDe };
 }
 
-type Enlaces = Awaited<ReturnType<typeof leerEnlaces>>;
+/**
+ * Los enlaces de UNA orden: su original (si es una corrección) y sus
+ * correcciones. Se piden solo esas filas, no toda la tabla.
+ */
+async function leerEnlacesDeOrden(fila: OrdenFila) {
+  const supabase = await createClient();
+  const consulta = supabase
+    .from("orden")
+    .select("id, numero_orden_compra, orden_original_id");
+
+  const { data, error } = await (fila.orden_original_id
+    ? consulta.or(
+        `id.eq.${fila.orden_original_id},orden_original_id.eq.${fila.id}`,
+      )
+    : consulta.eq("orden_original_id", fila.id));
+
+  if (error) {
+    throw new Error(`No se pudieron leer los enlaces: ${error.message}`);
+  }
+
+  return armarEnlaces(data);
+}
+
+type Enlaces = ReturnType<typeof armarEnlaces>;
 
 function prendasDe(items: OrdenFila["item_orden"]): {
   prenda: string;
@@ -245,7 +267,10 @@ function enriquecer(fila: OrdenFila, enlaces: Enlaces): OrdenEnTablero {
 }
 
 export async function listarOrdenesTablero(): Promise<OrdenEnTablero[]> {
-  const [filas, enlaces] = await Promise.all([leerOrdenes(), leerEnlaces()]);
+  const filas = await leerOrdenes();
+  // El tablero ya trae todas las órdenes: los enlaces salen de esas mismas
+  // filas, sin otra consulta.
+  const enlaces = armarEnlaces(filas);
   return filas.map((fila) => enriquecer(fila, enlaces));
 }
 
@@ -259,11 +284,10 @@ export async function obtenerResumenTablero(
 export async function obtenerDetalleOrden(
   ordenId: string,
 ): Promise<DetalleOrden | null> {
-  const [[fila], enlaces] = await Promise.all([
-    leerOrdenes(ordenId),
-    leerEnlaces(),
-  ]);
+  const [fila] = await leerOrdenes(ordenId);
   if (!fila) return null;
+
+  const enlaces = await leerEnlacesDeOrden(fila);
 
   const supabase = await createClient();
 
