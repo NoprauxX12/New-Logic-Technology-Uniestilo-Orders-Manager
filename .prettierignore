@@ -6,3 +6,6 @@ coverage
 package-lock.json
 next-env.d.ts
 src/types/database.types.ts
+
+# Pruebas pgTAP: son SQL con su propio estilo
+supabase/tests
