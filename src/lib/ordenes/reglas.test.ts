@@ -188,3 +188,50 @@ describe("contarProgreso", () => {
     expect(totales).toBeLessThan(CHECKPOINTS.length);
   });
 });
+
+describe("etapas que no aplicaron (órdenes en curso)", () => {
+  function avancesHasta(ultima: string): AvanceSeccion[] {
+    return [
+      {
+        seccion: ultima as AvanceSeccion["seccion"],
+        usuarioId: "u1",
+        usuarioNombre: "Camila Ríos",
+        fechaHora: "2026-09-01T10:00:00Z",
+      },
+    ];
+  }
+
+  it("una orden que solo tiene el corte ve las etapas anteriores como 'no aplicó'", () => {
+    const etapas = armarEtapas(avancesHasta("corte_completado"));
+    const posicion = etapas.findIndex((e) => e.seccion === "corte_completado");
+
+    for (const etapa of etapas.slice(0, posicion)) {
+      expect(etapa.estado).toBe("no_aplico");
+    }
+    expect(etapas[posicion].estado).toBe("completada");
+    for (const etapa of etapas.slice(posicion + 1)) {
+      expect(etapa.estado).toBe("pendiente");
+    }
+  });
+
+  it("una orden nueva no tiene ninguna que no aplicara", () => {
+    expect(
+      armarEtapas([]).filter((etapa) => etapa.estado === "no_aplico"),
+    ).toEqual([]);
+  });
+
+  it("las que no aplicaron no cuentan en el avance: la orden puede llegar al 100 %", () => {
+    // Una orden cerrada que nunca pasó por la etapa más temprana disponible.
+    const marcadas = CHECKPOINTS_DISPONIBLES.slice(1).map((cp) => ({
+      seccion: cp.id,
+      usuarioId: "u1",
+      usuarioNombre: "Camila Ríos",
+      fechaHora: "2026-09-01T10:00:00Z",
+    }));
+
+    const progreso = contarProgreso(armarEtapas(marcadas));
+
+    expect(progreso.completadas).toBe(progreso.totales);
+    expect(progreso.totales).toBe(CHECKPOINTS_DISPONIBLES.length - 1);
+  });
+});

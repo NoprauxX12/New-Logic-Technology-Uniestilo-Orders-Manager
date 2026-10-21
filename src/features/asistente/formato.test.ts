@@ -157,12 +157,15 @@ describe("detallarOrden", () => {
         observacion: "Faltó un rollo",
       },
     ]);
-    // Pendiente es toda etapa disponible sin marcar, no solo las que vienen
-    // después: esta orden tiene el corte marcado y nada más.
+    // Pendiente es lo que viene después del avance de la orden. Lo que quedó
+    // atrás sin marcarse (esta orden tiene el corte y nada más) no aplicó: no se
+    // puede marcar, así que tampoco se le ofrece a nadie como pendiente.
     expect(detalle.etapasPendientes).toEqual(
-      CHECKPOINTS_DISPONIBLES.filter((cp) => cp.id !== "corte_completado").map(
-        (cp) => cp.etiqueta,
-      ),
+      CHECKPOINTS_DISPONIBLES.slice(
+        CHECKPOINTS_DISPONIBLES.findIndex(
+          (cp) => cp.id === "corte_completado",
+        ) + 1,
+      ).map((cp) => cp.etiqueta),
     );
   });
 });

@@ -158,7 +158,7 @@ export function detallarOrden(
     })),
     etapasPendientes: disponibles
       .filter(
-        (checkpoint) => porSeccion.get(checkpoint.id)?.estado !== "completada",
+        (checkpoint) => porSeccion.get(checkpoint.id)?.estado === "pendiente",
       )
       .map((checkpoint) => checkpoint.etiqueta),
   };

@@ -35,7 +35,11 @@ export type OrdenResumen = {
 /** Semáforo derivado en aplicación (no columna editable). */
 export type SemaforoOrden = "a_tiempo" | "en_riesgo" | "atrasada";
 
-export type EstadoEtapa = "completada" | "pendiente";
+/**
+ * `no_aplico`: la orden pasó de largo esta etapa porque, cuando iba por ahí, la
+ * etapa todavía no se podía marcar en el sistema. No es un pendiente.
+ */
+export type EstadoEtapa = "completada" | "pendiente" | "no_aplico";
 
 export type EtapaTablero = {
   seccion: CheckpointId;

@@ -1,4 +1,5 @@
 import { buscarCheckpoint, CHECKPOINTS } from "@/features/workflow/checkpoints";
+import { etapasQueNoAplicaron } from "@/features/workflow/transiciones";
 import type {
   AvanceSeccion,
   EtapaTablero,
@@ -36,13 +37,20 @@ export function derivarSemaforo(
 
 export function armarEtapas(avances: AvanceSeccion[]): EtapaTablero[] {
   const porSeccion = new Map(avances.map((a) => [a.seccion, a]));
+  const noAplicaron = new Set(
+    etapasQueNoAplicaron(avances.map((avance) => avance.seccion)),
+  );
 
   return CHECKPOINTS.map((cp) => {
     const avance = porSeccion.get(cp.id) ?? null;
     return {
       seccion: cp.id,
       etiqueta: cp.etiqueta,
-      estado: avance ? ("completada" as const) : ("pendiente" as const),
+      estado: avance
+        ? ("completada" as const)
+        : noAplicaron.has(cp.id)
+          ? ("no_aplico" as const)
+          : ("pendiente" as const),
       avance,
     };
   });
@@ -57,8 +65,11 @@ export function contarProgreso(etapas: EtapaTablero[]): {
   completadas: number;
   totales: number;
 } {
+  // Las que la orden pasó de largo tampoco cuentan: no se pueden marcar.
   const disponibles = etapas.filter(
-    (etapa) => buscarCheckpoint(etapa.seccion).disponible,
+    (etapa) =>
+      buscarCheckpoint(etapa.seccion).disponible &&
+      etapa.estado !== "no_aplico",
   );
 
   return {

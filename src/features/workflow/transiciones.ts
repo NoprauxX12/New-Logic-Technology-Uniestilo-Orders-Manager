@@ -1,7 +1,6 @@
 import {
   buscarCheckpoint,
   CHECKPOINTS,
-  CHECKPOINTS_DISPONIBLES,
   ETIQUETAS_ROL,
   type CheckpointId,
   type Rol,
@@ -36,20 +35,64 @@ export type ResultadoMarcado =
   | { permitido: false; motivo: MotivoRechazo; mensaje: string };
 
 /**
+ * Qué lugar ocupa, en la secuencia, la etapa más avanzada que la orden ya
+ * tiene marcada. `-1` si todavía no tiene ninguna.
+ */
+function posicionDelAvance(marcados: readonly CheckpointId[]): number {
+  const yaEsta = new Set(marcados);
+  return CHECKPOINTS.reduce(
+    (ultima, checkpoint, posicion) =>
+      yaEsta.has(checkpoint.id) ? posicion : ultima,
+    -1,
+  );
+}
+
+/**
+ * Las etapas que esta orden se saltó sin que nadie hiciera nada mal: quedaron
+ * atrás de su avance sin marcarse, porque cuando la orden pasó por ahí esa
+ * etapa todavía no se podía marcar en el sistema. Es lo que le pasa a una orden
+ * que ya iba en corte el día que se enciende la programación a diseño.
+ *
+ * No son pendientes: no se pueden marcar, no cuentan en el avance y el tablero
+ * las muestra como "No aplicó".
+ */
+export function etapasQueNoAplicaron(
+  marcados: readonly CheckpointId[],
+): CheckpointId[] {
+  const yaEsta = new Set(marcados);
+  const ultima = posicionDelAvance(marcados);
+
+  return CHECKPOINTS.filter(
+    (checkpoint, posicion) => posicion < ultima && !yaEsta.has(checkpoint.id),
+  ).map((checkpoint) => checkpoint.id);
+}
+
+/**
  * El checkpoint que sigue: el primero que todavía no se ha marcado, contando
- * solo las etapas que ya tienen pantalla. Devuelve `null` cuando la orden ya
- * recorrió todo lo que hoy se puede marcar.
+ * solo las etapas que ya tienen pantalla y que están por delante del avance de
+ * la orden. Devuelve `null` cuando la orden ya recorrió todo lo que hoy se
+ * puede marcar.
  *
  * Se saltan las que no están disponibles a propósito: sus historias son de
- * otros sprints, y exigirlas dejaría trancada cualquier orden nueva.
+ * otros sprints, y exigirlas dejaría trancada cualquier orden nueva. Por la
+ * misma razón se ignoran las que quedaron atrás del avance de la orden: una
+ * etapa que se enciende con la orden ya en curso no la puede trancar, y como
+ * solo se marca la siguiente, tampoco se puede marcar después de haberla
+ * pasado. Una orden nueva sí las recorre todas.
  */
 export function siguienteCheckpoint(
   marcados: readonly CheckpointId[],
 ): CheckpointId | null {
   const yaEsta = new Set(marcados);
+  const ultima = posicionDelAvance(marcados);
+
   return (
-    CHECKPOINTS_DISPONIBLES.find((checkpoint) => !yaEsta.has(checkpoint.id))
-      ?.id ?? null
+    CHECKPOINTS.find(
+      (checkpoint, posicion) =>
+        posicion > ultima &&
+        checkpoint.disponible &&
+        !yaEsta.has(checkpoint.id),
+    )?.id ?? null
   );
 }
 
@@ -111,6 +154,14 @@ export function puedeMarcar({
       permitido: false,
       motivo: "todavia_no_disponible",
       mensaje: `"${etiqueta}" todavía no se puede marcar en el sistema.`,
+    };
+  }
+
+  if (etapasQueNoAplicaron(marcados).includes(checkpoint)) {
+    return {
+      permitido: false,
+      motivo: "fuera_de_secuencia",
+      mensaje: `"${etiqueta}" ya no aplica en esta orden: va más adelante.`,
     };
   }
 

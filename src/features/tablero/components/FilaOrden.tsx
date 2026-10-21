@@ -28,21 +28,24 @@ function formatoCorto(iso: string) {
 
 function NodoEtapa({ etapa }: { etapa: EtapaTablero }) {
   const completada = etapa.estado === "completada";
+  const noAplico = etapa.estado === "no_aplico";
   return (
     <li
       className="flex w-14 shrink-0 flex-col items-center gap-1"
-      title={etapa.etiqueta}
+      title={noAplico ? `${etapa.etiqueta} (no aplicó)` : etapa.etiqueta}
     >
       <span
         className={[
           "flex size-7 items-center justify-center rounded-full text-xs",
           completada
             ? "bg-emerald-100 text-emerald-800"
-            : "bg-zinc-100 text-zinc-400 ring-1 ring-zinc-200",
+            : noAplico
+              ? "ring-dashed bg-zinc-50 text-zinc-400 ring-1 ring-zinc-200"
+              : "bg-zinc-100 text-zinc-400 ring-1 ring-zinc-200",
         ].join(" ")}
-        aria-label={`${etapa.etiqueta}: ${completada ? "completada" : "pendiente"}`}
+        aria-label={`${etapa.etiqueta}: ${completada ? "completada" : noAplico ? "no aplicó" : "pendiente"}`}
       >
-        {completada ? "✓" : ""}
+        {completada ? "✓" : noAplico ? "–" : ""}
       </span>
       <span className="w-full text-center text-[10px] leading-tight text-zinc-500">
         {ETIQUETA_CORTA[etapa.seccion]}

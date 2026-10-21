@@ -19,10 +19,12 @@ function formatoFechaHora(iso: string) {
 
 function CardEtapa({ etapa }: { etapa: EtapaTablero }) {
   const completada = etapa.estado === "completada";
+  const noAplico = etapa.estado === "no_aplico";
   // De dónde salen el enlace y el "todavía no disponible": la fuente única de
   // la secuencia (regla 4), para no mantener aparte un mapa de etapa → página.
   const { ruta, disponible } = buscarCheckpoint(etapa.seccion);
-  const sePuedeIrAMarcar = !completada && disponible && ruta !== null;
+  const sePuedeIrAMarcar =
+    !completada && !noAplico && disponible && ruta !== null;
 
   return (
     <li className="rounded-xl border border-zinc-200 bg-white p-4">
@@ -38,9 +40,11 @@ function CardEtapa({ etapa }: { etapa: EtapaTablero }) {
         >
           {completada
             ? "Completada"
-            : disponible
-              ? "Pendiente"
-              : "Todavía no disponible"}
+            : noAplico
+              ? "No aplicó"
+              : disponible
+                ? "Pendiente"
+                : "Todavía no disponible"}
         </span>
       </div>
 
@@ -51,6 +55,11 @@ function CardEtapa({ etapa }: { etapa: EtapaTablero }) {
             {etapa.avance.usuarioNombre}
           </span>{" "}
           · {formatoFechaHora(etapa.avance.fechaHora)}
+        </p>
+      ) : noAplico ? (
+        <p className="mt-2 text-sm text-zinc-500">
+          La orden ya iba más adelante cuando esta etapa empezó a marcarse en el
+          sistema.
         </p>
       ) : disponible ? (
         <p className="mt-2 text-sm text-zinc-500">Aún no marcada.</p>
