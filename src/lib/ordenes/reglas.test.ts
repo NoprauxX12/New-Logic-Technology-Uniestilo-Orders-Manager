@@ -11,6 +11,7 @@ import {
   derivarSemaforo,
   describirQuienMarco,
   diasHasta,
+  etapaDevuelta,
   resumirTablero,
 } from "@/lib/ordenes/reglas";
 import type { AvanceSeccion, OrdenEnTablero } from "@/lib/ordenes/types";
@@ -364,5 +365,54 @@ describe("armarEtapas · devoluciones y órdenes de corrección (HU-18)", () => 
     expect(describirQuienMarco("Diana Restrepo", "corte_completado")).toBe(
       "Diana Restrepo (Corte)",
     );
+  });
+});
+
+describe("etapaDevuelta", () => {
+  const devolucion = (
+    id: string,
+    destino: AvanceSeccion["seccion"],
+    fechaHora: string,
+  ) => ({ id, destino, motivo: "x", porNombre: "Diana", fechaHora });
+  const vigentes = (...secciones: AvanceSeccion["seccion"][]) =>
+    secciones.map((seccion) => ({
+      seccion,
+      usuarioId: "u",
+      usuarioNombre: "U",
+      fechaHora: "2026-09-01T10:00:00Z",
+    }));
+
+  it("sin devoluciones no hay etapa devuelta", () => {
+    expect(etapaDevuelta(armarEtapas([]), [])).toBeNull();
+  });
+
+  it("es el destino de la devolución mientras siga pendiente", () => {
+    const etapas = armarEtapas(vigentes("cotizacion_enviada"), []);
+    expect(
+      etapaDevuelta(etapas, [
+        devolucion("d1", "cotizacion_aprobada", "2026-09-02T10:00:00Z"),
+      ]),
+    ).toBe("cotizacion_aprobada");
+  });
+
+  it("deja de serlo cuando la etapa se rehace", () => {
+    const etapas = armarEtapas(
+      vigentes("cotizacion_enviada", "cotizacion_aprobada"),
+    );
+    expect(
+      etapaDevuelta(etapas, [
+        devolucion("d1", "cotizacion_aprobada", "2026-09-02T10:00:00Z"),
+      ]),
+    ).toBeNull();
+  });
+
+  it("cuenta solo la devolución más reciente", () => {
+    const etapas = armarEtapas(vigentes("cotizacion_enviada"));
+    expect(
+      etapaDevuelta(etapas, [
+        devolucion("d2", "cotizacion_aprobada", "2026-09-03T10:00:00Z"),
+        devolucion("d1", "cotizacion_enviada", "2026-09-02T10:00:00Z"),
+      ]),
+    ).toBe("cotizacion_aprobada");
   });
 });

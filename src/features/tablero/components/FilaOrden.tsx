@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { BadgeSemaforo } from "@/features/tablero/components/BadgeSemaforo";
+import { etapaDevuelta } from "@/lib/ordenes/reglas";
 import type { EtapaTablero, OrdenEnTablero } from "@/lib/ordenes/types";
 import type { CheckpointId } from "@/features/workflow/checkpoints";
 import { loQueSigue } from "@/features/workflow/estado";
@@ -50,10 +51,13 @@ const CLASE_TRAMO: Record<Tramo, string> = {
 
 function NodoEtapa({
   etapa,
+  devuelta,
   izquierda,
   derecha,
 }: {
   etapa: EtapaTablero;
+  /** HU-18: es la etapa a la que se devolvió la orden y aún no se rehace. */
+  devuelta: boolean;
   /** Tramo que llega desde la etapa anterior; null en la primera. */
   izquierda: Tramo | null;
   /** Tramo que sale hacia la etapa siguiente; null en la última. */
@@ -61,8 +65,6 @@ function NodoEtapa({
 }) {
   const completada = etapa.estado === "completada";
   const noAplico = etapa.estado === "no_aplico";
-  // HU-18: la etapa estuvo marcada y una devolución la anuló; sigue pendiente.
-  const devuelta = !completada && etapa.anulados.length > 0;
   return (
     <li
       className="flex w-14 shrink-0 flex-col items-center gap-1"
@@ -130,8 +132,9 @@ export function FilaOrden({ orden }: { orden: OrdenEnTablero }) {
   );
 
   // HU-18: la etapa a la que se devolvió la orden y que todavía no se rehace.
+  const seccionDevuelta = etapaDevuelta(orden.etapas, orden.devoluciones);
   const devuelta = orden.etapas.find(
-    (etapa) => etapa.estado === "pendiente" && etapa.anulados.length > 0,
+    (etapa) => etapa.seccion === seccionDevuelta,
   );
 
   return (
@@ -187,6 +190,7 @@ export function FilaOrden({ orden }: { orden: OrdenEnTablero }) {
           <NodoEtapa
             key={etapa.seccion}
             etapa={etapa}
+            devuelta={etapa.seccion === seccionDevuelta}
             izquierda={i > 0 ? tramoHacia(etapas, i) : null}
             derecha={i < etapas.length - 1 ? tramoHacia(etapas, i + 1) : null}
           />

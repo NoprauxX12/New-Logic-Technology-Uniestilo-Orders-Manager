@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import { FichasAdjuntas } from "@/components/FichasAdjuntas";
 import { BadgeSemaforo } from "@/features/tablero/components/BadgeSemaforo";
-import { describirQuienMarco } from "@/lib/ordenes/reglas";
+import { describirQuienMarco, etapaDevuelta } from "@/lib/ordenes/reglas";
 import type {
   DetalleOrden,
   Devolucion,
@@ -70,16 +70,18 @@ function HistorialDeDevoluciones({
 
 function CardEtapa({
   etapa,
+  devuelta,
   devoluciones,
   esCorreccion,
 }: {
   etapa: EtapaTablero;
+  /** HU-18: es la etapa a la que se devolvió la orden y aún no se rehace. */
+  devuelta: boolean;
   devoluciones: Devolucion[];
   esCorreccion: boolean;
 }) {
   const completada = etapa.estado === "completada";
   const noAplico = etapa.estado === "no_aplico";
-  const devuelta = !completada && etapa.anulados.length > 0;
   // De dónde salen el enlace y el "todavía no disponible": la fuente única de
   // la secuencia (regla 4), para no mantener aparte un mapa de etapa → página.
   const { ruta, disponible } = buscarCheckpoint(etapa.seccion);
@@ -211,6 +213,7 @@ function EnlacesDeCorreccion({ orden }: { orden: DetalleOrden }) {
 
 export function DetalleOrdenView({ orden, accion, correccion }: Props) {
   const pct = Math.round((orden.etapasCompletadas / orden.etapasTotales) * 100);
+  const seccionDevuelta = etapaDevuelta(orden.etapas, orden.devoluciones);
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8">
@@ -308,6 +311,7 @@ export function DetalleOrdenView({ orden, accion, correccion }: Props) {
             <CardEtapa
               key={etapa.seccion}
               etapa={etapa}
+              devuelta={etapa.seccion === seccionDevuelta}
               devoluciones={orden.devoluciones}
               esCorreccion={orden.etapaInicial !== null}
             />

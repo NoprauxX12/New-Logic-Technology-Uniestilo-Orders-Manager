@@ -8,6 +8,7 @@ import { etapasQueNoAplicaron } from "@/features/workflow/transiciones";
 import type {
   AvanceAnulado,
   AvanceSeccion,
+  Devolucion,
   EtapaTablero,
   OrdenEnTablero,
   ResumenTablero,
@@ -102,6 +103,25 @@ export function armarEtapas(
         .sort((a, b) => a.fechaHora.localeCompare(b.fechaHora)),
     };
   });
+}
+
+/**
+ * La etapa a la que la orden está devuelta (HU-18): el destino de la última
+ * devolución, y solo mientras siga pendiente. Si ya se rehízo, o si una
+ * devolución posterior la superó, no hay etapa devuelta; las demás etapas que
+ * quedaron con avances anulados conservan su historial pero no la marca.
+ */
+export function etapaDevuelta(
+  etapas: readonly EtapaTablero[],
+  devoluciones: readonly Devolucion[],
+): CheckpointId | null {
+  const ultima = [...devoluciones].sort((a, b) =>
+    a.fechaHora.localeCompare(b.fechaHora),
+  )[devoluciones.length - 1];
+  if (!ultima) return null;
+
+  const destino = etapas.find((etapa) => etapa.seccion === ultima.destino);
+  return destino?.estado === "pendiente" ? destino.seccion : null;
 }
 
 /**
