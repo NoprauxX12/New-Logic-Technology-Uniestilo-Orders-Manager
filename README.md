@@ -134,6 +134,19 @@ En vez de escribir en `avance_seccion` por su cuenta, una historia de marcado ca
 | `npm run lint:fix` | Arregla lo que ESLint pueda arreglar solo                     |
 | `npm run format`   | Formatea todo con Prettier                                    |
 | `npm test`         | Tests en modo watch                                           |
+| `npm run test:db`  | Pruebas pgTAP contra la base local (RLS, triggers, funciones) |
+
+## Pruebas de la base de datos
+
+Lo que protege los datos (políticas RLS, triggers, restricciones y funciones de Postgres) se prueba con [pgTAP](https://pgtap.org/) en `supabase/tests/`, contra la base local. Con Docker y Supabase levantados (`npx supabase start`):
+
+```bash
+npx supabase db reset   # base limpia: migraciones + seed
+npm run test:db         # corre todos los archivos de supabase/tests
+npx supabase test db supabase/tests/04_avance_seccion.sql   # uno solo
+```
+
+Cada archivo corre dentro de `begin; ... rollback;`, no deja nada en la base y no depende de los demás. Las pruebas dan por hecho el seed de `supabase/seed.sql` (los usuarios `...a1` a `...a7` y algunas órdenes) y crean sus propios datos con ids que no chocan. Una prueba marcada `todo` documenta un hallazgo que todavía no está arreglado: falla a propósito y no rompe la corrida. En CI corre en el job `Base de datos`, que además verifica que todas las migraciones y el seed aplican desde cero.
 
 ## Documentación
 
