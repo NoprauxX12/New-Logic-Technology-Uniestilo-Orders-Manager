@@ -372,14 +372,12 @@ select count(pg_temp.intenta('a2', format(
      values (%L, 'cotizacion_enviada', '00000000-0000-0000-0000-0000000000a2', now() - interval '30 days')$q$,
   pg_temp.id(1015)))) as intentos_de_fechar_en_el_pasado;
 
-select todo_start('HALLAZGO: quien marca un avance puede ponerle la fecha_hora que quiera (la política no la fija ni hay trigger que use la del servidor)');
 select is(
   (select count(*)::int from public.avance_seccion
     where orden_id = pg_temp.id(1015) and fecha_hora < now() - interval '1 day'),
   0,
   'un avance no puede quedar fechado en el pasado por quien lo marca'
 );
-select todo_end();
 
 select * from finish();
 rollback;

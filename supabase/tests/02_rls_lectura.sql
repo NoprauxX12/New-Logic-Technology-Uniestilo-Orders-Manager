@@ -311,7 +311,6 @@ cross join unnest(array[
 
 -- La política "alerta propia o admin" solo mira destinatario_id = auth.uid(),
 -- sin pasar por rol_actual(): una cuenta desactivada sigue viendo sus alertas.
-select todo_start('HALLAZGO: una cuenta desactivada sigue leyendo las alertas que le llegaron (la política de lectura de alerta no exige rol_actual())');
 select is(
   pg_temp.intenta(p.sufijo, 'select 1 from public.alerta'),
   'ok:0',
@@ -322,7 +321,6 @@ from (values
   ('b2', 'el admin desactivado'),
   ('b3', 'quien tiene sesión pero no perfil')
 ) as p(sufijo, descripcion);
-select todo_end();
 
 -- Desactivar a alguien le quita el acceso al instante, sin tocar su JWT.
 update public.usuario set activo = false

@@ -336,15 +336,15 @@ select is(
 select is(
   pg_temp.intenta('a1', format(
     $q$update public.alerta set tela_llegada_en = now() + interval '1 day' where id = %L$q$, pg_temp.id(7001))),
-  'UE007',
-  'la hora de llegada de la tela no se cambia después (trigger UE007)'
+  'ok:0',
+  'la hora de llegada de la tela no se cambia después (ninguna política deja tocar una alerta atendida)'
 );
 
 select is(
   pg_temp.intenta('a1', format(
     $q$update public.alerta set tela_recibida_por = '00000000-0000-0000-0000-0000000000a1' where id = %L$q$, pg_temp.id(7001))),
-  'UE007',
-  'quién recibió la tela no se cambia después (trigger UE007)'
+  'ok:0',
+  'quién recibió la tela no se cambia después (ninguna política deja tocar una alerta atendida)'
 );
 
 select is(

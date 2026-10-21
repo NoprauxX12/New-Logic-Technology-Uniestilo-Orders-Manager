@@ -377,14 +377,12 @@ select is(
   'nadie borra prendas, ni admin'
 );
 
-select todo_start('HALLAZGO: secretaría puede cambiar cantidad, valor y descripción de una prenda con un UPDATE directo (item_orden conserva UPDATE sobre todas las columnas)');
 select is(
   pg_temp.intenta('a2', format('update public.item_orden set %s where orden_id = %L', c, pg_temp.id(1))),
   '42501',
   format('secretaría no puede escribir %s en item_orden', split_part(c, ' =', 1))
 )
 from unnest(array['valor = 1', 'cantidad = 1', 'descripcion = ''x''', 'tallas = ''x''']) c;
-select todo_end();
 
 -- ---------------------------------------------------------------------------
 -- lote_taller: logística despacha y recibe, a su nombre
@@ -426,17 +424,17 @@ select is(
 );
 
 select is(
-  pg_temp.intenta('b4', format($q$update public.lote_taller set recibido_completo = true, fecha_recepcion = now(),
-      recibido_por = '00000000-0000-0000-0000-0000000000b4' where id = %L$q$, pg_temp.id(901))),
-  'ok:1',
-  'logística confirma la recepción de un lote a su nombre'
-);
-
-select is(
   pg_temp.intenta('a5', format($q$update public.lote_taller set recibido_completo = true, fecha_recepcion = now(),
       recibido_por = '00000000-0000-0000-0000-0000000000a2' where id = %L$q$, pg_temp.id(901))),
   '42501',
   'logística no puede confirmar la recepción a nombre de otra persona'
+);
+
+select is(
+  pg_temp.intenta('b4', format($q$update public.lote_taller set recibido_completo = true, fecha_recepcion = now(),
+      recibido_por = '00000000-0000-0000-0000-0000000000b4' where id = %L$q$, pg_temp.id(901))),
+  'ok:1',
+  'logística confirma la recepción de un lote a su nombre'
 );
 
 select is(
@@ -470,7 +468,6 @@ select is(
   'la recepción no puede ser anterior al envío (lote_taller_recepcion_no_anterior)'
 );
 
-select todo_start('HALLAZGO: la política "logistica recibe" solo exige recibido_por = auth.uid(); un lote ya recibido se puede reescribir (otra persona, otros datos) y se puede cambiar enviado_por');
 select is(
   pg_temp.intenta('b4', format($q$update public.lote_taller set recibido_completo = false, recibido_por = '00000000-0000-0000-0000-0000000000b4'
       where id = %L$q$, pg_temp.id(902))),
@@ -484,7 +481,6 @@ select is(
   '42501',
   'nadie puede cambiar quién envió un lote'
 );
-select todo_end();
 
 -- ---------------------------------------------------------------------------
 -- ficha_tecnica: diseño sube, a su nombre
@@ -667,7 +663,6 @@ select is(
   'el detalle de una alerta no se puede cambiar (sin permiso de columna)'
 );
 
-select todo_start('HALLAZGO: el destinatario puede reabrir o reescribir la hora de una alerta ya atendida (la política de UPDATE no pone condición sobre el estado)');
 select is(
   pg_temp.intenta('a5', format($q$update public.alerta set estado = 'pendiente', fecha_atencion = null where id = %L$q$, pg_temp.id(802))),
   'ok:0',
@@ -678,7 +673,6 @@ select is(
   'ok:0',
   'la hora en que se atendió una alerta no se reescribe'
 );
-select todo_end();
 
 -- ---------------------------------------------------------------------------
 -- usuario: solo admin administra personas

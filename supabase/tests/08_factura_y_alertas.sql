@@ -227,8 +227,8 @@ select is(
 
 select is(
   pg_temp.valor('a2', format($q$select public.reportar_factura(%L, 'FV-000')::text$q$, pg_temp.id(4001))),
-  'ERR:23505',
-  'la factura de una orden no se reporta dos veces'
+  'ERR:UE015',
+  'la factura de una orden no se reporta dos veces (el número ya escrito no se cambia, UE015)'
 );
 
 select is(
@@ -273,8 +273,8 @@ select is(
 
 select is(
   pg_temp.valor('a2', format($q$select public.reportar_factura(%L, 'FV-NEW')::text$q$, pg_temp.id(4002))),
-  'ERR:UE004',
-  'a una orden cerrada no se le reporta factura (UE004)'
+  'ERR:UE015',
+  'a una orden cerrada y facturada no se le reporta factura (UE015, antes que UE004)'
 );
 
 select is(
@@ -283,26 +283,22 @@ select is(
   'y el rechazo deshizo el cambio del número en la orden cerrada'
 );
 
-select todo_start('HALLAZGO: secretaría puede cambiar numero_factura de una orden ya cerrada (o con factura) con un UPDATE directo: solo el avance está congelado, no la columna');
 select is(
   pg_temp.intenta('a2', format($q$update public.orden set numero_factura = 'FV-CAMBIADA' where id = %L$q$, pg_temp.id(4002))),
-  'ok:0',
-  'el número de factura de una orden cerrada no se puede cambiar'
+  'UE015',
+  'el número de factura de una orden cerrada no se puede cambiar (UE015)'
 );
 select is(
   pg_temp.intenta('a2', format($q$update public.orden set numero_factura = 'FV-CAMBIADA' where id = %L$q$, pg_temp.id(4001))),
-  'ok:0',
-  'el número de una factura ya reportada no se puede cambiar'
+  'UE015',
+  'el número de una factura ya reportada no se puede cambiar (UE015)'
 );
-select todo_end();
 
-select todo_start('HALLAZGO: reportar_factura acepta un número de factura en blanco (no hay validación en la función ni check en la tabla)');
 select is(
   pg_temp.valor('a2', format($q$select public.reportar_factura(%L, '   ')::text$q$, pg_temp.id(4003))),
   'ERR:23514',
   'la factura en blanco se rechaza'
 );
-select todo_end();
 
 -- ---------------------------------------------------------------------------
 -- generar_alertas_proximidad_entrega

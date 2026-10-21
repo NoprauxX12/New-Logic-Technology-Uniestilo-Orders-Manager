@@ -110,14 +110,12 @@ select is_empty(
 
 -- Defensa en profundidad: RLS no se aplica a TRUNCATE, así que el permiso no
 -- debería existir. Hoy lo concede el valor por defecto de Supabase.
-select todo_start('HALLAZGO: authenticated conserva TRUNCATE sobre las tablas (Supabase lo concede por defecto); RLS no lo frena');
 select is_empty(
   $$select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public' and c.relkind = 'r'
       and has_table_privilege('authenticated', c.oid, 'truncate')$$,
   'authenticated no puede hacer TRUNCATE sobre las tablas del dominio'
 );
-select todo_end();
 
 -- ---------------------------------------------------------------------------
 -- Columnas: lo que authenticated puede actualizar con UPDATE directo
@@ -135,7 +133,6 @@ select is(
 -- La migración programar_tela_por_item hace `grant update (columnas)`, pero
 -- item_orden ya tenía UPDATE sobre toda la tabla por los permisos por defecto
 -- de Supabase (a orden y a alerta sí se les hizo `revoke update` antes).
-select todo_start('HALLAZGO: authenticated puede actualizar TODAS las columnas de item_orden (cantidad, valor, descripcion...), no solo las de la tela');
 select is(
   (select coalesce(array_agg(column_name::text order by column_name), '{}')
      from information_schema.columns
@@ -144,7 +141,6 @@ select is(
   array['cantidad_tela', 'observaciones_tela', 'tipo_tela', 'unidad_tela'],
   'en item_orden, authenticated solo actualiza los datos de la tela'
 );
-select todo_end();
 
 select is(
   (select coalesce(array_agg(column_name::text order by column_name), '{}')
@@ -200,7 +196,6 @@ select ok(
 
 -- Las de trigger no se pueden llamar a mano (Postgres lo impide), pero igual
 -- no deberían estar abiertas: lo consistente con el resto es cerrarlas.
-select todo_start('HALLAZGO: las 4 funciones de trigger quedan con EXECUTE para PUBLIC (las migraciones no les hacen revoke)');
 select is(
   pg_temp.funciones_de('anon', true),
   '{}'::text[],
@@ -211,7 +206,6 @@ select is(
   '{}'::text[],
   'authenticated no ejecuta funciones de trigger'
 );
-select todo_end();
 
 -- SECURITY DEFINER es la excepción al ADR 0005: la lista es cerrada.
 select is(
