@@ -423,6 +423,10 @@ export type Database = {
     }
     Functions: {
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      generar_alertas_proximidad_entrega: {
+        Args: { p_dias?: number }
+        Returns: number
+      }
       nit_normalizado: { Args: { p_nit: string }; Returns: string }
       orden_espera_tela: { Args: { p_orden_id: string }; Returns: boolean }
       ordenes_esperando_tela: { Args: never; Returns: string[] }

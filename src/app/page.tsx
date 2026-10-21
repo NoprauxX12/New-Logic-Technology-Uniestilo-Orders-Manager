@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { ListaAvisosDeEntrega } from "@/features/alertas/components/ListaAvisosDeEntrega";
+import { listarAvisosDeEntrega } from "@/features/alertas/queries";
 import { cerrarSesion } from "@/features/auth/actions";
 import { vistaDeRol } from "@/features/auth/vistaPorRol";
 import { ETIQUETAS_ROL } from "@/features/workflow/checkpoints";
@@ -62,8 +64,12 @@ export default async function HomePage({ searchParams }: Props) {
   );
 }
 
-function PanelDePersona({ usuario }: { usuario: UsuarioActual }) {
+async function PanelDePersona({ usuario }: { usuario: UsuarioActual }) {
   const vista = vistaDeRol(usuario.rol);
+  const avisos = await listarAvisosDeEntrega();
+  const hoy = new Date().toLocaleDateString("en-CA", {
+    timeZone: "America/Bogota",
+  });
 
   return (
     <div className="flex flex-col items-center gap-4">
@@ -75,6 +81,8 @@ function PanelDePersona({ usuario }: { usuario: UsuarioActual }) {
       {vista.aviso ? (
         <p className="max-w-md text-base text-zinc-600">{vista.aviso}</p>
       ) : null}
+
+      <ListaAvisosDeEntrega avisos={avisos} hoy={hoy} />
 
       <div className="flex flex-wrap justify-center gap-3">
         {vista.botones.map((boton) => (
