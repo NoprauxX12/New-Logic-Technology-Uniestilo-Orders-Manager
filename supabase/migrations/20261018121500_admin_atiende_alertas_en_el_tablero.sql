@@ -7,6 +7,10 @@
 -- La hora de atención la pone la base, no el navegador. Atender no es recibir
 -- la tela (HU-22): esta migración no toca la llegada.
 
+-- Repetible a propósito: esta política se creó a mano en el proyecto hospedado
+-- antes de que existiera la migración, así que `db push` la encuentra hecha.
+drop policy if exists "admin atiende alertas pendientes" on public.alerta;
+
 create policy "admin atiende alertas pendientes"
   on public.alerta
   for update
