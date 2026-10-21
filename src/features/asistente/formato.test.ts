@@ -150,7 +150,7 @@ describe("detallarOrden", () => {
     expect(detalle.historial).toEqual([
       {
         etapa: "Corte completado",
-        quien: "Camila Ríos",
+        quien: "Camila Ríos (Corte)",
         cuando: expect.stringMatching(/9\/10\/2026.*10:12/),
         observacion: "Faltó un rollo",
       },

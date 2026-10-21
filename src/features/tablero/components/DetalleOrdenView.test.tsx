@@ -121,4 +121,26 @@ describe("DetalleOrdenView · ir a marcar", () => {
       sinPantalla.length,
     );
   });
+
+  it("dice quién reportó la etapa con el rol que la marca", () => {
+    const orden = ordenDePrueba();
+    orden.etapas = orden.etapas.map((etapa) =>
+      etapa.seccion === "cotizacion_aprobada"
+        ? {
+            ...etapa,
+            estado: "completada" as const,
+            avance: {
+              seccion: etapa.seccion,
+              usuarioId: "u1",
+              usuarioNombre: "Paula Henao",
+              fechaHora: "2026-09-01T15:00:00Z",
+            },
+          }
+        : etapa,
+    );
+
+    render(<DetalleOrdenView orden={orden} />);
+
+    expect(screen.getByText(/Paula Henao \(Secretaría\)/)).toBeInTheDocument();
+  });
 });

@@ -1,6 +1,6 @@
 import type { Checkpoint, CheckpointId } from "@/features/workflow/checkpoints";
 import { loQueSigue } from "@/features/workflow/estado";
-import { diasHasta } from "@/lib/ordenes/reglas";
+import { describirQuienMarco, diasHasta } from "@/lib/ordenes/reglas";
 import type {
   DetalleOrden,
   OrdenEnTablero,
@@ -135,7 +135,7 @@ export function detallarOrden(
     ...resumirOrden(detalle, ahora),
     historial: detalle.avances.map((avance) => ({
       etapa: porSeccion.get(avance.seccion)?.etiqueta ?? avance.seccion,
-      quien: avance.usuarioNombre,
+      quien: describirQuienMarco(avance.usuarioNombre, avance.seccion),
       cuando: fechaHoraDelTaller(avance.fechaHora),
       ...(avance.observacion ? { observacion: avance.observacion } : {}),
     })),
