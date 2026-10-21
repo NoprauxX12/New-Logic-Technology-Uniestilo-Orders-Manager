@@ -34,6 +34,7 @@ function ordenDePrueba(): DetalleOrden {
     fechaEntrega: "2026-09-21",
     tallerNombre: null,
     estadoTalleres: "Todavía no ha salido a ningún taller.",
+    lotesEnTaller: 0,
     tieneFicha: false,
     semaforo: "a_tiempo",
     etapas: ETAPAS_PENDIENTES,

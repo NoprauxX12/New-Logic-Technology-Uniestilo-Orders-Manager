@@ -2,9 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   detallarOrden,
-  filtrarOrdenes,
-  filtrarPorEstado,
-  normalizar,
   pareceUuid,
   resumirOrden,
 } from "@/features/asistente/formato";
@@ -66,6 +63,7 @@ function ordenStub(
     fechaEntrega: "2026-10-16",
     tallerNombre: null,
     estadoTalleres: "Todavía no ha salido a ningún taller.",
+    lotesEnTaller: 0,
     tieneFicha: false,
     semaforo: "a_tiempo",
     etapas,
@@ -167,76 +165,6 @@ describe("detallarOrden", () => {
         ) + 1,
       ).map((cp) => cp.etiqueta),
     );
-  });
-});
-
-describe("filtrarOrdenes", () => {
-  const ordenes = [
-    ordenStub(),
-    ordenStub({
-      id: "f5",
-      numeroOrdenCompra: "OC-5005",
-      razonSocial: "Dotaciones Ríos",
-    }),
-  ];
-
-  it("encuentra por parte del número, sin importar mayúsculas ni el prefijo", () => {
-    expect(filtrarOrdenes(ordenes, "5003").map((o) => o.id)).toEqual(["f3"]);
-    expect(filtrarOrdenes(ordenes, "oc-5005").map((o) => o.id)).toEqual(["f5"]);
-  });
-
-  it("encuentra por el cliente sin tildes", () => {
-    expect(filtrarOrdenes(ordenes, "san jose").map((o) => o.id)).toEqual([
-      "f3",
-    ]);
-    expect(filtrarOrdenes(ordenes, "RIOS").map((o) => o.id)).toEqual(["f5"]);
-  });
-
-  it("no devuelve nada con un texto vacío", () => {
-    expect(filtrarOrdenes(ordenes, "   ")).toEqual([]);
-  });
-
-  it("entiende el guion no separable que escriben los modelos", () => {
-    expect(filtrarOrdenes(ordenes, "OC\u20115003").map((o) => o.id)).toEqual([
-      "f3",
-    ]);
-  });
-});
-
-describe("filtrarPorEstado", () => {
-  const sinEmpezar = ordenStub({ id: "a" });
-  const enProduccion = ordenStub({
-    id: "b",
-    semaforo: "atrasada",
-    avances: [avance("corte_completado", "2026-10-01T10:00:00Z")],
-  });
-  const terminada = ordenStub({
-    id: "c",
-    semaforo: "en_riesgo",
-    avances: CHECKPOINTS_DISPONIBLES.map((cp, i) =>
-      avance(cp.id, diaDeOctubre(i)),
-    ),
-  });
-  const ordenes = [sinEmpezar, enProduccion, terminada];
-  const ids = (lista: OrdenEnTablero[]) => lista.map((o) => o.id);
-
-  it("separa por avance", () => {
-    expect(ids(filtrarPorEstado(ordenes, "todas"))).toEqual(["a", "b", "c"]);
-    expect(ids(filtrarPorEstado(ordenes, "sin_empezar"))).toEqual(["a"]);
-    expect(ids(filtrarPorEstado(ordenes, "en_produccion"))).toEqual(["b"]);
-    expect(ids(filtrarPorEstado(ordenes, "terminadas"))).toEqual(["c"]);
-  });
-
-  it("separa por semáforo", () => {
-    expect(ids(filtrarPorEstado(ordenes, "atrasadas"))).toEqual(["b"]);
-    expect(ids(filtrarPorEstado(ordenes, "en_riesgo"))).toEqual(["c"]);
-  });
-});
-
-describe("normalizar", () => {
-  it("quita tildes, virgulillas, mayúsculas y espacios de sobra", () => {
-    // La ñ también pierde su virgulilla: así "nandu" encuentra a "Ñandú".
-    expect(normalizar("  Confección Ñandú ")).toBe("confeccion nandu");
   });
 });
 

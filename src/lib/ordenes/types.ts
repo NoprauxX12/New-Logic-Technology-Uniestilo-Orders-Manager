@@ -28,6 +28,8 @@ export type OrdenResumen = {
   tallerNombre: string | null;
   /** HU-10 y HU-11: derivado de los lotes ("En confección", "Todo volvió"…). */
   estadoTalleres: string;
+  /** Lotes enviados a taller que todavía no se han recibido (HU-11). */
+  lotesEnTaller: number;
   /** HU-04: si diseño ya subió al menos un archivo. */
   tieneFicha: boolean;
 };

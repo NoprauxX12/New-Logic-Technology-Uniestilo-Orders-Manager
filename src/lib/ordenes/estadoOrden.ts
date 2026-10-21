@@ -128,6 +128,9 @@ function resumenDe(fila: OrdenFila): OrdenResumen {
         recibido: lote.recibido_completo !== null,
       })),
     ),
+    lotesEnTaller: fila.lote_taller.filter(
+      (lote) => lote.recibido_completo === null,
+    ).length,
     tieneFicha: fila.ficha_tecnica.length > 0,
   };
 }
