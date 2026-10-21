@@ -116,6 +116,7 @@ export function FilaOrden({ orden }: { orden: OrdenEnTablero }) {
     orden.etapas
       .filter((etapa) => etapa.estado === "completada")
       .map((etapa) => etapa.seccion),
+    orden.etapaInicial,
   );
 
   return (

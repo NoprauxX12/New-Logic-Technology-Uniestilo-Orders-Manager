@@ -2,6 +2,7 @@ import "server-only";
 
 import { CHECKPOINT_REQUERIDO } from "@/features/talleres/reglas";
 import type { CheckpointId } from "@/features/workflow/checkpoints";
+import { AVANCE_VIGENTE } from "@/lib/ordenes/vigentes";
 import { createClient } from "@/lib/supabase/server";
 import { describirEstadoDeTalleres } from "@/lib/talleres/estadoLotes";
 
@@ -71,6 +72,7 @@ export async function obtenerOrdenParaDespacho(
        )`,
     )
     .eq("id", ordenId)
+    .is(AVANCE_VIGENTE, null)
     .maybeSingle();
 
   if (error) {
@@ -140,6 +142,7 @@ export async function listarOrdenesParaTalleres(): Promise<
        avance_seccion ( checkpoint ),
        lote_taller ( recibido_completo )`,
     )
+    .is(AVANCE_VIGENTE, null)
     .order("fecha_entrega", { ascending: true });
 
   if (error) {

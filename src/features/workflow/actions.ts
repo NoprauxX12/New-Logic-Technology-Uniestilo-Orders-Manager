@@ -110,6 +110,7 @@ async function ejecutarMarcado({
     checkpoint,
     marcados: situacion.marcados,
     rol: usuario.rol,
+    etapaInicial: situacion.etapaInicial,
     recepcionConfirmada: situacion.recepcionConfirmada,
     esperandoTela: situacion.esperandoTela,
   });
@@ -172,7 +173,10 @@ async function ejecutarMarcado({
     };
   }
 
-  const sigue = loQueSigue([...situacion.marcados, checkpoint]);
+  const sigue = loQueSigue(
+    [...situacion.marcados, checkpoint],
+    situacion.etapaInicial,
+  );
 
   return {
     ok: true,

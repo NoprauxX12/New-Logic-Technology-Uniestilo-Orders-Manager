@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { CheckpointId } from "@/features/workflow/checkpoints";
+import { AVANCE_VIGENTE } from "@/lib/ordenes/vigentes";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -35,6 +36,7 @@ export async function listarOrdenesParaCierre(): Promise<OrdenParaCierre[]> {
        cliente ( razon_social ),
        avance_seccion ( checkpoint )`,
     )
+    .is(AVANCE_VIGENTE, null)
     .order("fecha_entrega", { ascending: true });
 
   if (error) {
@@ -68,6 +70,7 @@ export async function obtenerMarcadosDeLaOrden(
     .from("orden")
     .select(`id, avance_seccion ( checkpoint )`)
     .eq("id", ordenId)
+    .is(AVANCE_VIGENTE, null)
     .maybeSingle();
 
   if (error) {

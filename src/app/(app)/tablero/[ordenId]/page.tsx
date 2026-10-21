@@ -37,6 +37,7 @@ export default async function DetalleOrdenPage({ params }: Props) {
         checkpoint: "lista_despacho",
         marcados,
         rol: usuario.rol,
+        etapaInicial: orden.etapaInicial,
       })}
     />
   );

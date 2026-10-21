@@ -11,6 +11,7 @@ import {
 } from "@/features/workflow/transiciones";
 import { firmarFichas } from "@/lib/storage/firmarFichas";
 import type { FichaVisible } from "@/lib/storage/fichas";
+import { AVANCE_VIGENTE } from "@/lib/ordenes/vigentes";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -27,7 +28,10 @@ import { createClient } from "@/lib/supabase/server";
 
 /** Lo que el motor necesita saber de una orden para decidir. */
 export type SituacionDeOrden = {
+  /** Los avances vigentes: los que una devolución anuló (HU-18) no cuentan. */
   marcados: CheckpointId[];
+  /** HU-18: por qué etapa entró al flujo una orden de corrección. */
+  etapaInicial: CheckpointId | null;
   /** HU-11: si algún lote ya volvió del taller con su recepción confirmada. */
   recepcionConfirmada: boolean;
   /** HU-22: si la orden tiene una alerta de tela cuya tela no ha llegado. */
@@ -49,10 +53,12 @@ export async function obtenerSituacionDeOrden(
         .from("orden")
         .select(
           `id,
+           etapa_inicial,
            avance_seccion ( checkpoint ),
            lote_taller ( recibido_completo )`,
         )
         .eq("id", ordenId)
+        .is(AVANCE_VIGENTE, null)
         .maybeSingle(),
       supabase.rpc("orden_espera_tela", { p_orden_id: ordenId }),
     ]);
@@ -66,6 +72,7 @@ export async function obtenerSituacionDeOrden(
 
   return {
     marcados: data.avance_seccion.map((avance) => avance.checkpoint),
+    etapaInicial: data.etapa_inicial,
     recepcionConfirmada: data.lote_taller.some(
       (lote) => lote.recibido_completo !== null,
     ),
@@ -106,6 +113,7 @@ export async function obtenerOrdenesParaSeccion(
           `id,
            numero_orden_compra,
            fecha_entrega,
+           etapa_inicial,
            cliente ( razon_social ),
            avance_seccion ( checkpoint, fecha_hora ),
            lote_taller ( recibido_completo ),
@@ -116,6 +124,7 @@ export async function obtenerOrdenesParaSeccion(
              usuario:subida_por ( nombre )
            )`,
         )
+        .is(AVANCE_VIGENTE, null)
         .order("fecha_entrega", { ascending: true }),
       // Una sola llamada para toda la lista, no una por tarjeta (HU-22).
       supabase.rpc("ordenes_esperando_tela"),
@@ -150,6 +159,7 @@ export async function obtenerOrdenesParaSeccion(
           checkpoint,
           marcados,
           rol,
+          etapaInicial: orden.etapa_inicial,
           recepcionConfirmada: orden.lote_taller.some(
             (lote) => lote.recibido_completo !== null,
           ),

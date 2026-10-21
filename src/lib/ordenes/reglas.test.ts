@@ -37,6 +37,10 @@ function ordenStub(
     estadoTalleres: "Todavía no ha salido a ningún taller.",
     lotesEnTaller: 0,
     tieneFicha: false,
+    etapaInicial: null,
+    ordenOriginal: null,
+    correcciones: [],
+    devoluciones: [],
     etapas: [],
     ...parcial,
   };

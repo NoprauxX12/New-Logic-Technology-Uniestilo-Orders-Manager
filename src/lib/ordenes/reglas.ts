@@ -6,6 +6,7 @@ import {
 } from "@/features/workflow/checkpoints";
 import { etapasQueNoAplicaron } from "@/features/workflow/transiciones";
 import type {
+  AvanceAnulado,
   AvanceSeccion,
   EtapaTablero,
   OrdenEnTablero,
@@ -53,10 +54,23 @@ export function describirQuienMarco(
   return `${nombre} (${ETIQUETAS_ROL[buscarCheckpoint(seccion).rolDueno]})`;
 }
 
-export function armarEtapas(avances: AvanceSeccion[]): EtapaTablero[] {
+/**
+ * Las etapas de la orden con su estado, a partir de los avances VIGENTES. Los
+ * anulados por una devolución (HU-18) no cuentan para el estado, pero se
+ * adjuntan a su etapa para que el track muestre que se devolvió. Una orden de
+ * corrección declara su `etapaInicial`: las anteriores no le aplican.
+ */
+export function armarEtapas(
+  avances: AvanceSeccion[],
+  anulados: AvanceAnulado[] = [],
+  etapaInicial: CheckpointId | null = null,
+): EtapaTablero[] {
   const porSeccion = new Map(avances.map((a) => [a.seccion, a]));
   const noAplicaron = new Set(
-    etapasQueNoAplicaron(avances.map((avance) => avance.seccion)),
+    etapasQueNoAplicaron(
+      avances.map((avance) => avance.seccion),
+      etapaInicial,
+    ),
   );
 
   return CHECKPOINTS.map((cp) => {
@@ -70,6 +84,9 @@ export function armarEtapas(avances: AvanceSeccion[]): EtapaTablero[] {
           ? ("no_aplico" as const)
           : ("pendiente" as const),
       avance,
+      anulados: anulados
+        .filter((anulado) => anulado.seccion === cp.id)
+        .sort((a, b) => a.fechaHora.localeCompare(b.fechaHora)),
     };
   });
 }

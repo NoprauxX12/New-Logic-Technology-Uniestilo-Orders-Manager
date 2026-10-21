@@ -21,6 +21,7 @@ const ETAPAS_PENDIENTES: EtapaTablero[] = CHECKPOINTS.map((checkpoint) => ({
   etiqueta: checkpoint.etiqueta,
   estado: "pendiente",
   avance: null,
+  anulados: [],
 }));
 
 function ordenDePrueba(): DetalleOrden {
@@ -36,6 +37,10 @@ function ordenDePrueba(): DetalleOrden {
     estadoTalleres: "Todavía no ha salido a ningún taller.",
     lotesEnTaller: 0,
     tieneFicha: false,
+    etapaInicial: null,
+    ordenOriginal: null,
+    correcciones: [],
+    devoluciones: [],
     semaforo: "a_tiempo",
     etapas: ETAPAS_PENDIENTES,
     etapasCompletadas: 0,
