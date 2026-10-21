@@ -49,7 +49,8 @@ values
   ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-0000000000a3', 'authenticated', 'authenticated', 'diseno@uniestilo.test',     extensions.crypt('uniestilo123', extensions.gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-0000000000a4', 'authenticated', 'authenticated', 'corte@uniestilo.test',      extensions.crypt('uniestilo123', extensions.gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-0000000000a5', 'authenticated', 'authenticated', 'logistica@uniestilo.test',  extensions.crypt('uniestilo123', extensions.gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, '', '', '', ''),
-  ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-0000000000a6', 'authenticated', 'authenticated', 'marcacion@uniestilo.test',  extensions.crypt('uniestilo123', extensions.gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, '', '', '', '');
+  ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-0000000000a6', 'authenticated', 'authenticated', 'marcacion@uniestilo.test',  extensions.crypt('uniestilo123', extensions.gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-0000000000a7', 'authenticated', 'authenticated', 'terminacion@uniestilo.test',  extensions.crypt('uniestilo123', extensions.gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, '', '', '', '');
 
 -- ---------------------------------------------------------------------------
 -- Perfiles: uno por rol
@@ -61,7 +62,8 @@ insert into public.usuario (id, nombre, email, rol) values
   ('00000000-0000-0000-0000-0000000000a3', 'Andrés Mejía',   'diseno@uniestilo.test',     'diseno'),
   ('00000000-0000-0000-0000-0000000000a4', 'Jorge Cardona',  'corte@uniestilo.test',      'corte'),
   ('00000000-0000-0000-0000-0000000000a5', 'Luis Betancur',  'logistica@uniestilo.test',  'logistica'),
-  ('00000000-0000-0000-0000-0000000000a6', 'Sandra Vélez',   'marcacion@uniestilo.test',  'marcacion');
+  ('00000000-0000-0000-0000-0000000000a6', 'Sandra Vélez',   'marcacion@uniestilo.test',  'marcacion'),
+  ('00000000-0000-0000-0000-0000000000a7', 'Marcela Osorio', 'terminacion@uniestilo.test', 'terminacion');
 
 -- ---------------------------------------------------------------------------
 -- Clientes
@@ -182,7 +184,7 @@ insert into public.avance_seccion (orden_id, checkpoint, usuario_id, fecha_hora,
   ('00000000-0000-0000-0000-0000000000f6', 'corte_completado',    '00000000-0000-0000-0000-0000000000a4', now() - interval '18 days', null),
   ('00000000-0000-0000-0000-0000000000f6', 'recogido_bordado',    '00000000-0000-0000-0000-0000000000a5', now() - interval '10 days', null),
   ('00000000-0000-0000-0000-0000000000f6', 'llegada_marcacion',   '00000000-0000-0000-0000-0000000000a6', now() - interval '6 days',  null),
-  ('00000000-0000-0000-0000-0000000000f6', 'lista_despacho',      '00000000-0000-0000-0000-0000000000a6', now() - interval '2 days',  null),
+  ('00000000-0000-0000-0000-0000000000f6', 'lista_despacho',      '00000000-0000-0000-0000-0000000000a7', now() - interval '2 days',  null),
 
   -- OC-5007: el flujo completo, hasta el cierre.
   ('00000000-0000-0000-0000-0000000000f7', 'cotizacion_aprobada', '00000000-0000-0000-0000-0000000000a2', now() - interval '58 days', null),
@@ -192,7 +194,7 @@ insert into public.avance_seccion (orden_id, checkpoint, usuario_id, fecha_hora,
   ('00000000-0000-0000-0000-0000000000f7', 'corte_completado',    '00000000-0000-0000-0000-0000000000a4', now() - interval '40 days', null),
   ('00000000-0000-0000-0000-0000000000f7', 'recogido_bordado',    '00000000-0000-0000-0000-0000000000a5', now() - interval '30 days', null),
   ('00000000-0000-0000-0000-0000000000f7', 'llegada_marcacion',   '00000000-0000-0000-0000-0000000000a6', now() - interval '20 days', null),
-  ('00000000-0000-0000-0000-0000000000f7', 'lista_despacho',      '00000000-0000-0000-0000-0000000000a6', now() - interval '14 days', null),
+  ('00000000-0000-0000-0000-0000000000f7', 'lista_despacho',      '00000000-0000-0000-0000-0000000000a7', now() - interval '14 days', null),
   ('00000000-0000-0000-0000-0000000000f7', 'etiquetas',           '00000000-0000-0000-0000-0000000000a2', now() - interval '13 days', null),
   ('00000000-0000-0000-0000-0000000000f7', 'documentos_despacho', '00000000-0000-0000-0000-0000000000a2', now() - interval '12 days', null),
   ('00000000-0000-0000-0000-0000000000f7', 'factura_generada',    '00000000-0000-0000-0000-0000000000a2', now() - interval '11 days', 'Factura FV-2214'),

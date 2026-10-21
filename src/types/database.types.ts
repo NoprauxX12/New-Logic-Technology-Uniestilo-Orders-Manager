@@ -480,6 +480,7 @@ export type Database = {
         | "corte"
         | "logistica"
         | "marcacion"
+        | "terminacion"
       tipo_alerta: "falta_tela" | "proximidad_entrega"
     }
     CompositeTypes: {
@@ -626,7 +627,15 @@ export const Constants = {
         "cerrada",
       ],
       estado_alerta: ["pendiente", "atendida"],
-      rol: ["admin", "secretaria", "diseno", "corte", "logistica", "marcacion"],
+      rol: [
+        "admin",
+        "secretaria",
+        "diseno",
+        "corte",
+        "logistica",
+        "marcacion",
+        "terminacion",
+      ],
       tipo_alerta: ["falta_tela", "proximidad_entrega"],
     },
   },

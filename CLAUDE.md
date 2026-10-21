@@ -131,16 +131,17 @@ Salen del diseño de arquitectura y de los RNF. Un PR que las rompa no se mezcla
 
 Roles (enum `rol`) y lo que marca cada uno:
 
-| Rol          | Marca                                                                              |
-| ------------ | ---------------------------------------------------------------------------------- |
-| `admin`      | Registra órdenes, crea las cuentas (HU-24), ve todo el tablero, resuelve alertas   |
-| `secretaria` | Cotización, programación a diseño y de tela, validación de insumos, cierre (HU-13) |
-| `diseno`     | Ficha técnica (HU-04)                                                              |
-| `corte`      | Corte completado (HU-08)                                                           |
-| `logistica`  | Recogido/bordado (HU-09), despacho a taller (HU-10), recepción del taller (HU-11)  |
-| `marcacion`  | Llegada a marcación (HU-12)                                                        |
+| Rol           | Marca                                                                              |
+| ------------- | ---------------------------------------------------------------------------------- |
+| `admin`       | Registra órdenes, crea las cuentas (HU-24), ve todo el tablero, resuelve alertas   |
+| `secretaria`  | Cotización, programación a diseño y de tela, validación de insumos, cierre (HU-13) |
+| `diseno`      | Ficha técnica (HU-04)                                                              |
+| `corte`       | Corte completado (HU-08)                                                           |
+| `logistica`   | Recogido/bordado (HU-09), despacho a taller (HU-10), recepción del taller (HU-11)  |
+| `marcacion`   | Llegada a marcación (HU-12)                                                        |
+| `terminacion` | Lista para despachar (HU-19)                                                       |
 
-HU-19 (lista para despachar) la marca "terminación"; ver pendientes al final.
+El séptimo rol, `terminacion` (Marcela), es una sección distinta de marcación (Sandra): marca la orden lista para despachar y con eso le queda a secretaría para el cierre.
 
 ## Backlog (HU → sprint)
 
@@ -191,7 +192,7 @@ Un HU está terminado cuando cumple sus criterios de aceptación, tiene tests de
 
 Las decisiones cerradas están en `docs/adr/`. Abierto con el equipo o la PO:
 
-- HU-19 la marca "terminación (Marcela)", pero el modelo tiene 6 roles y `terminacion` no es uno. Definir si es un rol nuevo o si lo marca `marcacion`.
+- ~~HU-19 la marca "terminación (Marcela)", pero el modelo tiene 6 roles.~~ Resuelto: `terminacion` es un rol propio (enum `rol`, `rol_dueno` en SQL y `checkpoints.ts`).
 - El documento de arquitectura asigna la autenticación a HU-21; el backlog la pone en HU-16/HU-17 y HU-21 es el asistente. Unificar.
 - ~~El Sprint 1 exige "queda registro de quién marcó" pero el login (HU-16) es Sprint 2. Hace falta al menos un login básico en Sprint 1.~~ Resuelto: login real con Supabase Auth y el rol como claim del JWT (`docs/adr/0006`). ~~Falta HU-17.~~ Resuelto: RLS por rol y acceso por pantalla (`docs/adr/0007`). El PR #37 quedó reemplazado y debe cerrarse.
 - Segundo factor (MFA). Propuesta: TOTP obligatorio para `admin` y `secretaria` exigiendo `aal2` en el proxy y en las políticas sensibles; passkeys para todos cuando Supabase las saque de beta. Antes hace falta SMTP propio para recuperar contraseñas.

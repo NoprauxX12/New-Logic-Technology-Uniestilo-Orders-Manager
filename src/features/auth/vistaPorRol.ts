@@ -78,8 +78,12 @@ const VISTAS: Record<Rol, VistaDeRol> = {
         etiqueta: `Marcar ${buscarCheckpoint("llegada_marcacion").etiqueta.toLowerCase()}`,
         ruta: "/ordenes/marcacion",
       },
+    ],
+    aviso: null,
+  },
+  terminacion: {
+    botones: [
       {
-        // HU-19 la marca marcación de forma provisional (ver pendientes).
         etiqueta: `Marcar ${buscarCheckpoint("lista_despacho").etiqueta.toLowerCase()}`,
         ruta: "/ordenes/despacho",
       },

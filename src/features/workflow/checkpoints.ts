@@ -126,13 +126,10 @@ export const CHECKPOINTS = [
     ruta: "/ordenes/marcacion",
   },
   {
-    // PENDIENTE (CLAUDE.md): HU-19 la marca "terminación (Marcela)", que no es
-    // ninguno de los seis roles del modelo. Queda en `marcacion` de forma
-    // provisional para no bloquear el sprint. Cuando el equipo decida, se
-    // cambia aquí y —si resulta ser un rol nuevo— en una migración del enum.
+    // HU-19 la marca terminación (Marcela), una sección distinta de marcación.
     id: "lista_despacho",
     etiqueta: "Lista para despachar",
-    rolDueno: "marcacion",
+    rolDueno: "terminacion",
     hu: "HU-19",
     disponible: true,
     ruta: "/ordenes/despacho",
@@ -187,6 +184,7 @@ export const ETIQUETAS_ROL: Record<Rol, string> = {
   corte: "Corte",
   logistica: "Logística",
   marcacion: "Marcación",
+  terminacion: "Terminación",
 };
 
 const POR_ID = new Map<CheckpointId, Checkpoint>(

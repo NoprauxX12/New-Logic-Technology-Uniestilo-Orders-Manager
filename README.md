@@ -49,14 +49,15 @@ que levanta el `start`: http://127.0.0.1:54323
 
 Hay una persona por rol, con su cuenta de autenticación ya creada y la contraseña `uniestilo123` igual para todas (solo en local). Con eso se entra por `/login`: ver [Iniciar sesión](#iniciar-sesión).
 
-| Rol          | Id en `usuario`                        | Correo                      | Marca                                      |
-| ------------ | -------------------------------------- | --------------------------- | ------------------------------------------ |
-| `admin`      | `00000000-0000-0000-0000-0000000000a1` | `admin@uniestilo.test`      | Registra órdenes y ve el tablero completo  |
-| `secretaria` | `00000000-0000-0000-0000-0000000000a2` | `secretaria@uniestilo.test` | Cotización, programación, tela y cierre    |
-| `diseno`     | `00000000-0000-0000-0000-0000000000a3` | `diseno@uniestilo.test`     | Ficha técnica                              |
-| `corte`      | `00000000-0000-0000-0000-0000000000a4` | `corte@uniestilo.test`      | Corte completado                           |
-| `logistica`  | `00000000-0000-0000-0000-0000000000a5` | `logistica@uniestilo.test`  | Recogido y bordado, lotes a taller         |
-| `marcacion`  | `00000000-0000-0000-0000-0000000000a6` | `marcacion@uniestilo.test`  | Llegada a marcación y lista para despachar |
+| Rol           | Id en `usuario`                        | Correo                       | Marca                                     |
+| ------------- | -------------------------------------- | ---------------------------- | ----------------------------------------- |
+| `admin`       | `00000000-0000-0000-0000-0000000000a1` | `admin@uniestilo.test`       | Registra órdenes y ve el tablero completo |
+| `secretaria`  | `00000000-0000-0000-0000-0000000000a2` | `secretaria@uniestilo.test`  | Cotización, programación, tela y cierre   |
+| `diseno`      | `00000000-0000-0000-0000-0000000000a3` | `diseno@uniestilo.test`      | Ficha técnica                             |
+| `corte`       | `00000000-0000-0000-0000-0000000000a4` | `corte@uniestilo.test`       | Corte completado                          |
+| `logistica`   | `00000000-0000-0000-0000-0000000000a5` | `logistica@uniestilo.test`   | Recogido y bordado, lotes a taller        |
+| `marcacion`   | `00000000-0000-0000-0000-0000000000a6` | `marcacion@uniestilo.test`   | Llegada a marcación                       |
+| `terminacion` | `00000000-0000-0000-0000-0000000000a7` | `terminacion@uniestilo.test` | Lista para despachar                      |
 
 Y hay siete órdenes, cada una parada en un punto distinto del flujo, para que nadie tenga que hacerle clic a medio proceso solo para llegar a su pantalla:
 
@@ -74,16 +75,17 @@ HU-10 despacha un lote nuevo desde cualquier orden que ya esté recogida y borda
 
 ## Iniciar sesión
 
-Login real contra Supabase Auth (HU-16), en `/login`, con las seis cuentas del seed. Al entrar, `/` muestra a quién le toca qué y un botón a su pantalla:
+Login real contra Supabase Auth (HU-16), en `/login`, con las siete cuentas del seed. Al entrar, `/` muestra a quién le toca qué y un botón a su pantalla:
 
-| Rol          | Botón                                                 | Ruta                                             |
-| ------------ | ----------------------------------------------------- | ------------------------------------------------ |
-| `admin`      | Ver el tablero / Registrar una orden / Crear cuentas  | `/tablero`, `/ordenes/nueva`, `/usuarios`        |
-| `secretaria` | Cerrar órdenes / Validar telas                        | `/ordenes/cierre`, `/ordenes/telas`              |
-| `corte`      | Marcar corte completado                               | `/ordenes/corte`                                 |
-| `marcacion`  | Marcar llegada a marcación                            | `/ordenes/marcacion`                             |
-| `logistica`  | Marcar recogido y bordado / Despachar y recibir lotes | `/ordenes/recogido-bordado`, `/ordenes/talleres` |
-| `diseno`     | Solo un aviso: su pantalla (HU-04) no existe aún      | —                                                |
+| Rol           | Botón                                                 | Ruta                                             |
+| ------------- | ----------------------------------------------------- | ------------------------------------------------ |
+| `admin`       | Ver el tablero / Registrar una orden / Crear cuentas  | `/tablero`, `/ordenes/nueva`, `/usuarios`        |
+| `secretaria`  | Cerrar órdenes / Validar telas                        | `/ordenes/cierre`, `/ordenes/telas`              |
+| `corte`       | Marcar corte completado                               | `/ordenes/corte`                                 |
+| `marcacion`   | Marcar llegada a marcación                            | `/ordenes/marcacion`                             |
+| `terminacion` | Marcar lista para despachar                           | `/ordenes/despacho`                              |
+| `logistica`   | Marcar recogido y bordado / Despachar y recibir lotes | `/ordenes/recogido-bordado`, `/ordenes/talleres` |
+| `diseno`      | Solo un aviso: su pantalla (HU-04) no existe aún      | —                                                |
 
 Sin sesión, el proxy manda a `/login` a cualquier ruta que no sea `/` o `/login`. Con sesión, cada pantalla exige el rol que le toca (HU-17): el mapa está en `src/features/auth/accesoPorRuta.ts` y lo aplica `exigirAcceso()` al principio de cada página. Administración entra a todo; quien abre una pantalla ajena vuelve a `/` con un aviso.
 
