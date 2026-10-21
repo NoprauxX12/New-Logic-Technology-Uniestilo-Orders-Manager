@@ -61,10 +61,18 @@ function NodoEtapa({
 }) {
   const completada = etapa.estado === "completada";
   const noAplico = etapa.estado === "no_aplico";
+  // HU-18: la etapa estuvo marcada y una devolución la anuló; sigue pendiente.
+  const devuelta = !completada && etapa.anulados.length > 0;
   return (
     <li
       className="flex w-14 shrink-0 flex-col items-center gap-1"
-      title={noAplico ? `${etapa.etiqueta} (no aplicó)` : etapa.etiqueta}
+      title={
+        noAplico
+          ? `${etapa.etiqueta} (no aplicó)`
+          : devuelta
+            ? `${etapa.etiqueta} (devuelta)`
+            : etapa.etiqueta
+      }
     >
       {/* Cada mitad de línea mide la mitad del nodo (w-1/2): juntas
           forman una sola línea que pasa por el centro de los círculos (size-7). */}
@@ -86,13 +94,15 @@ function NodoEtapa({
             "relative flex size-7 items-center justify-center rounded-full text-xs",
             completada
               ? "bg-emerald-100 text-emerald-800 ring-1 ring-emerald-500"
-              : noAplico
-                ? "ring-dashed bg-zinc-50 text-zinc-400 ring-1 ring-zinc-200"
-                : "bg-zinc-100 text-zinc-400 ring-1 ring-zinc-200",
+              : devuelta
+                ? "bg-amber-100 text-amber-900 ring-1 ring-amber-500"
+                : noAplico
+                  ? "ring-dashed bg-zinc-50 text-zinc-400 ring-1 ring-zinc-200"
+                  : "bg-zinc-100 text-zinc-400 ring-1 ring-zinc-200",
           ].join(" ")}
-          aria-label={`${etapa.etiqueta}: ${completada ? "completada" : noAplico ? "no aplicó" : "pendiente"}`}
+          aria-label={`${etapa.etiqueta}: ${completada ? "completada" : devuelta ? "devuelta" : noAplico ? "no aplicó" : "pendiente"}`}
         >
-          {completada ? "✓" : noAplico ? "–" : ""}
+          {completada ? "✓" : devuelta ? "↩" : noAplico ? "–" : ""}
         </span>
       </div>
       <span className="w-full text-center text-[10px] leading-tight text-zinc-500">
@@ -119,6 +129,11 @@ export function FilaOrden({ orden }: { orden: OrdenEnTablero }) {
     orden.etapaInicial,
   );
 
+  // HU-18: la etapa a la que se devolvió la orden y que todavía no se rehace.
+  const devuelta = orden.etapas.find(
+    (etapa) => etapa.estado === "pendiente" && etapa.anulados.length > 0,
+  );
+
   return (
     <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -128,6 +143,16 @@ export function FilaOrden({ orden }: { orden: OrdenEnTablero }) {
               {orden.numeroOrdenCompra}
             </h2>
             <BadgeSemaforo semaforo={orden.semaforo} />
+            {orden.ordenOriginal ? (
+              <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-900">
+                Corrección de {orden.ordenOriginal.numeroOrdenCompra}
+              </span>
+            ) : null}
+            {devuelta ? (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+                Devuelta a {devuelta.etiqueta}
+              </span>
+            ) : null}
           </div>
           <p className="text-sm text-zinc-700">{orden.razonSocial}</p>
           <p className="text-sm text-zinc-500">

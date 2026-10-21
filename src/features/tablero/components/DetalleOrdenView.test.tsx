@@ -151,3 +151,110 @@ describe("DetalleOrdenView · ir a marcar", () => {
     expect(screen.getByText(/Paula Henao \(Secretaría\)/)).toBeInTheDocument();
   });
 });
+
+describe("DetalleOrdenView · devoluciones y correcciones (HU-18)", () => {
+  const devolucion = {
+    id: "d1",
+    destino: "corte_completado" as const,
+    motivo: "El corte salió con la manga corta",
+    porNombre: "Diana Restrepo",
+    fechaHora: "2026-10-13T15:00:00Z",
+  };
+
+  function ordenDevuelta(): DetalleOrden {
+    const base = ordenDePrueba();
+    return {
+      ...base,
+      devoluciones: [devolucion],
+      etapas: base.etapas.map((etapa) =>
+        etapa.seccion === "corte_completado"
+          ? {
+              ...etapa,
+              anulados: [
+                {
+                  seccion: "corte_completado" as const,
+                  usuarioId: "u4",
+                  usuarioNombre: "Jorge Cardona",
+                  fechaHora: "2026-10-10T10:00:00Z",
+                  devolucionId: "d1",
+                },
+              ],
+            }
+          : etapa,
+      ),
+    };
+  }
+
+  it("la etapa devuelta se ve como 'Devuelta' con el motivo, quién y cuándo", () => {
+    render(<DetalleOrdenView orden={ordenDevuelta()} />);
+
+    expect(screen.getByText("Devuelta")).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/El corte salió con la manga corta/).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Diana Restrepo/).length).toBeGreaterThan(0);
+    // La bitácora original sigue visible: quién la había marcado.
+    expect(screen.getByText(/Jorge Cardona \(Corte\)/)).toBeInTheDocument();
+  });
+
+  it("lista las devoluciones de la orden antes de la línea de tiempo", () => {
+    render(<DetalleOrdenView orden={ordenDevuelta()} />);
+
+    expect(
+      screen.getByRole("heading", { name: "Devoluciones" }),
+    ).toBeInTheDocument();
+  });
+
+  it("una orden sin devoluciones no muestra ese bloque", () => {
+    render(<DetalleOrdenView orden={ordenDePrueba()} />);
+
+    expect(screen.queryByRole("heading", { name: "Devoluciones" })).toBeNull();
+  });
+
+  it("la corrección enlaza a su original, y la original a sus correcciones", () => {
+    const { rerender } = render(
+      <DetalleOrdenView
+        orden={{
+          ...ordenDePrueba(),
+          etapaInicial: "corte_completado",
+          ordenOriginal: { id: "f7", numeroOrdenCompra: "OC-5007" },
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "OC-5007" })).toHaveAttribute(
+      "href",
+      "/tablero/f7",
+    );
+    expect(
+      screen.getByText(/entra por «Corte completado»/),
+    ).toBeInTheDocument();
+
+    rerender(
+      <DetalleOrdenView
+        orden={{
+          ...ordenDePrueba(),
+          correcciones: [{ id: "fb", numeroOrdenCompra: "OC-5007-C1" }],
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "OC-5007-C1" })).toHaveAttribute(
+      "href",
+      "/tablero/fb",
+    );
+  });
+
+  it("monta lo que administración puede hacer ante un defecto", () => {
+    render(
+      <DetalleOrdenView
+        orden={ordenDePrueba()}
+        correccion={<p>Devolver la orden a una etapa</p>}
+      />,
+    );
+
+    expect(
+      screen.getByText("Devolver la orden a una etapa"),
+    ).toBeInTheDocument();
+  });
+});
