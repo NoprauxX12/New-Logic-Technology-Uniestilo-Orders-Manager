@@ -238,5 +238,12 @@ insert into public.lote_taller (
 insert into public.alerta (tipo, orden_id, destinatario_id, creada_por, detalle, estado, fecha_creacion, fecha_atencion, tela_llegada_en, tela_recibida_por) values
   ('falta_tela',         '00000000-0000-0000-0000-0000000000f2', '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a2', 'Faltan 40 metros de tela impermeable azul', 'pendiente', now() - interval '2 days', null, null, null),
   ('falta_tela',         '00000000-0000-0000-0000-0000000000f5', '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a2', 'La tela antifluidos lleva 3 semanas sin llegar', 'atendida', now() - interval '35 days', now() - interval '33 days', now() - interval '31 days', '00000000-0000-0000-0000-0000000000a2'),
-  ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f4', '00000000-0000-0000-0000-0000000000a1', null,                                   'Entrega en 2 días y el lote del taller llegó incompleto', 'pendiente', now() - interval '1 day', null, null, null),
-  ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f7', '00000000-0000-0000-0000-0000000000a1', null,                                   'Entrega la próxima semana', 'atendida', now() - interval '25 days', now() - interval '24 days', null, null);
+  -- HU-20: entrega próxima. OC-5004 (entrega en 2 días, con un lote todavía en taller) avisa a
+  -- administración y a logística; OC-5005 (vencida hace 3 días, le toca terminación) a administración.
+  -- Marcación (OC-5004) y terminación (OC-5005) quedan sin aviso a propósito: correr
+  -- `select public.generar_alertas_proximidad_entrega();` en local los crea, sin repetir estos.
+  ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f4', '00000000-0000-0000-0000-0000000000a1', null, 'La orden OC-5004 de Transportes La Mesa S.A.S. entrega en 2 días (' || to_char(current_date + 2, 'DD/MM') || ') y está en el taller', 'pendiente', now() - interval '1 day', null, null, null),
+  ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f4', '00000000-0000-0000-0000-0000000000a5', null, 'La orden OC-5004 de Transportes La Mesa S.A.S. entrega en 2 días (' || to_char(current_date + 2, 'DD/MM') || ') y está en el taller', 'pendiente', now() - interval '1 day', null, null, null),
+  ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f5', '00000000-0000-0000-0000-0000000000a1', null, 'La orden OC-5005 de Clínica del Norte se venció hace 3 días (' || to_char(current_date - 3, 'DD/MM') || ') y está en Terminación', 'pendiente', now() - interval '1 day', null, null, null),
+  -- Una ya atendida, de una orden que después se cerró (no recibe más avisos).
+  ('proximidad_entrega', '00000000-0000-0000-0000-0000000000f7', '00000000-0000-0000-0000-0000000000a1', null, 'La orden OC-5007 de Colegio San Ignacio entrega en 3 días y está en el cierre de la orden', 'atendida', now() - interval '25 days', now() - interval '24 days', null, null);
