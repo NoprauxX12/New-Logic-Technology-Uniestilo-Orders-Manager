@@ -35,7 +35,7 @@
     "@supabase/ssr": "^0.12.6",
     "@supabase/supabase-js": "^2.115.0",
     "ai": "^7.0.137",
-    "next": "16.2.12",
+    "next": "16.4.2",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-markdown": "^10.1.0",
@@ -60,7 +60,7 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "6.1.1",
     "eslint": "^9",
-    "eslint-config-next": "16.2.12",
+    "eslint-config-next": "16.4.2",
     "eslint-config-prettier": "10.1.8",
     "husky": "9.1.7",
     "jsdom": "30.0.1",
@@ -70,6 +70,6 @@
     "supabase": "2.121.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "5.0.0"
+    "vitest": "5.0.5"
   }
 }
