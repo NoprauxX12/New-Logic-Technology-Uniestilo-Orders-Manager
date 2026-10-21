@@ -9,6 +9,7 @@ vi.mock("@/features/alertas/actions", () => ({
 }));
 
 const ALERTA: AlertaTelaEnTablero = {
+  tipo: "falta_tela",
   id: "00000000-0000-0000-0000-0000000000b1",
   detalle: "Faltan 40 metros de tela impermeable azul",
   fechaCreacion: "2026-10-16T15:00:00.000Z",
