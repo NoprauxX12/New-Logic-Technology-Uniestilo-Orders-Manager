@@ -55,6 +55,7 @@ create policy "lectura con sesion" on public.reproceso
 -- Sin política (ni permiso) de insert, update o delete para nadie: un reproceso
 -- sin sus avances anulados sería una devolución falsa en el track. La única vía
 -- de alta es la función SECURITY DEFINER de más abajo, que exige rol admin.
+revoke all on public.reproceso from anon, authenticated;
 grant select on public.reproceso to authenticated;
 
 -- ---------------------------------------------------------------------------
@@ -125,6 +126,11 @@ create trigger avance_seccion_bitacora_inmutable
   before update or delete on public.avance_seccion
   for each row
   execute function public.proteger_bitacora_de_avances();
+
+-- Local reparte privilegios por defecto a `authenticated`: se le quitan el
+-- update, el delete y el truncate de la bitácora para que tampoco dependa de
+-- que no haya política (RNF-05). El insert se conserva.
+revoke update, delete, truncate on public.avance_seccion from anon, authenticated;
 
 -- Nadie puede insertar un avance ya anulado: la política de alta lo exige
 -- (se recrea igual que en 20261005120000, más `anulado_por is null`).
