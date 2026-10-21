@@ -127,11 +127,6 @@ create trigger avance_seccion_bitacora_inmutable
   for each row
   execute function public.proteger_bitacora_de_avances();
 
--- Local reparte privilegios por defecto a `authenticated`: se le quitan el
--- update, el delete y el truncate de la bitácora para que tampoco dependa de
--- que no haya política (RNF-05). El insert se conserva.
-revoke update, delete, truncate on public.avance_seccion from anon, authenticated;
-
 -- Nadie puede insertar un avance ya anulado: la política de alta lo exige
 -- (se recrea igual que en 20261005120000, más `anulado_por is null`).
 drop policy "cada rol marca su checkpoint" on public.avance_seccion;

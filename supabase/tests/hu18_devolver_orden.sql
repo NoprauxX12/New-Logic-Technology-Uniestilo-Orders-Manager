@@ -5,7 +5,7 @@
 
 begin;
 
-select plan(30);
+select plan(31);
 
 -- Quién actúa: lo que el JWT diría. Se usa `set local role` + claims, igual
 -- que lo hace PostgREST.
@@ -131,10 +131,20 @@ select throws_ok(
 
 select pg_temp.como('00000000-0000-0000-0000-0000000000a1');
 
-select throws_ok(
+select lives_ok(
   $$update public.avance_seccion set observaciones = 'editado'$$,
-  '42501', null, 'administración no tiene permiso de update sobre la bitácora'
+  'administración puede intentar editar la bitácora...'
 );
+
+reset role;
+
+select is(
+  (select count(*)::int from public.avance_seccion where observaciones = 'editado'),
+  0,
+  '...pero sin política de update, RLS no deja ninguna fila'
+);
+
+select pg_temp.como('00000000-0000-0000-0000-0000000000a1');
 
 select throws_ok(
   $$insert into public.reproceso (orden_id, checkpoint_destino, motivo)
