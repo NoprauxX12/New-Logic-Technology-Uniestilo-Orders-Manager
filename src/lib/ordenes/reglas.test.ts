@@ -107,6 +107,12 @@ describe("armarEtapas", () => {
   it("no deja ambigüedad: cada etapa es completada o pendiente", () => {
     const etapas = armarEtapas([
       {
+        seccion: "cotizacion_enviada",
+        usuarioId: "u1",
+        usuarioNombre: "Laura",
+        fechaHora: "2026-09-01T08:00:00",
+      },
+      {
         seccion: "cotizacion_aprobada",
         usuarioId: "u1",
         usuarioNombre: "Laura",
@@ -185,6 +191,8 @@ describe("contarProgreso", () => {
 
     expect(completadas).toBe(0);
     expect(totales).toBe(CHECKPOINTS_DISPONIBLES.length);
+    // Cuando todas las historias estén construidas, este caso deja de existir.
+    if (CHECKPOINTS_DISPONIBLES.length === CHECKPOINTS.length) return;
     expect(totales).toBeLessThan(CHECKPOINTS.length);
   });
 });

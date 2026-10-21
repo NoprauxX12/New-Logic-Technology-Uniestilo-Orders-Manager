@@ -9,7 +9,10 @@ import {
   totalDePrendas,
   validarHoja,
 } from "@/features/programacion/reglas";
-import { buscarCheckpoint } from "@/features/workflow/checkpoints";
+import {
+  buscarCheckpoint,
+  type CheckpointId,
+} from "@/features/workflow/checkpoints";
 
 /**
  * Las reglas de la programación a diseño (HU-03).
@@ -46,20 +49,34 @@ describe("la etapa y el rol salen de checkpoints.ts", () => {
   });
 });
 
+/** HU-02: una orden solo se programa con la cotización enviada y aprobada. */
+const COTIZADA: CheckpointId[] = ["cotizacion_enviada", "cotizacion_aprobada"];
+
 describe("puedeProgramar · le pregunta al motor", () => {
-  it("deja programar una orden recién registrada", () => {
-    expect(puedeProgramar([], "secretaria")).toEqual({ permitido: true });
+  it("deja programar una orden con la cotización aprobada", () => {
+    expect(puedeProgramar(COTIZADA, "secretaria")).toEqual({ permitido: true });
+  });
+
+  it("no deja programar una orden sin la cotización aprobada (HU-02)", () => {
+    const veredicto = puedeProgramar([], "secretaria");
+
+    expect(veredicto.permitido).toBe(false);
+    if (!veredicto.permitido)
+      expect(veredicto.motivo).toBe("fuera_de_secuencia");
   });
 
   it("no deja programar dos veces la misma orden", () => {
-    const veredicto = puedeProgramar(["programada_diseno"], "secretaria");
+    const veredicto = puedeProgramar(
+      [...COTIZADA, "programada_diseno"],
+      "secretaria",
+    );
 
     expect(veredicto.permitido).toBe(false);
     if (!veredicto.permitido) expect(veredicto.motivo).toBe("ya_marcado");
   });
 
   it("no deja programar a quien no es secretaría", () => {
-    const veredicto = puedeProgramar([], "corte");
+    const veredicto = puedeProgramar(COTIZADA, "corte");
 
     expect(veredicto.permitido).toBe(false);
     if (!veredicto.permitido)
