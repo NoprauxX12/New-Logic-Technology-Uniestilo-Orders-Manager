@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { FichasAdjuntas } from "@/components/FichasAdjuntas";
 import { BadgeSemaforo } from "@/features/tablero/components/BadgeSemaforo";
+import { describirQuienMarco } from "@/lib/ordenes/reglas";
 import type { DetalleOrden, EtapaTablero } from "@/lib/ordenes/types";
 import { buscarCheckpoint } from "@/features/workflow/checkpoints";
 
@@ -52,7 +53,7 @@ function CardEtapa({ etapa }: { etapa: EtapaTablero }) {
         <p className="mt-2 text-sm text-zinc-600">
           Reportado por{" "}
           <span className="font-medium text-zinc-800">
-            {etapa.avance.usuarioNombre}
+            {describirQuienMarco(etapa.avance.usuarioNombre, etapa.seccion)}
           </span>{" "}
           · {formatoFechaHora(etapa.avance.fechaHora)}
         </p>

@@ -34,6 +34,7 @@ function ordenDePrueba(): DetalleOrden {
     fechaEntrega: "2026-09-21",
     tallerNombre: null,
     estadoTalleres: "Todavía no ha salido a ningún taller.",
+    lotesEnTaller: 0,
     tieneFicha: false,
     semaforo: "a_tiempo",
     etapas: ETAPAS_PENDIENTES,
@@ -119,5 +120,27 @@ describe("DetalleOrdenView · ir a marcar", () => {
     expect(screen.getAllByText("Todavía no disponible")).toHaveLength(
       sinPantalla.length,
     );
+  });
+
+  it("dice quién reportó la etapa con el rol que la marca", () => {
+    const orden = ordenDePrueba();
+    orden.etapas = orden.etapas.map((etapa) =>
+      etapa.seccion === "cotizacion_aprobada"
+        ? {
+            ...etapa,
+            estado: "completada" as const,
+            avance: {
+              seccion: etapa.seccion,
+              usuarioId: "u1",
+              usuarioNombre: "Paula Henao",
+              fechaHora: "2026-09-01T15:00:00Z",
+            },
+          }
+        : etapa,
+    );
+
+    render(<DetalleOrdenView orden={orden} />);
+
+    expect(screen.getByText(/Paula Henao \(Secretaría\)/)).toBeInTheDocument();
   });
 });

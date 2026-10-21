@@ -1,6 +1,6 @@
 import type { Checkpoint, CheckpointId } from "@/features/workflow/checkpoints";
 import { loQueSigue } from "@/features/workflow/estado";
-import { diasHasta } from "@/lib/ordenes/reglas";
+import { describirQuienMarco, diasHasta } from "@/lib/ordenes/reglas";
 import type {
   DetalleOrden,
   OrdenEnTablero,
@@ -22,23 +22,6 @@ const ETIQUETA_SEMAFORO: Record<SemaforoOrden, string> = {
   en_riesgo: "en riesgo (entrega en 3 días o menos)",
   atrasada: "atrasada (la fecha de entrega ya pasó)",
 };
-
-export type FiltroOrdenes =
-  | "todas"
-  | "atrasadas"
-  | "en_riesgo"
-  | "en_produccion"
-  | "sin_empezar"
-  | "terminadas";
-
-export const FILTROS_ORDENES: readonly FiltroOrdenes[] = [
-  "todas",
-  "atrasadas",
-  "en_riesgo",
-  "en_produccion",
-  "sin_empezar",
-  "terminadas",
-];
 
 export type OrdenParaModelo = {
   ordenId: string;
@@ -152,7 +135,7 @@ export function detallarOrden(
     ...resumirOrden(detalle, ahora),
     historial: detalle.avances.map((avance) => ({
       etapa: porSeccion.get(avance.seccion)?.etiqueta ?? avance.seccion,
-      quien: avance.usuarioNombre,
+      quien: describirQuienMarco(avance.usuarioNombre, avance.seccion),
       cuando: fechaHoraDelTaller(avance.fechaHora),
       ...(avance.observacion ? { observacion: avance.observacion } : {}),
     })),
@@ -162,66 +145,4 @@ export function detallarOrden(
       )
       .map((checkpoint) => checkpoint.etiqueta),
   };
-}
-
-/**
- * Sin tildes ni virgulillas, sin mayúsculas y sin espacios de sobra, para
- * comparar lo que escribe la persona con lo que hay en la base.
- */
-export function normalizar(texto: string): string {
-  return (
-    texto
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      // Los modelos escriben "OC‑5003" con guion no separable; en la base es "-".
-      .replace(/[\u2010-\u2015\u2212]/g, "-")
-      .toLowerCase()
-      .trim()
-  );
-}
-
-/**
- * Las órdenes cuyo número de orden de compra o cliente contienen el texto.
- * "5003" encuentra "OC-5003"; "colegio" encuentra "Colegio San José".
- */
-export function filtrarOrdenes(
-  ordenes: readonly OrdenEnTablero[],
-  texto: string,
-): OrdenEnTablero[] {
-  const buscado = normalizar(texto);
-  if (!buscado) return [];
-
-  return ordenes.filter(
-    (orden) =>
-      normalizar(orden.numeroOrdenCompra).includes(buscado) ||
-      normalizar(orden.razonSocial).includes(buscado),
-  );
-}
-
-export function filtrarPorEstado(
-  ordenes: readonly OrdenEnTablero[],
-  filtro: FiltroOrdenes,
-): OrdenEnTablero[] {
-  switch (filtro) {
-    case "todas":
-      return [...ordenes];
-    case "atrasadas":
-      return ordenes.filter((orden) => orden.semaforo === "atrasada");
-    case "en_riesgo":
-      return ordenes.filter((orden) => orden.semaforo === "en_riesgo");
-    case "en_produccion":
-      return ordenes.filter(
-        (orden) =>
-          orden.etapasCompletadas > 0 &&
-          orden.etapasCompletadas < orden.etapasTotales,
-      );
-    case "sin_empezar":
-      return ordenes.filter((orden) => orden.etapasCompletadas === 0);
-    case "terminadas":
-      return ordenes.filter(
-        (orden) =>
-          orden.etapasTotales > 0 &&
-          orden.etapasCompletadas === orden.etapasTotales,
-      );
-  }
 }

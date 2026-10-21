@@ -1,4 +1,9 @@
-import { buscarCheckpoint, CHECKPOINTS } from "@/features/workflow/checkpoints";
+import {
+  buscarCheckpoint,
+  CHECKPOINTS,
+  ETIQUETAS_ROL,
+  type CheckpointId,
+} from "@/features/workflow/checkpoints";
 import { etapasQueNoAplicaron } from "@/features/workflow/transiciones";
 import type {
   AvanceSeccion,
@@ -33,6 +38,19 @@ export function derivarSemaforo(
   if (dias < 0) return "atrasada";
   if (dias <= DIAS_EN_RIESGO) return "en_riesgo";
   return "a_tiempo";
+}
+
+/**
+ * "Paula Henao (Secretaría)": quien marcó una etapa, con el rol que le toca a
+ * esa etapa. El rol sale del dueño del checkpoint y no de la cuenta: cada etapa
+ * la marca un solo rol (RLS lo garantiza), y así el historial no cambia si
+ * después a la persona le cambian el rol.
+ */
+export function describirQuienMarco(
+  nombre: string,
+  seccion: CheckpointId,
+): string {
+  return `${nombre} (${ETIQUETAS_ROL[buscarCheckpoint(seccion).rolDueno]})`;
 }
 
 export function armarEtapas(avances: AvanceSeccion[]): EtapaTablero[] {

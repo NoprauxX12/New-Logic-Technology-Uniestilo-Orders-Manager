@@ -9,6 +9,7 @@ import {
   armarEtapas,
   contarProgreso,
   derivarSemaforo,
+  describirQuienMarco,
   diasHasta,
   resumirTablero,
 } from "@/lib/ordenes/reglas";
@@ -34,6 +35,7 @@ function ordenStub(
     fechaEntrega: "2026-09-30",
     tallerNombre: null,
     estadoTalleres: "Todavía no ha salido a ningún taller.",
+    lotesEnTaller: 0,
     tieneFicha: false,
     etapas: [],
     ...parcial,
@@ -233,5 +235,19 @@ describe("etapas que no aplicaron (órdenes en curso)", () => {
 
     expect(progreso.completadas).toBe(progreso.totales);
     expect(progreso.totales).toBe(CHECKPOINTS_DISPONIBLES.length - 1);
+  });
+});
+
+describe("describirQuienMarco", () => {
+  it("pone entre paréntesis el rol dueño de la etapa, no el de la cuenta", () => {
+    expect(describirQuienMarco("Paula Henao", "cotizacion_aprobada")).toBe(
+      "Paula Henao (Secretaría)",
+    );
+    expect(describirQuienMarco("Camila Ríos", "corte_completado")).toBe(
+      "Camila Ríos (Corte)",
+    );
+    expect(describirQuienMarco("Luis", "lista_despacho")).toBe(
+      "Luis (Terminación)",
+    );
   });
 });

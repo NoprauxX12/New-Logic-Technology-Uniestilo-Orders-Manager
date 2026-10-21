@@ -4,12 +4,14 @@ import { z } from "zod";
 
 import {
   detallarOrden,
-  filtrarOrdenes,
-  filtrarPorEstado,
-  FILTROS_ORDENES,
   pareceUuid,
   resumirOrden,
 } from "@/features/asistente/formato";
+import {
+  filtrarOrdenes,
+  filtrarPorEstado,
+  FILTROS_ORDENES,
+} from "@/lib/ordenes/filtros";
 import { CHECKPOINTS_DISPONIBLES } from "@/features/workflow/checkpoints";
 import { herramienta, type Herramientas } from "@/lib/ai";
 import {
