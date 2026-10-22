@@ -38,6 +38,7 @@ Node 22 (`.nvmrc`) y npm. No usar pnpm, yarn ni bun: un solo lockfile.
 | `npm run check`                     | format:check + lint + typecheck + test:run. **Correrlo antes de abrir un PR**      |
 | `npm run db:types`                  | Regenera `src/types/database.types.ts` desde la base local de Supabase             |
 | `npm run test:db`                   | Pruebas pgTAP de `supabase/tests/` contra la base local (RLS, triggers, funciones) |
+| `npm run test:e2e`                  | Pruebas E2E con Playwright de `e2e/` (navegador real; ver `e2e/README.md`)         |
 
 Un solo test: `npx vitest run src/features/workflow/transitions.test.ts`, o por nombre: `npx vitest run -t "no permite repetir"`.
 
@@ -177,7 +178,7 @@ El séptimo rol, `terminacion` (Marcela), es una sección distinta de marcación
 - Unitarios con Vitest + Testing Library, al lado del código (`*.test.ts(x)` dentro de `src/`).
 - La base se prueba con pgTAP en `supabase/tests/` (`npm run test:db`): RLS por rol, triggers, restricciones y funciones. Una tabla, política, trigger o función nueva trae su prueba ahí.
 - Obligatorio probar: las reglas puras del workflow (transiciones válidas, rol permitido, no repetir checkpoint) y los esquemas de validación. Ahí vive el riesgo del dominio.
-- Componentes: se prueban los que tienen lógica (formularios, guardas por rol). Los Server Components `async` no se prueban con Vitest; para flujos completos se agregará Playwright después del Sprint 1.
+- Componentes: se prueban los que tienen lógica (formularios, guardas por rol). Los Server Components `async` no se prueban con Vitest: los flujos completos se prueban con Playwright en `e2e/` (`npm run test:e2e`), una prueba por flujo con su caso feliz y sus alternativos. Solo corren contra Supabase local.
 - CI corre `npm run check` en cada PR. Un PR con CI en rojo no se revisa.
 
 ## Git y PRs (resumen; el detalle está en CONTRIBUTING.md)

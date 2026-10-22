@@ -56,3 +56,47 @@ jobs:
         run: supabase db reset
       - name: Pruebas pgTAP
         run: supabase test db
+
+  e2e:
+    # Job aparte y en paralelo. Levanta Supabase local con el seed y la
+    # aplicación compilada, y un navegador real hace los flujos de e2e/flujos.
+    name: E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      HUSKY: 0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - uses: supabase/setup-cli@v1
+        with:
+          # La misma versión que fija package.json ("supabase").
+          version: 2.121.0
+      - name: Levantar Supabase local con el seed
+        run: |
+          supabase start -x studio,imgproxy,edge-runtime,vector,logflare,mailpit,postgres-meta,supavisor
+          supabase db reset
+      - name: Variables de la aplicación apuntando a Supabase local
+        # `.env.local` no existe en CI: se arma con las llaves de esta base.
+        run: |
+          eval "$(supabase status -o env | grep -E '^(API_URL|PUBLISHABLE_KEY|SECRET_KEY)=')"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
+            echo "SUPABASE_SECRET_KEY=$SECRET_KEY"
+          } > .env.local
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - name: Guardar el reporte si algo falló
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-e2e
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
