@@ -137,6 +137,19 @@ En vez de escribir en `avance_seccion` por su cuenta, una historia de marcado ca
 | `npm run format`   | Formatea todo con Prettier                                    |
 | `npm test`         | Tests en modo watch                                           |
 | `npm run test:db`  | Pruebas pgTAP contra la base local (RLS, triggers, funciones) |
+| `npm run test:e2e` | Pruebas E2E con Playwright (navegador real, Supabase local)   |
+
+## Pruebas E2E
+
+Un navegador real hace lo que haría una persona —entrar por el login, registrar una orden, filtrar el tablero— contra la aplicación y Supabase local. Viven en `e2e/` (estructura y cómo agregar un flujo en `e2e/README.md`).
+
+```bash
+npx supabase start && npx supabase db reset   # base local con el seed
+npm run test:e2e        # corre todos los flujos (levanta la app si no está corriendo)
+npm run test:e2e:ui     # modo visual, para depurar viendo el navegador
+```
+
+Solo corren contra localhost: se niegan a arrancar si la aplicación o `NEXT_PUBLIC_SUPABASE_URL` apuntan a otro lado, porque crean datos y usan la contraseña pública del seed.
 
 ## Pruebas de la base de datos
 

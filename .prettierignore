@@ -3,6 +3,9 @@ node_modules
 out
 build
 coverage
+playwright-report
+test-results
+e2e/.auth
 package-lock.json
 next-env.d.ts
 src/types/database.types.ts
