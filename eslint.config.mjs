@@ -13,6 +13,9 @@ export default defineConfig([
     "out/**",
     "build/**",
     "coverage/**",
+    // Generados por Playwright (npm run test:e2e)
+    "playwright-report/**",
+    "test-results/**",
     "next-env.d.ts",
     // Generado por `npm run db:types`
     "src/types/database.types.ts",
