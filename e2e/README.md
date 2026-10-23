@@ -22,6 +22,29 @@ En CI corre el job `E2E` con la aplicación compilada.
 `E2E_BASE_URL` o `NEXT_PUBLIC_SUPABASE_URL` (de `.env.local`) no son locales:
 las pruebas crean órdenes y entran con la contraseña pública del seed.
 
+## Si algo falla
+
+- **El clic nunca se completa y el log dice `element was detached from the DOM` /
+  `navigated to .../login` una y otra vez**: la página se está recargando sola en
+  bucle (cientos de veces por segundo). No es un fallo de la prueba: es la caché
+  de Turbopack de la carpeta `.next`, generada con otra versión de Next, que no
+  coincide con la instalada (pasó al subir de Next 16.2 a 16.4). En el log del
+  servidor se ve `✓ Compiled in 0ms` seguido de `GET /login` sin parar.
+  Arreglo: detén `npm run dev`, borra `.next` y vuelve a correr.
+
+  ```bash
+  rm -rf .next && npm run test:e2e
+  ```
+
+  Conviene hacerlo siempre que cambie la versión de `next` en `package.json`.
+
+- **`E2E: ... no es local`**: el candado de `fixtures/entorno.ts` detectó que
+  `E2E_BASE_URL` o `NEXT_PUBLIC_SUPABASE_URL` no apuntan a localhost. Es a propósito.
+- **Falla el login del paso de preparación**: la base local no tiene el seed.
+  Corre `npx supabase db reset`.
+- **Ver qué pasó**: `npx playwright show-report playwright-report` o, para una
+  prueba, `npx playwright show-trace test-results/<carpeta>/trace.zip`.
+
 ## Estructura
 
 ```
