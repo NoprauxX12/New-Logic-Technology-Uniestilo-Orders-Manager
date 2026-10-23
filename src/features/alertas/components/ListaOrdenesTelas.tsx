@@ -1,7 +1,10 @@
+import { BadgeSemaforo } from "@/components/BadgeSemaforo";
 import { FichasAdjuntas } from "@/components/FichasAdjuntas";
+import { agruparOrdenesDeTelas } from "@/features/alertas/agrupacion";
 import { BotonLlegadaTela } from "@/features/alertas/components/BotonLlegadaTela";
 import { FormularioAvisoTela } from "@/features/alertas/components/FormularioAvisoTela";
 import type { OrdenParaTelas } from "@/features/alertas/queries";
+import { derivarSemaforo } from "@/lib/ordenes/reglas";
 import { formatearFecha } from "@/lib/utils/fechas";
 
 /**
@@ -87,21 +90,13 @@ function TarjetaSinEspera({ orden }: { orden: OrdenParaTelas }) {
   );
 }
 
-export function ListaOrdenesTelas({ ordenes }: Props) {
-  if (ordenes.length === 0) {
-    return (
-      <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6 text-center">
-        <p className="font-medium text-zinc-900">
-          No hay órdenes esperando el corte
-        </p>
-        <p className="mt-1 text-sm text-zinc-600">
-          Cuando se registre una orden nueva, aparecerá aquí para validar su
-          tela.
-        </p>
-      </div>
-    );
-  }
-
+function Tarjetas({
+  ordenes,
+  ahora,
+}: {
+  ordenes: OrdenParaTelas[];
+  ahora: Date;
+}) {
   return (
     <ul className="flex flex-col gap-4">
       {ordenes.map((orden) => (
@@ -111,9 +106,14 @@ export function ListaOrdenesTelas({ ordenes }: Props) {
         >
           <header className="mb-4">
             <p className="text-sm font-medium text-zinc-500">Orden de compra</p>
-            <h2 className="text-lg font-semibold text-zinc-900">
-              {orden.numeroOrdenCompra}
-            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-lg font-semibold text-zinc-900">
+                {orden.numeroOrdenCompra}
+              </h3>
+              <BadgeSemaforo
+                semaforo={derivarSemaforo(orden.fechaEntrega, ahora)}
+              />
+            </div>
             <p className="mt-1 text-sm text-zinc-700">{orden.razonSocial}</p>
             <p className="mt-1 text-sm text-zinc-500">
               Entrega: {formatearFecha(orden.fechaEntrega)}
@@ -135,5 +135,70 @@ export function ListaOrdenesTelas({ ordenes }: Props) {
         </li>
       ))}
     </ul>
+  );
+}
+
+export function ListaOrdenesTelas({ ordenes }: Props) {
+  if (ordenes.length === 0) {
+    return (
+      <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6 text-center">
+        <p className="font-medium text-zinc-900">
+          No hay órdenes esperando el corte
+        </p>
+        <p className="mt-1 text-sm text-zinc-600">
+          Cuando se registre una orden nueva, aparecerá aquí para validar su
+          tela.
+        </p>
+      </div>
+    );
+  }
+
+  const ahora = new Date();
+  const { porValidar, esperandoTela, telaLlegada } = agruparOrdenesDeTelas(
+    ordenes,
+    ahora,
+  );
+
+  return (
+    <div className="flex flex-col gap-8">
+      <section className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold text-zinc-900">
+          Por validar{" "}
+          <span className="font-normal text-zinc-500">
+            ({porValidar.length})
+          </span>
+        </h2>
+        {porValidar.length > 0 ? (
+          <Tarjetas ordenes={porValidar} ahora={ahora} />
+        ) : (
+          <p className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600">
+            No hay órdenes por validar ahora.
+          </p>
+        )}
+      </section>
+
+      {esperandoTela.length > 0 ? (
+        <section className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold text-zinc-900">
+            Esperando que llegue la tela{" "}
+            <span className="font-normal text-zinc-500">
+              ({esperandoTela.length})
+            </span>
+          </h2>
+          <Tarjetas ordenes={esperandoTela} ahora={ahora} />
+        </section>
+      ) : null}
+
+      {telaLlegada.length > 0 ? (
+        <details className="rounded-xl border border-zinc-200 bg-white">
+          <summary className="min-h-12 cursor-pointer px-5 py-3 text-base font-semibold text-zinc-800">
+            Tela ya llegada ({telaLlegada.length})
+          </summary>
+          <div className="border-t border-zinc-100 p-4">
+            <Tarjetas ordenes={telaLlegada} ahora={ahora} />
+          </div>
+        </details>
+      ) : null}
+    </div>
   );
 }

@@ -3,6 +3,7 @@ import {
   type CheckpointId,
   type Rol,
 } from "@/features/workflow/checkpoints";
+import { compararPorUrgencia } from "@/lib/ordenes/urgencia";
 import { puedeMarcar } from "@/features/workflow/transiciones";
 
 /**
@@ -109,4 +110,40 @@ export function validarCierre({
   return veredicto.permitido
     ? { permitido: true }
     : { permitido: false, mensaje: veredicto.mensaje };
+}
+
+/**
+ * Cómo se ordena la pantalla de cierre de secretaría.
+ *
+ * Primero lo que ya se puede dar por completado (los tres reportes están hechos),
+ * porque es un solo clic y saca la orden de la lista; después las que todavía
+ * tienen reportes por hacer, empezando por las que están más cerca de terminar y,
+ * a igual avance, por urgencia.
+ */
+export type OrdenesDeCierre<T> = {
+  listas: T[];
+  faltanReportes: T[];
+};
+
+type ParaCierre = {
+  fechaEntrega: string;
+  numeroOrdenCompra: string;
+  marcados: readonly CheckpointId[];
+};
+
+export function agruparOrdenesDeCierre<T extends ParaCierre>(
+  ordenes: readonly T[],
+  ahora = new Date(),
+): OrdenesDeCierre<T> {
+  const porUrgencia = compararPorUrgencia(ahora);
+  const faltan = (orden: T) => reportesPendientes(orden.marcados).length;
+
+  return {
+    listas: ordenes.filter((orden) => faltan(orden) === 0).sort(porUrgencia),
+    faltanReportes: ordenes
+      .filter((orden) => faltan(orden) > 0)
+      .sort(
+        (uno, otro) => faltan(uno) - faltan(otro) || porUrgencia(uno, otro),
+      ),
+  };
 }

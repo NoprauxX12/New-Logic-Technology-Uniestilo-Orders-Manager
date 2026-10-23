@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { flushSync } from "react-dom";
 
+import { BadgeSemaforo } from "@/components/BadgeSemaforo";
 import {
   programarOrdenes,
   type EstadoProgramacion,
@@ -10,6 +11,7 @@ import {
 import { ENTRADA_VACIA } from "@/features/programacion/formulario";
 import type { OrdenPorProgramar } from "@/features/programacion/queries";
 import { MAXIMO_POR_HOJA, moverEnLista } from "@/features/programacion/reglas";
+import { derivarSemaforo } from "@/lib/ordenes/reglas";
 import { formatearFecha } from "@/lib/utils/fechas";
 
 /**
@@ -189,8 +191,11 @@ export function FormularioProgramacion({ ordenes }: Props) {
                   </span>
 
                   <span className="flex flex-col gap-0.5">
-                    <span className="text-base font-semibold text-zinc-900">
+                    <span className="flex flex-wrap items-center gap-2 text-base font-semibold text-zinc-900">
                       {orden.razonSocial}
+                      <BadgeSemaforo
+                        semaforo={derivarSemaforo(orden.fechaEntrega)}
+                      />
                     </span>
                     <span className="text-sm text-zinc-600">
                       {orden.numeroOrdenCompra} · llegó el{" "}

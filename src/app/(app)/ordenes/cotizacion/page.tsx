@@ -58,9 +58,12 @@ export default async function CotizacionesPage() {
             >
               Por enviar
             </h2>
+            {/* La que lleva más tiempo esperando va primero: se envía por llegada. */}
             <ListaOrdenesSeccion
               ordenes={porEnviar}
               checkpoint="cotizacion_enviada"
+              ordenarPor="llegada"
+              conTitulos={false}
             />
           </section>
         ) : null}
@@ -73,9 +76,13 @@ export default async function CotizacionesPage() {
             >
               Esperando que el cliente la apruebe
             </h2>
+            {/* A quién cobrarle primero: la enviada hace más tiempo. */}
             <ListaOrdenesSeccion
               ordenes={porAprobar}
               checkpoint="cotizacion_aprobada"
+              ordenarPor="antiguedad"
+              conTitulos={false}
+              leyendaDesde="Cotización enviada"
             />
           </section>
         ) : null}

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { BadgeSemaforo } from "@/features/tablero/components/BadgeSemaforo";
+import { BadgeSemaforo } from "@/components/BadgeSemaforo";
 import { EstadoVacioTablero } from "@/features/tablero/components/EstadoVacioTablero";
 import { TableroOrdenes } from "@/features/tablero/components/TableroOrdenes";
 import type { ConteosTablero } from "@/lib/ordenes/filtros";

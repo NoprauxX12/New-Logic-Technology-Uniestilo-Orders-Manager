@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { BadgeSemaforo } from "@/features/tablero/components/BadgeSemaforo";
+import { BadgeSemaforo } from "@/components/BadgeSemaforo";
 import { etapaDevuelta } from "@/lib/ordenes/reglas";
 import type { EtapaTablero, OrdenEnTablero } from "@/lib/ordenes/types";
 import type { CheckpointId } from "@/features/workflow/checkpoints";

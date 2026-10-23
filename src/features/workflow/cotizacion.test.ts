@@ -117,10 +117,14 @@ function orden(
     numeroOrdenCompra: id,
     razonSocial: "Cliente",
     fechaEntrega: "2026-12-01",
+    fechaIngreso: "2026-09-01",
     yaMarcada,
     fechaMarcado: null,
     veredicto,
     fichas: [],
+    cerrada: false,
+    noAplica: false,
+    etapasFaltantes: 0,
   };
 }
 
