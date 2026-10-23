@@ -136,7 +136,7 @@ select throws_ok(
 
 select throws_ok(
   $$select public.crear_orden_de_correccion(
-      '00000000-0000-0000-0000-0000000000f7', current_date - 1, 'Defecto', 'corte_completado',
+      '00000000-0000-0000-0000-0000000000f7', ((now() at time zone 'America/Bogota')::date - 1), 'Defecto', 'corte_completado',
       jsonb_build_array(jsonb_build_object('item_id', (select id from prenda), 'cantidad', 5, 'tallas', 'S:5')))$$,
   'UE010', null, 'la entrega no puede ser anterior a hoy'
 );
