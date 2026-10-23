@@ -15,8 +15,13 @@ npx playwright test --config e2e/playwright.config.ts e2e/flujos/01-registrar-or
 npx playwright show-report playwright-report  # reporte del último intento
 ```
 
-Si ya tienes `npm run dev` corriendo se reutiliza; si no, Playwright lo levanta.
-En CI corre el job `E2E` con la aplicación compilada.
+Playwright compila la aplicación y la levanta (`npm run build && npm run start`,
+~25 s), igual que el job `E2E` del CI. Si ya hay un servidor en el puerto 3000 lo
+reutiliza y se salta el build.
+
+Se prueba lo compilado a propósito: el servidor de desarrollo compila cada ruta
+al visitarla por primera vez y recarga la página en caliente, y en una prueba
+larga eso da fallos intermitentes (un clic que cae en medio de una recarga).
 
 **Solo corren contra localhost.** `fixtures/entorno.ts` se niega a arrancar si
 `E2E_BASE_URL` o `NEXT_PUBLIC_SUPABASE_URL` (de `.env.local`) no son locales:
@@ -24,6 +29,9 @@ las pruebas crean órdenes y entran con la contraseña pública del seed.
 
 ## Si algo falla
 
+- **Con tu propio `npm run dev` corriendo en el puerto 3000** las pruebas lo
+  reutilizan y heredan sus carreras. Si ves fallos intermitentes, detenlo y deja
+  que Playwright levante la versión compilada.
 - **El clic nunca se completa y el log dice `element was detached from the DOM` /
   `navigated to .../login` una y otra vez**: la página se está recargando sola en
   bucle (cientos de veces por segundo). No es un fallo de la prueba: es la caché
@@ -52,8 +60,11 @@ e2e/
 ├── playwright.config.ts   URL, navegador, proyectos y servidor
 ├── fixtures/              piezas que reutilizan los flujos
 │   ├── entorno.ts         candado: solo localhost
-│   ├── cuentas.ts         usuarios del seed
+│   ├── cuentas.ts         las 7 cuentas del seed, una por rol
+│   ├── sesion.ts          entrarComo(browser, cuenta): login real de una persona
+│   ├── acciones.ts        pulsarYEsperarGuardado(): espera la respuesta del servidor
 │   ├── datos.ts           generadores (número de orden único, fechas, prendas)
+│   ├── ficha-tecnica.pdf  archivo de prueba para subir
 │   └── preparacion.setup.ts   entra una vez como admin y guarda la sesión
 ├── paginas/               una clase por pantalla: solo ella conoce los selectores
 └── flujos/                una prueba por flujo, escrita como historia
@@ -70,12 +81,20 @@ e2e/
    pruebas se repiten sin reiniciar la base.
 5. Los flujos empiezan con la sesión de administración ya iniciada. Si el flujo
    _es_ el login, usa `test.use({ storageState: { cookies: [], origins: [] } })`.
+   Para pasar de una persona a otra (el ciclo completo) usa
+   `entrarComo(browser, CUENTAS.rol)`.
+6. **Después de pulsar un botón que guarda, espera la respuesta del servidor**
+   (`pulsarYEsperarGuardado`), no «a que el botón desaparezca»: mientras guarda,
+   el botón cambia su texto a «Guardando…» y deja de coincidir con su nombre, así
+   que esa espera termina antes de tiempo y el flujo sigue con la acción todavía
+   en camino.
 
 Imports con el alias `@e2e/` (por ejemplo `@e2e/paginas/LoginPagina`).
 
 ## Flujos actuales
 
-| Flujo                | HU    | Casos                                                                                                                             |
-| -------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `01-registrar-orden` | HU-01 | Feliz: login → registrar con 2 prendas → ver en el tablero. Alternativos: número repetido; formulario vacío                       |
-| `02-filtrar-tablero` | HU-14 | Feliz: buscar una orden y abrir su trazabilidad. Alternativos: búsqueda por cliente sin tildes; botón «Atrasadas»; sin resultados |
+| Flujo                            | HU            | Casos                                                                                                                                                                                                                                                                                                                            |
+| -------------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `01-registrar-orden`             | HU-01         | Feliz: login → registrar con 2 prendas → ver en el tablero. Alternativos: número repetido; formulario vacío                                                                                                                                                                                                                      |
+| `02-filtrar-tablero`             | HU-14         | Feliz: buscar una orden y abrir su trazabilidad. Alternativos: búsqueda por cliente sin tildes; botón «Atrasadas»; sin resultados                                                                                                                                                                                                |
+| `03-ciclo-completo-de-una-orden` | HU-01 a HU-19 | Una orden de la creación al cierre: Diana la registra y, cada una con su cuenta, Paula (cotización, programación, tela, cierre), Andrés (ficha), Jorge (corte), Luis (recogido, taller, recepción), Sandra (marcación) y Marcela (lista para despachar) marcan lo suyo; al final se comprueban las 13 etapas firmadas por su rol |

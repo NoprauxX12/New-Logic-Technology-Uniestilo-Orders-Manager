@@ -27,10 +27,15 @@ export default defineConfig({
     ["list"],
     ["html", { open: "never", outputFolder: "../playwright-report" }],
   ],
+  expect: { timeout: 10_000 },
   use: {
     baseURL: BASE,
     locale: "es-CO",
     timezoneId: "America/Bogota",
+    // Plazos cortos: un paso que no ocurre debe fallar en segundos, no al final
+    // de un tiempo máximo de minutos.
+    actionTimeout: 15_000,
+    navigationTimeout: 30_000,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
@@ -48,12 +53,15 @@ export default defineConfig({
     },
   ],
   webServer: {
-    // En CI se prueba lo compilado, que es lo que corre en producción; en local
-    // basta el modo desarrollo (y si ya lo tienes corriendo, se reutiliza).
-    command: process.env.CI ? "npm run build && npm run start" : "npm run dev",
+    // Siempre se prueba lo compilado, que es lo que corre en producción. El modo
+    // desarrollo compila cada ruta al visitarla por primera vez y recarga la
+    // página en caliente: en una prueba larga eso da carreras intermitentes
+    // (un clic que cae en medio de una recarga, una pantalla que tarda en
+    // compilarse). Si ya tienes un servidor corriendo en el puerto, se reutiliza.
+    command: "npm run build && npm run start",
     url: `${BASE}/api/health`,
     reuseExistingServer: !process.env.CI,
-    timeout: 240_000,
+    timeout: 300_000,
     cwd: "..",
   },
 });
