@@ -8,8 +8,10 @@ import {
   reportarParteDelCierre,
   type ResultadoCierre,
 } from "@/features/documentos/actions";
+import { FichasAdjuntas } from "@/components/FichasAdjuntas";
 import { reportesPendientes } from "@/features/documentos/reglas";
 import type { CheckpointId } from "@/features/workflow/checkpoints";
+import type { FichaVisible } from "@/lib/storage/fichas";
 import { formatearFecha } from "@/lib/utils/fechas";
 
 /**
@@ -30,6 +32,7 @@ export type OrdenEnCierre = {
   fechaEntrega: string;
   numeroFactura: string | null;
   marcados: CheckpointId[];
+  fichas: FichaVisible[];
 };
 
 type Props = {
@@ -99,6 +102,11 @@ export function FilaOrdenCierre({ orden }: Props) {
           {orden.razonSocial} · entrega el {formatearFecha(orden.fechaEntrega)}
         </p>
       </header>
+
+      <div className="mb-3">
+        <p className="mb-1 text-sm font-medium text-zinc-700">Ficha técnica</p>
+        <FichasAdjuntas fichas={orden.fichas} />
+      </div>
 
       <ul className="flex flex-col gap-3">
         {tiene("etiquetas") ? (

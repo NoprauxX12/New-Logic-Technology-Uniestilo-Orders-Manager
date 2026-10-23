@@ -20,6 +20,13 @@ export class CierrePagina {
     });
   }
 
+  /** El enlace a la ficha técnica en la orden a cerrar. */
+  fichaDe(numeroOrdenCompra: string): Locator {
+    return this.orden(numeroOrdenCompra).getByRole("link", {
+      name: /ficha-tecnica\.pdf/,
+    });
+  }
+
   /** Reporta cada paso del cierre y da la orden por completada. */
   async cerrar(numeroOrdenCompra: string, numeroFactura: string) {
     const orden = this.orden(numeroOrdenCompra);

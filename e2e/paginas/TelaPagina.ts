@@ -20,6 +20,13 @@ export class TelaPagina {
     });
   }
 
+  /** El enlace a la ficha técnica, junto al formulario de la orden. */
+  fichaDe(numeroOrdenCompra: string): Locator {
+    return this.tarjeta(numeroOrdenCompra).getByRole("link", {
+      name: /ficha-tecnica\.pdf/,
+    });
+  }
+
   /** Abre el formulario, llena la tela de cada prenda (por su descripción) y programa. */
   async programarTela(
     numeroOrdenCompra: string,

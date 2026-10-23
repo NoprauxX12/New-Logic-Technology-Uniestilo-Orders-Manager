@@ -1,6 +1,8 @@
 import "server-only";
 
 import { AVANCE_VIGENTE } from "@/lib/ordenes/vigentes";
+import { fichasDeOrdenes } from "@/lib/storage/fichasDeOrdenes";
+import type { FichaVisible } from "@/lib/storage/fichas";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database.types";
 
@@ -12,6 +14,8 @@ export type OrdenParaTela = {
   razonSocial: string;
   fechaEntrega: string;
   items: ItemParaTela[];
+  /** La ficha técnica: es de donde sale cuánta tela lleva cada prenda. */
+  fichas: FichaVisible[];
 };
 
 export async function obtenerOrdenesParaTela(): Promise<OrdenParaTela[]> {
@@ -39,22 +43,28 @@ export async function obtenerOrdenesParaTela(): Promise<OrdenParaTela[]> {
     );
   }
 
-  return data
-    .filter((orden) => {
-      const marcados = orden.avance_seccion.map((avance) => avance.checkpoint);
+  const ordenes = data.filter((orden) => {
+    const marcados = orden.avance_seccion.map((avance) => avance.checkpoint);
 
-      return (
-        marcados.includes("ficha_adjunta") &&
-        !marcados.includes("tela_programada") &&
-        !marcados.includes("corte_completado") &&
-        !marcados.includes("cerrada")
-      );
-    })
-    .map((orden) => ({
-      id: orden.id,
-      numeroOrdenCompra: orden.numero_orden_compra,
-      razonSocial: orden.cliente?.razon_social ?? "Cliente sin nombre",
-      fechaEntrega: orden.fecha_entrega,
-      items: orden.item_orden,
-    }));
+    return (
+      marcados.includes("ficha_adjunta") &&
+      !marcados.includes("tela_programada") &&
+      !marcados.includes("corte_completado") &&
+      !marcados.includes("cerrada")
+    );
+  });
+
+  const fichas = await fichasDeOrdenes(
+    supabase,
+    ordenes.map((orden) => orden.id),
+  );
+
+  return ordenes.map((orden) => ({
+    id: orden.id,
+    numeroOrdenCompra: orden.numero_orden_compra,
+    razonSocial: orden.cliente?.razon_social ?? "Cliente sin nombre",
+    fechaEntrega: orden.fecha_entrega,
+    items: orden.item_orden,
+    fichas: fichas.get(orden.id) ?? [],
+  }));
 }

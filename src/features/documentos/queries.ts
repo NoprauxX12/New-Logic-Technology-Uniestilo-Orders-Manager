@@ -2,6 +2,8 @@ import "server-only";
 
 import type { CheckpointId } from "@/features/workflow/checkpoints";
 import { AVANCE_VIGENTE } from "@/lib/ordenes/vigentes";
+import { fichasDeOrdenes } from "@/lib/storage/fichasDeOrdenes";
+import type { FichaVisible } from "@/lib/storage/fichas";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -21,6 +23,8 @@ export type OrdenParaCierre = {
   numeroFactura: string | null;
   /** Todo lo que la orden lleva marcado, para que las reglas decidan. */
   marcados: CheckpointId[];
+  /** La ficha técnica: secretaría tiene a la mano de qué orden se trata. */
+  fichas: FichaVisible[];
 };
 
 export async function listarOrdenesParaCierre(): Promise<OrdenParaCierre[]> {
@@ -44,7 +48,7 @@ export async function listarOrdenesParaCierre(): Promise<OrdenParaCierre[]> {
     throw new Error("No se pudieron leer las órdenes.");
   }
 
-  return data
+  const ordenes = data
     .map((orden) => ({
       id: orden.id,
       numeroOrdenCompra: orden.numero_orden_compra,
@@ -58,6 +62,16 @@ export async function listarOrdenesParaCierre(): Promise<OrdenParaCierre[]> {
         orden.marcados.includes("lista_despacho") &&
         !orden.marcados.includes("cerrada"),
     );
+
+  const fichas = await fichasDeOrdenes(
+    supabase,
+    ordenes.map((orden) => orden.id),
+  );
+
+  return ordenes.map((orden) => ({
+    ...orden,
+    fichas: fichas.get(orden.id) ?? [],
+  }));
 }
 
 /** Los avances de una orden, para que la action valide antes de escribir. */

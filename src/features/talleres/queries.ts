@@ -3,6 +3,8 @@ import "server-only";
 import { CHECKPOINT_REQUERIDO } from "@/features/talleres/reglas";
 import type { CheckpointId } from "@/features/workflow/checkpoints";
 import { AVANCE_VIGENTE } from "@/lib/ordenes/vigentes";
+import { fichasDeOrdenes } from "@/lib/storage/fichasDeOrdenes";
+import type { FichaVisible } from "@/lib/storage/fichas";
 import { createClient } from "@/lib/supabase/server";
 import { describirEstadoDeTalleres } from "@/lib/talleres/estadoLotes";
 
@@ -44,6 +46,8 @@ export type OrdenParaDespacho = {
   marcados: CheckpointId[];
   /** Del más reciente al más antiguo. */
   lotes: LoteDespachado[];
+  /** La ficha técnica: logística ve qué lleva lo que despacha y recibe. */
+  fichas: FichaVisible[];
 };
 
 export async function obtenerOrdenParaDespacho(
@@ -82,6 +86,8 @@ export async function obtenerOrdenParaDespacho(
 
   if (!data) return null;
 
+  const fichas = await fichasDeOrdenes(supabase, [data.id]);
+
   return {
     id: data.id,
     numeroOrdenCompra: data.numero_orden_compra,
@@ -108,6 +114,7 @@ export async function obtenerOrdenParaDespacho(
         observacionesRecepcion: lote.observaciones_recepcion,
       }))
       .sort((uno, otro) => otro.fechaEnvio.localeCompare(uno.fechaEnvio)),
+    fichas: fichas.get(data.id) ?? [],
   };
 }
 
