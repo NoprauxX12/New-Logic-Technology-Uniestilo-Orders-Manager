@@ -9,6 +9,8 @@ import {
 import type { CheckpointId, Rol } from "@/features/workflow/checkpoints";
 import { getUsuarioActual } from "@/lib/auth/usuarioActual";
 import { AVANCE_VIGENTE } from "@/lib/ordenes/vigentes";
+import { fichasDeOrdenes } from "@/lib/storage/fichasDeOrdenes";
+import type { FichaVisible } from "@/lib/storage/fichas";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -44,6 +46,8 @@ export type OrdenParaTelas = {
   veredictoAviso: ResultadoAlerta;
   /** HU-22: lo que las reglas dicen de marcar que llegó la tela. */
   veredictoLlegada: ResultadoAlerta;
+  /** La ficha técnica: de ahí sale qué tela falta y cuánta. */
+  fichas: FichaVisible[];
 };
 
 type AlertaFila = {
@@ -106,7 +110,7 @@ export async function listarOrdenesParaTelas(
     throw new Error("No se pudieron leer las órdenes.");
   }
 
-  return data.flatMap((orden) => {
+  const filas = data.flatMap((orden) => {
     const marcados = orden.avance_seccion.map((avance) => avance.checkpoint);
 
     // Con el corte hecho la tela ya se usó, y una orden completada ya salió.
@@ -134,6 +138,16 @@ export async function listarOrdenesParaTelas(
       },
     ];
   });
+
+  const fichas = await fichasDeOrdenes(
+    supabase,
+    filas.map((orden) => orden.id),
+  );
+
+  return filas.map((orden) => ({
+    ...orden,
+    fichas: fichas.get(orden.id) ?? [],
+  }));
 }
 
 /** Lo que las actions necesitan saber de la orden antes de escribir. */

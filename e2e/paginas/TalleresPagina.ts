@@ -27,6 +27,11 @@ export class TalleresPagina {
     await expect(this.page).toHaveURL(/\/ordenes\/[0-9a-f-]{36}$/);
   }
 
+  /** El enlace a la ficha técnica en el detalle de la orden. */
+  ficha(): Locator {
+    return this.page.getByRole("link", { name: /ficha-tecnica\.pdf/ });
+  }
+
   async despachar(taller: string, prendas: string) {
     await this.taller.fill(taller);
     await this.prendasEnviadas.fill(prendas);
