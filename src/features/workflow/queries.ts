@@ -2,11 +2,14 @@ import "server-only";
 
 import {
   buscarCheckpoint,
+  CHECKPOINTS,
   type CheckpointId,
   type Rol,
 } from "@/features/workflow/checkpoints";
 import {
+  etapasQueNoAplicaron,
   puedeMarcar,
+  siguienteCheckpoint,
   type ResultadoMarcado,
 } from "@/features/workflow/transiciones";
 import { firmarFichas } from "@/lib/storage/firmarFichas";
@@ -85,6 +88,8 @@ export type OrdenParaSeccion = {
   numeroOrdenCompra: string;
   razonSocial: string;
   fechaEntrega: string;
+  /** Cuándo llegó el pedido: es el orden de «primero la que lleva más esperando». */
+  fechaIngreso: string;
   /** Si esta sección ya marcó su etapa en la orden. */
   yaMarcada: boolean;
   fechaMarcado: string | null;
@@ -92,6 +97,18 @@ export type OrdenParaSeccion = {
   veredicto: ResultadoMarcado;
   /** HU-04: el equipo ve la ficha desde cualquier sección. */
   fichas: FichaVisible[];
+  /** La orden ya se completó: a ninguna sección le sirve verla en su lista. */
+  cerrada: boolean;
+  /**
+   * La orden pasó de largo esta etapa sin marcarla (porque cuando iba por ahí
+   * todavía no se podía marcar en el sistema): no se puede ni se necesita marcar.
+   */
+  noAplica: boolean;
+  /**
+   * Cuántas etapas le faltan a la orden para llegar a esta: 0 si es la que sigue.
+   * Con esto la lista pone primero lo que está por llegarle a la sección.
+   */
+  etapasFaltantes: number;
 };
 
 /**
@@ -113,6 +130,7 @@ export async function obtenerOrdenesParaSeccion(
           `id,
            numero_orden_compra,
            fecha_entrega,
+           fecha_ingreso,
            etapa_inicial,
            cliente ( razon_social ),
            avance_seccion ( checkpoint, fecha_hora ),
@@ -147,12 +165,20 @@ export async function obtenerOrdenesParaSeccion(
       const propio = orden.avance_seccion.find(
         (avance) => avance.checkpoint === checkpoint,
       );
+      const siguiente = siguienteCheckpoint(marcados, orden.etapa_inicial);
+      const lugarDeEstaEtapa = CHECKPOINTS.findIndex(
+        (cp) => cp.id === checkpoint,
+      );
+      const lugarDeLaSiguiente = CHECKPOINTS.findIndex(
+        (cp) => cp.id === siguiente,
+      );
 
       return {
         id: orden.id,
         numeroOrdenCompra: orden.numero_orden_compra,
         razonSocial: orden.cliente?.razon_social ?? "Cliente sin nombre",
         fechaEntrega: orden.fecha_entrega,
+        fechaIngreso: orden.fecha_ingreso,
         yaMarcada: propio !== undefined,
         fechaMarcado: propio?.fecha_hora ?? null,
         veredicto: puedeMarcar({
@@ -166,6 +192,14 @@ export async function obtenerOrdenesParaSeccion(
           esperandoTela: esperandoTela.has(orden.id),
         }),
         fichas: await firmarFichas(supabase, orden.ficha_tecnica),
+        cerrada: marcados.includes("cerrada"),
+        noAplica: etapasQueNoAplicaron(marcados, orden.etapa_inicial).includes(
+          checkpoint,
+        ),
+        etapasFaltantes:
+          siguiente === null
+            ? 0
+            : Math.max(0, lugarDeEstaEtapa - lugarDeLaSiguiente),
       };
     }),
   );

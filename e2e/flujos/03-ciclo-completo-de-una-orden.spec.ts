@@ -108,7 +108,16 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
 
     await corte.abrir();
     await expect(corte.fichaDe(numero)).toBeVisible();
+
+    // A Jorge le toca esta orden: está arriba, en «Para marcar ahora».
+    await expect(corte.paraMarcar().getByText(numero)).toBeVisible();
+
     await corte.marcar(numero, "Marcar corte completado");
+
+    // Ya marcada, sale de ahí y pasa al grupo plegado de lo hecho esta semana.
+    await expect(corte.paraMarcar().getByText(numero)).toBeHidden();
+    await expect(corte.marcadas().getByText(numero)).toHaveCount(1);
+    await expect(corte.marcadas()).not.toHaveAttribute("open", "");
     await page.context().close();
   });
 

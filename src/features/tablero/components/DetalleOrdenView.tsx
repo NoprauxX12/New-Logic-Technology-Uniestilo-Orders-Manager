@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { FichasAdjuntas } from "@/components/FichasAdjuntas";
-import { BadgeSemaforo } from "@/features/tablero/components/BadgeSemaforo";
+import { BadgeSemaforo } from "@/components/BadgeSemaforo";
 import { describirQuienMarco, etapaDevuelta } from "@/lib/ordenes/reglas";
 import type {
   DetalleOrden,

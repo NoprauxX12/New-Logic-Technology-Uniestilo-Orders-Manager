@@ -125,6 +125,12 @@ export type OrdenParaTalleres = {
   fechaEntrega: string;
   /** Derivado de los lotes (regla 1): "En confección", "Todo volvió"… */
   estadoTalleres: string;
+  /** Cuántos lotes ha despachado la orden. Con 0, falta mandar el primero. */
+  lotesTotales: number;
+  /** Cuántos siguen en el taller sin confirmar su recepción. */
+  lotesSinRecibir: number;
+  /** Cuándo salió el lote más viejo que sigue afuera: de ahí salen los días. */
+  enTallerDesde: string | null;
 };
 
 /**
@@ -147,7 +153,7 @@ export async function listarOrdenesParaTalleres(): Promise<
        fecha_entrega,
        cliente ( razon_social ),
        avance_seccion ( checkpoint ),
-       lote_taller ( recibido_completo )`,
+       lote_taller ( recibido_completo, fecha_envio )`,
     )
     .is(AVANCE_VIGENTE, null)
     .order("fecha_entrega", { ascending: true });
@@ -164,15 +170,24 @@ export async function listarOrdenesParaTalleres(): Promise<
         marcados.includes(CHECKPOINT_REQUERIDO) || orden.lote_taller.length > 0;
       return listaParaTaller && !marcados.includes("cerrada");
     })
-    .map((orden) => ({
-      id: orden.id,
-      numeroOrdenCompra: orden.numero_orden_compra,
-      razonSocial: orden.cliente?.razon_social ?? "Cliente sin nombre",
-      fechaEntrega: orden.fecha_entrega,
-      estadoTalleres: describirEstadoDeTalleres(
-        orden.lote_taller.map((lote) => ({
-          recibido: lote.recibido_completo !== null,
-        })),
-      ),
-    }));
+    .map((orden) => {
+      const afuera = orden.lote_taller.filter(
+        (lote) => lote.recibido_completo === null,
+      );
+
+      return {
+        id: orden.id,
+        numeroOrdenCompra: orden.numero_orden_compra,
+        razonSocial: orden.cliente?.razon_social ?? "Cliente sin nombre",
+        fechaEntrega: orden.fecha_entrega,
+        estadoTalleres: describirEstadoDeTalleres(
+          orden.lote_taller.map((lote) => ({
+            recibido: lote.recibido_completo !== null,
+          })),
+        ),
+        lotesTotales: orden.lote_taller.length,
+        lotesSinRecibir: afuera.length,
+        enTallerDesde: afuera.map((lote) => lote.fecha_envio).sort()[0] ?? null,
+      };
+    });
 }

@@ -44,7 +44,12 @@ export function repartirPorCotizacion(
     .filter((orden) => orden.yaMarcada)
     .flatMap((orden) => {
       const aprobada = aprobadasPorId.get(orden.id);
-      return aprobada && lesToca(aprobada) ? [aprobada] : [];
+      // `fechaMarcado` de esta lista es cuándo se envió: sirve para ordenar por
+      // «la que lleva más tiempo esperando respuesta» y decir «enviada hace N
+      // días». La etapa de aprobar sigue sin marcar (`yaMarcada` es false).
+      return aprobada && lesToca(aprobada)
+        ? [{ ...aprobada, fechaMarcado: orden.fechaMarcado }]
+        : [];
     });
 
   return { porEnviar, porAprobar };

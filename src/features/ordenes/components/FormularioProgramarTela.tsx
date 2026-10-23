@@ -2,9 +2,11 @@
 
 import { useActionState, useState } from "react";
 
+import { BadgeSemaforo } from "@/components/BadgeSemaforo";
 import { FichasAdjuntas } from "@/components/FichasAdjuntas";
 import { programarTela } from "@/features/ordenes/telaActions";
 import type { OrdenParaTela } from "@/features/ordenes/telaQueries";
+import { derivarSemaforo } from "@/lib/ordenes/reglas";
 
 type Props = {
   orden: OrdenParaTela;
@@ -38,7 +40,10 @@ export function FormularioProgramarTela({ orden }: Props) {
 
   return (
     <article className="rounded-xl border border-zinc-200 bg-white p-5">
-      <h2 className="text-xl font-semibold">{orden.numeroOrdenCompra}</h2>
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-xl font-semibold">{orden.numeroOrdenCompra}</h2>
+        <BadgeSemaforo semaforo={derivarSemaforo(orden.fechaEntrega)} />
+      </div>
 
       <p className="mt-1 text-zinc-600">{orden.razonSocial}</p>
 

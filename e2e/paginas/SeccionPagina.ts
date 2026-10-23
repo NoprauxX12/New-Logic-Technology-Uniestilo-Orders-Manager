@@ -28,6 +28,20 @@ export class SeccionPagina {
     });
   }
 
+  /** El grupo «Para marcar ahora»: lo que le toca a esta sección. */
+  paraMarcar(): Locator {
+    return this.page.locator("section").filter({
+      has: this.page.getByRole("heading", { name: /Para marcar ahora/ }),
+    });
+  }
+
+  /** El grupo plegado de lo que la sección ya marcó esta semana. */
+  marcadas(): Locator {
+    return this.page
+      .locator("details")
+      .filter({ hasText: /Marcadas en los últimos \d+ días/ });
+  }
+
   /** El enlace a la ficha técnica en la tarjeta de la orden. */
   fichaDe(numeroOrdenCompra: string): Locator {
     return this.tarjeta(numeroOrdenCompra).getByRole("link", {
