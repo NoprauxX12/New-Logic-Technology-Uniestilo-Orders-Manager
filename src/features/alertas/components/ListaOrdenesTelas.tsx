@@ -1,3 +1,4 @@
+import { FichasAdjuntas } from "@/components/FichasAdjuntas";
 import { BotonLlegadaTela } from "@/features/alertas/components/BotonLlegadaTela";
 import { FormularioAvisoTela } from "@/features/alertas/components/FormularioAvisoTela";
 import type { OrdenParaTelas } from "@/features/alertas/queries";
@@ -118,6 +119,13 @@ export function ListaOrdenesTelas({ ordenes }: Props) {
               Entrega: {formatearFecha(orden.fechaEntrega)}
             </p>
           </header>
+
+          <div className="mb-4">
+            <p className="mb-1 text-sm font-medium text-zinc-700">
+              Ficha técnica
+            </p>
+            <FichasAdjuntas fichas={orden.fichas} />
+          </div>
 
           {orden.avisoAbierto ? (
             <TarjetaEsperandoTela orden={orden} />

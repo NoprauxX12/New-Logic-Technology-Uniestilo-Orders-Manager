@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 
+import { FichasAdjuntas } from "@/components/FichasAdjuntas";
 import { programarTela } from "@/features/ordenes/telaActions";
 import type { OrdenParaTela } from "@/features/ordenes/telaQueries";
 
@@ -40,6 +41,12 @@ export function FormularioProgramarTela({ orden }: Props) {
       <h2 className="text-xl font-semibold">{orden.numeroOrdenCompra}</h2>
 
       <p className="mt-1 text-zinc-600">{orden.razonSocial}</p>
+
+      {/* La cantidad de tela sale de la ficha: se ve junto al formulario. */}
+      <div className="mt-3">
+        <p className="mb-1 text-sm font-medium text-zinc-700">Ficha técnica</p>
+        <FichasAdjuntas fichas={orden.fichas} />
+      </div>
 
       {estado.mensaje ? (
         <p

@@ -28,6 +28,13 @@ export class SeccionPagina {
     });
   }
 
+  /** El enlace a la ficha técnica en la tarjeta de la orden. */
+  fichaDe(numeroOrdenCompra: string): Locator {
+    return this.tarjeta(numeroOrdenCompra).getByRole("link", {
+      name: /ficha-tecnica\.pdf/,
+    });
+  }
+
   /** Pulsa «Marcar …» en la tarjeta de la orden y espera a que se registre. */
   async marcar(numeroOrdenCompra: string, accion: string) {
     const boton = this.tarjeta(numeroOrdenCompra).getByRole("button", {

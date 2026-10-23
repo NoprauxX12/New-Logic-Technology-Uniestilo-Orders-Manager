@@ -85,6 +85,8 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
     const tela = new TelaPagina(page);
 
     await tela.abrir();
+    // De la ficha sale cuánta tela lleva cada prenda: se ve junto al formulario.
+    await expect(tela.fichaDe(numero)).toBeVisible();
     await tela.programarTela(numero, {
       [orden.prendas[0].descripcion]: {
         tipo: "Popelina azul",
@@ -105,6 +107,7 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
     const corte = new SeccionPagina(page, "/ordenes/corte");
 
     await corte.abrir();
+    await expect(corte.fichaDe(numero)).toBeVisible();
     await corte.marcar(numero, "Marcar corte completado");
     await page.context().close();
   });
@@ -114,6 +117,7 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
     const recogido = new SeccionPagina(page, "/ordenes/recogido-bordado");
 
     await recogido.abrir();
+    await expect(recogido.fichaDe(numero)).toBeVisible();
     await recogido.marcar(numero, "Marcar recogido y bordado");
     await page.context().close();
   });
@@ -124,6 +128,7 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
 
     await talleres.abrir();
     await talleres.abrirOrden(numero);
+    await expect(talleres.ficha()).toBeVisible();
     await talleres.despachar("Taller Marinilla Centro", "Todas las prendas");
     await talleres.confirmarRecepcionCompleta();
     await page.context().close();
@@ -134,6 +139,7 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
     const marcacion = new SeccionPagina(page, "/ordenes/marcacion");
 
     await marcacion.abrir();
+    await expect(marcacion.fichaDe(numero)).toBeVisible();
     await marcacion.marcar(numero, "Marcar llegada a marcación");
     await page.context().close();
   });
@@ -143,6 +149,7 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
     const despacho = new SeccionPagina(page, "/ordenes/despacho");
 
     await despacho.abrir();
+    await expect(despacho.fichaDe(numero)).toBeVisible();
     await despacho.marcar(numero, "Marcar lista para despachar");
     await page.context().close();
   });
@@ -152,6 +159,7 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
     const cierre = new CierrePagina(page);
 
     await cierre.abrir();
+    await expect(cierre.fichaDe(numero)).toBeVisible();
     await cierre.cerrar(numero, `FE-${numero.slice(-6)}`);
     await page.context().close();
   });

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { FichasAdjuntas } from "@/components/FichasAdjuntas";
 import { exigirAcceso } from "@/features/auth/guardia";
 import { FormularioDespacharTaller } from "@/features/talleres/components/FormularioDespacharTaller";
 import { LotesDeLaOrden } from "@/features/talleres/components/LotesDeLaOrden";
@@ -58,6 +59,11 @@ export default async function OrdenPage({ params }: Props) {
           <p className="text-base text-zinc-700">
             {describirEstadoDeTalleres(orden.lotes)}
           </p>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="text-lg font-semibold text-zinc-900">Ficha técnica</h2>
+          <FichasAdjuntas fichas={orden.fichas} />
         </section>
 
         <section className="flex flex-col gap-2">
