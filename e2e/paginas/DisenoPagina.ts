@@ -31,7 +31,9 @@ export class DisenoPagina {
       tarjeta.getByRole("button", { name: "Adjuntar ficha técnica" }),
     );
 
-    await expect(tarjeta.getByRole("status")).toContainText(
+    // El aviso va arriba de la lista: al adjuntar, la orden cambia de grupo y su
+    // tarjeta ya no está donde estaba.
+    await expect(this.page.getByRole("status")).toContainText(
       "Ficha técnica adjuntada",
     );
   }

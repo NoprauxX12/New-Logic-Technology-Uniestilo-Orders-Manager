@@ -6,6 +6,7 @@ import {
   reportesPendientes,
   validarCierre,
   validarReporte,
+  agruparOrdenesDeCierre,
 } from "@/features/documentos/reglas";
 import type { CheckpointId } from "@/features/workflow/checkpoints";
 
@@ -185,5 +186,77 @@ describe("estaCompletada", () => {
   it("distingue una orden cerrada de una que solo tiene los reportes", () => {
     expect(estaCompletada(CON_LOS_TRES_REPORTES)).toBe(false);
     expect(estaCompletada([...CON_LOS_TRES_REPORTES, "cerrada"])).toBe(true);
+  });
+});
+
+/**
+ * La pantalla de cierre pone primero lo que se puede dar por completado de un
+ * clic, y después lo que aún tiene reportes por hacer, de más a menos avanzado.
+ */
+describe("agruparOrdenesDeCierre", () => {
+  const AHORA = new Date("2026-10-23T15:00:00Z");
+
+  function orden(
+    numero: string,
+    marcados: CheckpointId[],
+    fechaEntrega = "2026-12-01",
+  ) {
+    return { numeroOrdenCompra: numero, fechaEntrega, marcados };
+  }
+
+  const numeros = (lista: { numeroOrdenCompra: string }[]) =>
+    lista.map((o) => o.numeroOrdenCompra);
+
+  it("separa las que ya tienen los tres reportes de las que todavía faltan", () => {
+    const grupos = agruparOrdenesDeCierre(
+      [
+        orden("FALTA", ["etiquetas"]),
+        orden("LISTA", [
+          "etiquetas",
+          "documentos_despacho",
+          "factura_generada",
+        ]),
+      ],
+      AHORA,
+    );
+
+    expect(numeros(grupos.listas)).toEqual(["LISTA"]);
+    expect(numeros(grupos.faltanReportes)).toEqual(["FALTA"]);
+  });
+
+  it("entre las que faltan, primero la más avanzada (menos reportes por hacer)", () => {
+    const grupos = agruparOrdenesDeCierre(
+      [
+        orden("FALTAN-3", []),
+        orden("FALTA-1", ["etiquetas", "documentos_despacho"]),
+        orden("FALTAN-2", ["etiquetas"]),
+      ],
+      AHORA,
+    );
+
+    expect(numeros(grupos.faltanReportes)).toEqual([
+      "FALTA-1",
+      "FALTAN-2",
+      "FALTAN-3",
+    ]);
+  });
+
+  it("a igual avance, la más urgente primero", () => {
+    const grupos = agruparOrdenesDeCierre(
+      [
+        orden("TRANQUILA", ["etiquetas"], "2026-12-30"),
+        orden("ATRASADA", ["etiquetas"], "2026-10-10"),
+      ],
+      AHORA,
+    );
+
+    expect(numeros(grupos.faltanReportes)).toEqual(["ATRASADA", "TRANQUILA"]);
+  });
+
+  it("sin órdenes da dos grupos vacíos", () => {
+    expect(agruparOrdenesDeCierre([], AHORA)).toEqual({
+      listas: [],
+      faltanReportes: [],
+    });
   });
 });

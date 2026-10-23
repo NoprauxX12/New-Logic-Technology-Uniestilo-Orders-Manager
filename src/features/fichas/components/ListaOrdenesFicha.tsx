@@ -1,14 +1,17 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useActionState, useId, useMemo, useState } from "react";
 
+import { BadgeSemaforo } from "@/components/BadgeSemaforo";
 import { FichasAdjuntas } from "@/components/FichasAdjuntas";
 import {
   adjuntarFichaTecnica,
   type ResultadoFicha,
 } from "@/features/fichas/actions";
 import type { OrdenParaFicha } from "@/features/fichas/queries";
+import { agruparOrdenesDeSeccion } from "@/features/workflow/agrupacion";
 import { buscarCheckpoint } from "@/features/workflow/checkpoints";
+import { derivarSemaforo } from "@/lib/ordenes/reglas";
 import { formatearFecha } from "@/lib/utils/fechas";
 
 /**
@@ -26,6 +29,16 @@ type Props = {
 };
 
 export function ListaOrdenesFicha({ ordenes }: Props) {
+  const [aviso, setAviso] = useState<string | null>(null);
+
+  // Diseño puede adjuntar otra versión de una ficha vieja, así que lo ya marcado
+  // se muestra sin límite de días (plegado, y sin las órdenes cerradas).
+  const { paraMarcar, enEspera, hechas } = useMemo(
+    () =>
+      agruparOrdenesDeSeccion(ordenes, new Date(), { diasDeMarcadas: null }),
+    [ordenes],
+  );
+
   if (ordenes.length === 0) {
     return (
       <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6 text-center">
@@ -37,20 +50,92 @@ export function ListaOrdenesFicha({ ordenes }: Props) {
     );
   }
 
-  return (
+  const tarjetas = (lista: OrdenParaFicha[]) => (
     <ul className="flex flex-col gap-4">
-      {ordenes.map((orden) => (
+      {lista.map((orden) => (
         <li key={orden.id}>
-          <TarjetaFicha orden={orden} />
+          <TarjetaFicha orden={orden} alAdjuntar={setAviso} />
         </li>
       ))}
     </ul>
   );
+
+  return (
+    <div className="flex flex-col gap-8">
+      {aviso ? (
+        <p
+          role="status"
+          className="rounded-lg bg-emerald-50 px-4 py-3 text-base font-medium text-emerald-900"
+        >
+          {aviso}
+        </p>
+      ) : null}
+
+      <section className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold text-zinc-900">
+          Para adjuntar ahora{" "}
+          <span className="font-normal text-zinc-500">
+            ({paraMarcar.length})
+          </span>
+        </h2>
+
+        {paraMarcar.length > 0 ? (
+          tarjetas(paraMarcar as OrdenParaFicha[])
+        ) : (
+          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6 text-center">
+            <p className="font-medium text-zinc-900">
+              No hay fichas por adjuntar ahora
+            </p>
+            {enEspera.length > 0 ? (
+              <p className="mt-1 text-sm text-zinc-600">
+                {enEspera.length === 1
+                  ? "Hay 1 orden esperando que termine una etapa anterior."
+                  : `Hay ${enEspera.length} órdenes esperando que terminen etapas anteriores.`}
+              </p>
+            ) : null}
+          </div>
+        )}
+      </section>
+
+      {enEspera.length > 0 ? (
+        <details className="rounded-xl border border-zinc-200 bg-white">
+          <summary className="min-h-12 cursor-pointer px-5 py-3 text-base font-semibold text-zinc-800">
+            Todavía no llegan a esta etapa ({enEspera.length})
+          </summary>
+          <div className="border-t border-zinc-100 p-4">
+            {tarjetas(enEspera as OrdenParaFicha[])}
+          </div>
+        </details>
+      ) : null}
+
+      {hechas.length > 0 ? (
+        <details className="rounded-xl border border-zinc-200 bg-white">
+          <summary className="min-h-12 cursor-pointer px-5 py-3 text-base font-semibold text-zinc-800">
+            Con ficha adjunta ({hechas.length})
+          </summary>
+          <div className="border-t border-zinc-100 p-4">
+            {tarjetas(hechas as OrdenParaFicha[])}
+          </div>
+        </details>
+      ) : null}
+    </div>
+  );
 }
 
-function TarjetaFicha({ orden }: { orden: OrdenParaFicha }) {
+function TarjetaFicha({
+  orden,
+  alAdjuntar,
+}: {
+  orden: OrdenParaFicha;
+  /** El aviso de éxito sube a la lista: al adjuntar, la tarjeta cambia de grupo. */
+  alAdjuntar: (mensaje: string) => void;
+}) {
   const [estado, enviar, enviando] = useActionState(
-    adjuntarFichaTecnica,
+    async (previo: ResultadoFicha, formData: FormData) => {
+      const resultado = await adjuntarFichaTecnica(previo, formData);
+      if (resultado.ok) alAdjuntar(resultado.mensaje);
+      return resultado;
+    },
     ESTADO_INICIAL,
   );
   const idArchivo = useId();
@@ -61,9 +146,14 @@ function TarjetaFicha({ orden }: { orden: OrdenParaFicha }) {
       <div className="flex flex-col gap-4">
         <div>
           <p className="text-sm font-medium text-zinc-500">Orden de compra</p>
-          <h2 className="text-lg font-semibold text-zinc-900">
-            {orden.numeroOrdenCompra}
-          </h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-lg font-semibold text-zinc-900">
+              {orden.numeroOrdenCompra}
+            </h3>
+            {orden.yaMarcada ? null : (
+              <BadgeSemaforo semaforo={derivarSemaforo(orden.fechaEntrega)} />
+            )}
+          </div>
           <p className="mt-1 text-sm text-zinc-700">{orden.razonSocial}</p>
           <p className="mt-1 text-sm text-zinc-500">
             Entrega: {formatearFecha(orden.fechaEntrega)}
@@ -129,15 +219,10 @@ function TarjetaFicha({ orden }: { orden: OrdenParaFicha }) {
           </div>
         )}
 
-        {estado.mensaje ? (
+        {estado.mensaje && !estado.ok ? (
           <p
-            role={estado.ok ? "status" : "alert"}
-            className={[
-              "rounded-lg px-4 py-3 text-sm",
-              estado.ok
-                ? "bg-emerald-50 text-emerald-800"
-                : "bg-red-50 text-red-800",
-            ].join(" ")}
+            role="alert"
+            className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800"
           >
             {estado.mensaje}
           </p>
