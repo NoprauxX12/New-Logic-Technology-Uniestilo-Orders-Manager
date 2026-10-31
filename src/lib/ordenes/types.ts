@@ -105,6 +105,8 @@ export type OrdenEnTablero = OrdenResumen & {
 export type ResumenTablero = {
   totalOrdenes: number;
   enProduccion: number;
+  /** Prendas de las órdenes registradas que todavía no se entregan. */
+  prendasEnProduccion: number;
   atrasadas: number;
   enRiesgo: number;
 };
