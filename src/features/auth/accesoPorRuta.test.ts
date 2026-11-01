@@ -114,6 +114,14 @@ describe("puedeEntrar · lo de cada sección", () => {
     }
   });
 
+  it("editar una orden es solo de administración", () => {
+    const editar = `${ORDEN}/editar`;
+
+    for (const rol of ROLES) {
+      expect(puedeEntrar(rol, editar)).toBe(rol === "admin");
+    }
+  });
+
   it("la portada y el login son de todos", () => {
     for (const rol of ROLES) {
       expect(puedeEntrar(rol, "/")).toBe(true);

@@ -109,9 +109,20 @@ export type ResumenTablero = {
   enRiesgo: number;
 };
 
+/** Una edición de la orden (tabla `edicion_orden`, `docs/adr/0012`). */
+export type EdicionOrden = {
+  id: string;
+  porNombre: string;
+  fechaHora: string; // ISO
+  /** Lo que cambió, una frase por cambio. */
+  cambios: string[];
+};
+
 export type DetalleOrden = OrdenEnTablero & {
   /** Los avances vigentes. Los anulados están en cada etapa (`anulados`). */
   avances: AvanceSeccion[];
   /** URLs firmadas para abrir el archivo (expiran; no se guardan). */
   fichas: FichaVisible[];
+  /** Quién editó la orden y qué cambió, de la más vieja a la más nueva. */
+  ediciones: EdicionOrden[];
 };

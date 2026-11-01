@@ -35,12 +35,23 @@ function conId(prefijo: string, roles: readonly Rol[]): Regla {
   return { coincide: (candidata) => patron.test(candidata), roles };
 }
 
+function conIdYSufijo(
+  prefijo: string,
+  sufijo: string,
+  roles: readonly Rol[],
+): Regla {
+  const patron = new RegExp(`^${prefijo}/${UUID}/${sufijo}$`, "i");
+  return { coincide: (candidata) => patron.test(candidata), roles };
+}
+
 const REGLAS: readonly Regla[] = [
   // HU-14: el tablero y la trazabilidad de una orden son de administración.
   exacta("/tablero", [ADMIN]),
   conId("/tablero", [ADMIN]),
   // HU-01: registrar órdenes es de administración.
   exacta("/ordenes/nueva", [ADMIN]),
+  // Editar una orden es de administración (docs/adr/0012).
+  conIdYSufijo("/ordenes", "editar", [ADMIN]),
   // HU-24: crear cuentas es de administración.
   exacta("/usuarios", [ADMIN]),
   // HU-10 y HU-11: logística despacha y recibe desde el detalle de la orden.

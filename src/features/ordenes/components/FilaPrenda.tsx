@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { CampoTexto } from "@/components/ui/CampoTexto";
 import type { EntradaPrenda } from "@/features/ordenes/formulario";
@@ -53,6 +53,10 @@ type Props = {
   errores: Record<string, string[]>;
   /** Lo que se escribió en esta prenda, para no perderlo si hubo error. */
   valores?: EntradaPrenda;
+  /** Identifica la fila al volver de la action (ver `EntradaPrenda.clave`). */
+  clave?: string;
+  /** Al editar: la prenda guardada que es esta fila. */
+  itemId?: string;
   /** Sin esto no se puede quitar la única prenda que queda. */
   sePuedeQuitar: boolean;
   alQuitar: () => void;
@@ -62,6 +66,8 @@ export function FilaPrenda({
   posicion,
   errores,
   valores,
+  clave = "",
+  itemId = "",
   sePuedeQuitar,
   alQuitar,
 }: Props) {
@@ -76,6 +82,15 @@ export function FilaPrenda({
     valores?.cantidadesPorTalla ?? {},
   );
 
+  // React 19 limpia el formulario al volver de la action, y eso deja el selector
+  // en «Elige una opción» aunque `tallaje` no cambie: como el valor es el mismo,
+  // React no lo vuelve a escribir y el siguiente envío lo manda vacío. `valores`
+  // es un objeto nuevo cada vez que la action responde.
+  const selectorDeTallaje = useRef<HTMLSelectElement>(null);
+  useEffect(() => {
+    if (selectorDeTallaje.current) selectorDeTallaje.current.value = tallaje;
+  }, [valores, tallaje]);
+
   const delCatalogo = esTallaje(tallaje) ? TALLAJES[tallaje] : null;
   const total = delCatalogo ? totalEscrito(delCatalogo.tallas, cantidades) : 0;
   const errorDeTallaje = errorDe("tallaje")?.[0];
@@ -87,6 +102,9 @@ export function FilaPrenda({
       <legend className="px-1 text-base font-semibold text-zinc-900">
         Prenda {posicion + 1}
       </legend>
+
+      <input type="hidden" name="clave" value={clave} />
+      <input type="hidden" name="itemId" value={itemId} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
@@ -119,6 +137,7 @@ export function FilaPrenda({
             ¿Para qué tipo de prenda son las tallas?
           </label>
           <select
+            ref={selectorDeTallaje}
             id={idDe("tallaje")}
             name="tallaje"
             value={tallaje}
