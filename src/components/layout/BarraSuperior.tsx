@@ -13,7 +13,7 @@ import type { UsuarioActual } from "@/lib/auth/usuarioActual";
  */
 export function BarraSuperior({ usuario }: { usuario: UsuarioActual }) {
   return (
-    <header className="border-b border-zinc-200 bg-white">
+    <header className="border-b border-zinc-200 bg-white print:hidden">
       <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-2">
         <Link
           href="/"

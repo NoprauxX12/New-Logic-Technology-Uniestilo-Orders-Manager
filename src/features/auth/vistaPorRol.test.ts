@@ -122,6 +122,18 @@ describe("vistaDeRol · roles con pantalla propia", () => {
     expect(rutas).toContain("/ordenes/telas");
   });
 
+  it("secretaría valida los insumos después de programar la tela (HU-23)", () => {
+    const rutas = vistaDeRol("secretaria").botones.map((b) => b.ruta);
+
+    expect(rutas).toContain(buscarCheckpoint("insumos_validados").ruta);
+    expect(rutas.indexOf("/ordenes/insumos")).toBeGreaterThan(
+      rutas.indexOf("/ordenes/tela"),
+    );
+    expect(rutas.indexOf("/ordenes/insumos")).toBeLessThan(
+      rutas.indexOf("/ordenes/cierre"),
+    );
+  });
+
   it("admin puede ver el tablero, registrar órdenes y crear cuentas", () => {
     const rutas = vistaDeRol("admin").botones.map((b) => b.ruta);
 
