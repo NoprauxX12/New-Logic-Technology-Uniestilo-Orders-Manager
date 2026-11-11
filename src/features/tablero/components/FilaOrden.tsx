@@ -13,6 +13,7 @@ const ETIQUETA_CORTA: Record<CheckpointId, string> = {
   programada_diseno: "Diseño",
   ficha_adjunta: "Ficha",
   tela_programada: "Tela",
+  insumos_validados: "Insumos",
   corte_completado: "Corte",
   recogido_bordado: "Bordado",
   llegada_marcacion: "Marcación",

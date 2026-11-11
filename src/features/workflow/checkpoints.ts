@@ -44,7 +44,7 @@ export type Checkpoint = {
   /**
    * Si el sistema ya permite marcarlo.
    *
-   * El flujo del taller tiene trece etapas. Una historia que todavía no
+   * El flujo del taller tiene catorce etapas. Una historia que todavía no
    * se construye deja la suya en `false` hasta que tenga pantalla. Sin esta marca, una orden recién registrada se quedaría
    * trancada para siempre en la primera etapa, porque el motor exigiría marcar
    * algo que nadie puede marcar.
@@ -105,6 +105,17 @@ export const CHECKPOINTS = [
     hu: "HU-05",
     disponible: true,
     ruta: "/ordenes/tela",
+  },
+  {
+    // HU-23: hilo, resorte, cierre, botón, hilo de bordar, sublimado y
+    // estampado. Se marca guardando el listado (`validar_insumos`), no con la
+    // acción genérica: una validación sin listado no se confirma en la base.
+    id: "insumos_validados",
+    etiqueta: "Insumos validados",
+    rolDueno: "secretaria",
+    hu: "HU-23",
+    disponible: true,
+    ruta: "/ordenes/insumos",
   },
   {
     id: "corte_completado",

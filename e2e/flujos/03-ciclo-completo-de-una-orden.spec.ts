@@ -9,6 +9,7 @@ import { CierrePagina } from "@e2e/paginas/CierrePagina";
 import { DetalleOrdenPagina } from "@e2e/paginas/DetalleOrdenPagina";
 import { DisenoPagina } from "@e2e/paginas/DisenoPagina";
 import { InicioPagina } from "@e2e/paginas/InicioPagina";
+import { InsumosPagina } from "@e2e/paginas/InsumosPagina";
 import { NuevaOrdenPagina } from "@e2e/paginas/NuevaOrdenPagina";
 import { ProgramacionPagina } from "@e2e/paginas/ProgramacionPagina";
 import { SeccionPagina } from "@e2e/paginas/SeccionPagina";
@@ -22,7 +23,7 @@ import { TelaPagina } from "@e2e/paginas/TelaPagina";
  * Una sola historia, como pasa en el taller: administración registra la orden y
  * después cada persona entra con su propia cuenta y marca lo suyo, en el orden
  * del flujo, hasta que secretaría la da por completada. Al final se comprueba en
- * el tablero que las 13 etapas quedaron firmadas por su rol.
+ * el tablero que las 14 etapas quedaron firmadas por su rol.
  *
  * Es una prueba larga a propósito: lo que se verifica es la secuencia entre
  * pantallas y roles, que ninguna prueba más pequeña alcanza.
@@ -102,6 +103,34 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
     await page.context().close();
   });
 
+  await test.step("Paula valida los insumos según la orden de compra", async () => {
+    const page = await entrarComo(browser, CUENTAS.secretaria);
+    const insumos = new InsumosPagina(page);
+
+    await insumos.abrir();
+    await expect(insumos.paraValidar().getByText(numero)).toBeVisible();
+    await insumos.validar(numero, {
+      Hilo: "12 conos de hilo azul 40/2",
+      Botón: "300 botones azules de 4 huecos",
+    });
+
+    // Validada, pasa al grupo plegado de lo hecho, con su listado para imprimir.
+    await expect(insumos.paraValidar().getByText(numero)).toBeHidden();
+    await page.getByText(/Validadas en los últimos/).click();
+    await insumos
+      .tarjeta(numero)
+      .getByRole("link", { name: "Ver listado para imprimir" })
+      .click();
+    await expect(page).toHaveURL(/\/ordenes\/insumos\/[0-9a-f-]{36}$/);
+    await expect(
+      page.getByText("300 botones azules de 4 huecos"),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Imprimir listado" }),
+    ).toBeVisible();
+    await page.context().close();
+  });
+
   await test.step("Jorge (corte) marca el corte completado", async () => {
     const page = await entrarComo(browser, CUENTAS.corte);
     const corte = new SeccionPagina(page, "/ordenes/corte");
@@ -173,7 +202,7 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
     await page.context().close();
   });
 
-  await test.step("Diana comprueba en el tablero que la orden terminó con las 13 etapas firmadas por su rol", async () => {
+  await test.step("Diana comprueba en el tablero que la orden terminó con las 14 etapas firmadas por su rol", async () => {
     const page = await entrarComo(browser, CUENTAS.admin);
     const tablero = new TableroPagina(page);
     const detalle = new DetalleOrdenPagina(page);
@@ -185,7 +214,7 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
     await tablero.abrirTrazabilidad(numero);
     await expect(page).toHaveURL(/\/tablero\/[0-9a-f-]{36}$/);
     await expect(detalle.titulo(numero)).toBeVisible();
-    await expect(page.getByText(/13\/13 etapas/)).toBeVisible();
+    await expect(page.getByText(/14\/14 etapas/)).toBeVisible();
 
     // Cada etapa la firma el rol dueño: el historial lo dice entre paréntesis.
     await expect(

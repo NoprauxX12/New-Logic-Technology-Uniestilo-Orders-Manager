@@ -33,12 +33,14 @@ const VISTAS: Record<Rol, VistaDeRol> = {
   secretaria: {
     botones: [
       // En el orden del flujo: primero la cotización, luego se programa a
-      // diseño, después la tela y al final se cierra.
+      // diseño, después la tela y los insumos, y al final se cierra.
       { etiqueta: "Cotizaciones", ruta: "/ordenes/cotizacion" },
       { etiqueta: "Programar a diseño", ruta: "/ordenes/programacion" },
       { etiqueta: "Programar tela", ruta: "/ordenes/tela" },
       // HU-06: avisar a administración que falta tela.
       { etiqueta: "Validar telas", ruta: "/ordenes/telas" },
+      // HU-23: después de la tela, los demás insumos de la orden.
+      { etiqueta: "Validar insumos", ruta: "/ordenes/insumos" },
       { etiqueta: "Cerrar órdenes", ruta: "/ordenes/cierre" },
     ],
     aviso: null,

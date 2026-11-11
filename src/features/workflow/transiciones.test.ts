@@ -39,6 +39,7 @@ const TODOS: Record<CheckpointId, true> = {
   programada_diseno: true,
   ficha_adjunta: true,
   tela_programada: true,
+  insumos_validados: true,
   corte_completado: true,
   recogido_bordado: true,
   llegada_marcacion: true,

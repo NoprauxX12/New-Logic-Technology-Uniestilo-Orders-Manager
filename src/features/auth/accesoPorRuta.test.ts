@@ -94,6 +94,25 @@ describe("puedeEntrar · lo de cada sección", () => {
     }
   });
 
+  it("solo secretaría y administración validan insumos y ven el listado (HU-23)", () => {
+    for (const rol of ROLES) {
+      const esperado = rol === "secretaria" || rol === "admin";
+      expect(puedeEntrar(rol, "/ordenes/insumos")).toBe(esperado);
+      expect(
+        puedeEntrar(
+          rol,
+          "/ordenes/insumos/00000000-0000-0000-0000-0000000000f2",
+        ),
+      ).toBe(esperado);
+    }
+  });
+
+  it("el listado de insumos exige un id de orden válido (HU-23)", () => {
+    expect(puedeEntrar("secretaria", "/ordenes/insumos/no-es-un-id")).toBe(
+      false,
+    );
+  });
+
   it("logística entra a sus órdenes y al detalle de una orden", () => {
     expect(puedeEntrar("logistica", "/ordenes/talleres")).toBe(true);
     expect(puedeEntrar("logistica", ORDEN)).toBe(true);

@@ -49,6 +49,9 @@ const REGLAS: readonly Regla[] = [
   // HU-06: secretaría valida la tela y avisa cuando falta. No es la pantalla
   // de un checkpoint: avisar crea una alerta (regla 7), no marca una etapa.
   exacta("/ordenes/telas", ["secretaria", ADMIN]),
+  // HU-23: el listado de insumos de una orden, para imprimir. La pantalla de
+  // la lista sale de `checkpoints.ts` como las demás etapas.
+  conId("/ordenes/insumos", ["secretaria", ADMIN]),
   // La pantalla de cada etapa es de su rol dueño.
   ...CHECKPOINTS.flatMap((checkpoint) =>
     checkpoint.ruta

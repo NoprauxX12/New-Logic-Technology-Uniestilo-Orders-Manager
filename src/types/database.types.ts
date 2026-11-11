@@ -223,6 +223,45 @@ export type Database = {
           },
         ]
       }
+      insumo_orden: {
+        Row: {
+          avance_id: string
+          detalle: string
+          id: string
+          insumo: Database["public"]["Enums"]["tipo_insumo"]
+          orden_id: string
+        }
+        Insert: {
+          avance_id: string
+          detalle: string
+          id?: string
+          insumo: Database["public"]["Enums"]["tipo_insumo"]
+          orden_id: string
+        }
+        Update: {
+          avance_id?: string
+          detalle?: string
+          id?: string
+          insumo?: Database["public"]["Enums"]["tipo_insumo"]
+          orden_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insumo_orden_avance_id_fkey"
+            columns: ["avance_id"]
+            isOneToOne: false
+            referencedRelation: "avance_seccion"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insumo_orden_orden_id_fkey"
+            columns: ["orden_id"]
+            isOneToOne: false
+            referencedRelation: "orden"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_orden: {
         Row: {
           cantidad: number
@@ -534,6 +573,10 @@ export type Database = {
         Args: { p_checkpoint: Database["public"]["Enums"]["checkpoint"] }
         Returns: Database["public"]["Enums"]["rol"]
       }
+      validar_insumos: {
+        Args: { p_insumos: Json; p_orden_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       checkpoint:
@@ -542,6 +585,7 @@ export type Database = {
         | "programada_diseno"
         | "ficha_adjunta"
         | "tela_programada"
+        | "insumos_validados"
         | "corte_completado"
         | "recogido_bordado"
         | "llegada_marcacion"
@@ -560,6 +604,14 @@ export type Database = {
         | "marcacion"
         | "terminacion"
       tipo_alerta: "falta_tela" | "proximidad_entrega"
+      tipo_insumo:
+        | "hilo"
+        | "resorte"
+        | "cierre"
+        | "boton"
+        | "hilo_bordar"
+        | "sublimado"
+        | "estampado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -696,6 +748,7 @@ export const Constants = {
         "programada_diseno",
         "ficha_adjunta",
         "tela_programada",
+        "insumos_validados",
         "corte_completado",
         "recogido_bordado",
         "llegada_marcacion",
@@ -716,6 +769,15 @@ export const Constants = {
         "terminacion",
       ],
       tipo_alerta: ["falta_tela", "proximidad_entrega"],
+      tipo_insumo: [
+        "hilo",
+        "resorte",
+        "cierre",
+        "boton",
+        "hilo_bordar",
+        "sublimado",
+        "estampado",
+      ],
     },
   },
 } as const

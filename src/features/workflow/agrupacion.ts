@@ -22,10 +22,10 @@ import { compararPorUrgencia } from "@/lib/ordenes/urgencia";
 /** Cuántos días se sigue mostrando lo que la sección ya marcó. */
 export const DIAS_DE_MARCADAS = 7;
 
-export type OrdenesAgrupadas = {
-  paraMarcar: OrdenParaSeccion[];
-  enEspera: OrdenParaSeccion[];
-  hechas: OrdenParaSeccion[];
+export type OrdenesAgrupadas<T extends OrdenParaSeccion = OrdenParaSeccion> = {
+  paraMarcar: T[];
+  enEspera: T[];
+  hechas: T[];
 };
 
 const MS_DIA = 24 * 60 * 60 * 1000;
@@ -49,14 +49,18 @@ export type OpcionesDeAgrupacion = {
   diasDeMarcadas?: number | null;
 };
 
-export function agruparOrdenesDeSeccion(
-  ordenes: readonly OrdenParaSeccion[],
+/**
+ * Genérica para que una pantalla con datos propios por orden (los insumos de
+ * HU-23, por ejemplo) reciba de vuelta sus mismas órdenes, no la forma base.
+ */
+export function agruparOrdenesDeSeccion<T extends OrdenParaSeccion>(
+  ordenes: readonly T[],
   ahora = new Date(),
   { diasDeMarcadas = DIAS_DE_MARCADAS }: OpcionesDeAgrupacion = {},
-): OrdenesAgrupadas {
-  const paraMarcar: OrdenParaSeccion[] = [];
-  const enEspera: OrdenParaSeccion[] = [];
-  const hechas: OrdenParaSeccion[] = [];
+): OrdenesAgrupadas<T> {
+  const paraMarcar: T[] = [];
+  const enEspera: T[] = [];
+  const hechas: T[] = [];
   const limite =
     diasDeMarcadas === null
       ? Number.NEGATIVE_INFINITY
