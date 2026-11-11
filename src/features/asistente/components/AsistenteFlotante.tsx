@@ -200,7 +200,7 @@ export function AsistenteFlotante({ porAtender = 0 }: Props) {
         type="button"
         onClick={abrir}
         aria-label={nombreDelBoton(porAtender)}
-        className="bg-marca hover:bg-marca-oscuro focus:ring-marca fixed right-4 bottom-4 z-40 flex min-h-14 items-center gap-2 rounded-full px-5 text-base font-semibold text-white shadow-lg focus:ring-2 focus:ring-offset-2 focus:outline-none"
+        className="bg-marca hover:bg-marca-oscuro focus:ring-marca fixed right-4 bottom-4 z-40 flex min-h-14 items-center gap-2 rounded-full px-5 text-base font-semibold text-white shadow-lg focus:ring-2 focus:ring-offset-2 focus:outline-none print:hidden"
       >
         <IconoChat />
         Asistente
