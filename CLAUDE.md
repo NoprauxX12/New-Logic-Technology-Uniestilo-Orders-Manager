@@ -119,7 +119,7 @@ Reglas de ubicación:
 - **Sin código muerto ni `TODO`** en PRs a `develop`. Lo pendiente se abre como issue.
 - **UI para gente no digital (RNF-08/09/10):** máximo 1–2 acciones por pantalla por rol, botones grandes, textos del taller sin jerga, responsive desde 360 px, contraste AA.
 - **Las listas de trabajo contestan «¿qué hago ahora?».** Lo que le toca a la sección va arriba y por urgencia (`compararPorUrgencia`, `src/lib/ordenes/urgencia.ts`: atrasadas, luego en riesgo, luego entrega más cercana); lo que aún no llega y lo ya hecho van debajo, plegados; las órdenes cerradas no aparecen. La clasificación es una función pura con pruebas (`agruparOrdenesDeSeccion`, `agruparOrdenesDeTalleres`, `agruparOrdenesDeCierre`, `agruparOrdenesDeTelas`). Una lista nueva no ordena por fecha de entrega sin más.
-- **El detalle de una orden es uno solo y lo ven todos los roles:** `/ordenes/<orden>` (para quién es, entrega, prendas con tallas, ficha técnica y talleres por los que pasó; sin valores). Las tarjetas de las listas no repiten esos datos: llevan `EnlaceDetalleOrden` (`src/components/`). Es de lectura; solo logística ve ahí sus formularios de despacho y recepción.
+- **El detalle de una orden es uno solo y lo ven todos los roles:** `/ordenes/<orden>` (para quién es, entrega, prendas con tallas y ficha técnica; sin valores). Los talleres por los que pasó solo los ven terminación, logística y admin (`puedeVerTalleres`). Las tarjetas de las listas no repiten esos datos: llevan `EnlaceDetalleOrden` (`src/components/`). Es de lectura; solo logística ve ahí sus formularios de despacho y recepción.
 
 ## Reglas del dominio (no negociables)
 

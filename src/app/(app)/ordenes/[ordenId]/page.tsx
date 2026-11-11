@@ -6,7 +6,11 @@ import { exigirAcceso } from "@/features/auth/guardia";
 import { FormularioDespacharTaller } from "@/features/talleres/components/FormularioDespacharTaller";
 import { LotesDeLaOrden } from "@/features/talleres/components/LotesDeLaOrden";
 import { obtenerOrdenParaDespacho } from "@/features/talleres/queries";
-import { puedeDespachar, ROL_DE_TALLERES } from "@/features/talleres/reglas";
+import {
+  puedeDespachar,
+  puedeVerTalleres,
+  ROL_DE_TALLERES,
+} from "@/features/talleres/reglas";
 import { describirEstadoDeTalleres } from "@/lib/talleres/estadoLotes";
 import { formatearFecha } from "@/lib/utils/fechas";
 
@@ -16,8 +20,8 @@ export const metadata: Metadata = {
 
 /**
  * El detalle de una orden, el mismo para todos los roles: para quién es, la
- * entrega, las prendas con sus tallas, la ficha técnica y los talleres por los
- * que ha pasado. Es de solo lectura, salvo para logística, que desde aquí
+ * entrega, las prendas con sus tallas y la ficha técnica. Los talleres por los
+ * que ha pasado solo los ven terminación, logística y administración. Es de solo lectura, salvo para logística, que desde aquí
  * despacha a taller y recibe los lotes (HU-10 y HU-11).
  *
  * Solo enruta: los datos los trae `queries.ts`, la decisión de si se puede
@@ -40,6 +44,8 @@ export default async function OrdenPage({ params }: Props) {
   const yaDespachada = orden.lotes.length > 0;
   // Solo logística despacha y recibe; los demás roles leen.
   const esLogistica = usuario.rol === ROL_DE_TALLERES;
+  // De qué taller viene la orden solo lo ven terminación, logística y admin.
+  const veTalleres = puedeVerTalleres(usuario.rol);
   const totalPrendas = orden.prendas.reduce(
     (total, prenda) => total + prenda.cantidad,
     0,
@@ -89,14 +95,16 @@ export default async function OrdenPage({ params }: Props) {
           ) : null}
         </section>
 
-        <section className="flex flex-col gap-2">
-          <h2 className="text-lg font-semibold text-zinc-900">
-            Estado en talleres
-          </h2>
-          <p className="text-base text-zinc-700">
-            {describirEstadoDeTalleres(orden.lotes)}
-          </p>
-        </section>
+        {veTalleres ? (
+          <section className="flex flex-col gap-2">
+            <h2 className="text-lg font-semibold text-zinc-900">
+              Estado en talleres
+            </h2>
+            <p className="text-base text-zinc-700">
+              {describirEstadoDeTalleres(orden.lotes)}
+            </p>
+          </section>
+        ) : null}
 
         <section className="flex flex-col gap-2">
           <h2 className="text-lg font-semibold text-zinc-900">Ficha técnica</h2>
@@ -130,11 +138,13 @@ export default async function OrdenPage({ params }: Props) {
           </ul>
         </section>
 
-        <LotesDeLaOrden
-          ordenId={orden.id}
-          lotes={orden.lotes}
-          puedeConfirmar={esLogistica}
-        />
+        {veTalleres ? (
+          <LotesDeLaOrden
+            ordenId={orden.id}
+            lotes={orden.lotes}
+            puedeConfirmar={esLogistica}
+          />
+        ) : null}
 
         {esLogistica ? (
           <section className="flex flex-col gap-4">

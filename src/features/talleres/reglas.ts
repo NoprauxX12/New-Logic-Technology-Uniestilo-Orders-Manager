@@ -24,6 +24,22 @@ export const CHECKPOINT_REQUERIDO: CheckpointId = "recogido_bordado";
 /** El único rol que despacha y recibe lotes. */
 export const ROL_DE_TALLERES: Rol = "logistica";
 
+/**
+ * Quién ve en el detalle de una orden por qué talleres pasó: terminación, que
+ * recibe las prendas y necesita saber de qué taller vienen; logística, que
+ * despacha y recibe los lotes; y administración, que ve todo. A los demás
+ * roles ese dato no les sirve para su etapa.
+ */
+const ROLES_QUE_VEN_TALLERES: readonly Rol[] = [
+  "terminacion",
+  ROL_DE_TALLERES,
+  "admin",
+];
+
+export function puedeVerTalleres(rol: Rol): boolean {
+  return ROLES_QUE_VEN_TALLERES.includes(rol);
+}
+
 export type ResultadoDespacho =
   { permitido: true } | { permitido: false; mensaje: string };
 
