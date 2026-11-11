@@ -11,6 +11,9 @@ import { describirEstadoDeTalleres } from "@/lib/talleres/estadoLotes";
 /**
  * HU-10 · Lecturas de la pantalla de despacho a taller.
  *
+ * `obtenerOrdenParaDespacho` alimenta además el detalle de la orden que ven
+ * todos los roles (`/ordenes/<orden>`): no trae el valor de las prendas.
+ *
  * Las usa el Server Component de la orden y la propia action, que antes de
  * escribir necesita saber qué checkpoints lleva marcados la orden. Quién
  * despacha o recibe sale de la sesión, así que aquí no se lista a nadie.
@@ -21,6 +24,7 @@ export type PrendaDeLaOrden = {
   descripcion: string;
   cantidad: number;
   tallas: string;
+  observaciones: string | null;
 };
 
 /** Un lote ya despachado. De aquí sale el taller que se ve en la orden. */
@@ -39,8 +43,12 @@ export type OrdenParaDespacho = {
   id: string;
   numeroOrdenCompra: string;
   razonSocial: string;
+  /** A quién se le entrega: el contacto del cliente. */
+  contactoNombre: string | null;
+  contactoCelular: string | null;
   fechaIngreso: string;
   fechaEntrega: string;
+  observaciones: string | null;
   prendas: PrendaDeLaOrden[];
   /** Checkpoints ya marcados: el estado de la orden se deriva de aquí. */
   marcados: CheckpointId[];
@@ -62,8 +70,9 @@ export async function obtenerOrdenParaDespacho(
        numero_orden_compra,
        fecha_ingreso,
        fecha_entrega,
-       cliente ( razon_social ),
-       item_orden ( id, descripcion, cantidad, tallas ),
+       observaciones,
+       cliente ( razon_social, contacto_nombre, contacto_celular ),
+       item_orden ( id, descripcion, cantidad, tallas, observaciones ),
        avance_seccion ( checkpoint ),
        lote_taller (
          id,
@@ -92,13 +101,17 @@ export async function obtenerOrdenParaDespacho(
     id: data.id,
     numeroOrdenCompra: data.numero_orden_compra,
     razonSocial: data.cliente?.razon_social ?? "Cliente sin nombre",
+    contactoNombre: data.cliente?.contacto_nombre ?? null,
+    contactoCelular: data.cliente?.contacto_celular ?? null,
     fechaIngreso: data.fecha_ingreso,
     fechaEntrega: data.fecha_entrega,
+    observaciones: data.observaciones,
     prendas: data.item_orden.map((prenda) => ({
       id: prenda.id,
       descripcion: prenda.descripcion,
       cantidad: prenda.cantidad,
       tallas: prenda.tallas,
+      observaciones: prenda.observaciones,
     })),
     marcados: data.avance_seccion.map((avance) => avance.checkpoint),
     lotes: data.lote_taller

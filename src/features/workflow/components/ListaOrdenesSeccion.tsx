@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useId, useMemo, useState, useTransition } from "react";
 
+import { EnlaceDetalleOrden } from "@/components/EnlaceDetalleOrden";
 import { BadgeSemaforo } from "@/components/BadgeSemaforo";
 import { FichasAdjuntas } from "@/components/FichasAdjuntas";
 import {
@@ -224,6 +225,10 @@ function TarjetaOrden({
           <p className="mt-1 text-sm text-zinc-500">
             Entrega: {formatearFecha(orden.fechaEntrega)}
           </p>
+          <EnlaceDetalleOrden
+            ordenId={orden.id}
+            numeroOrdenCompra={orden.numeroOrdenCompra}
+          />
           {leyendaDesde && !orden.yaMarcada && orden.fechaMarcado ? (
             <p className="mt-1 text-sm font-medium text-zinc-700">
               {leyendaDesde} {haceCuanto(orden.fechaMarcado, ahora)}

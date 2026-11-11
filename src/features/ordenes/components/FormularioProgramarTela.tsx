@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 
+import { EnlaceDetalleOrden } from "@/components/EnlaceDetalleOrden";
 import { BadgeSemaforo } from "@/components/BadgeSemaforo";
 import { FichasAdjuntas } from "@/components/FichasAdjuntas";
 import { programarTela } from "@/features/ordenes/telaActions";
@@ -46,6 +47,10 @@ export function FormularioProgramarTela({ orden }: Props) {
       </div>
 
       <p className="mt-1 text-zinc-600">{orden.razonSocial}</p>
+      <EnlaceDetalleOrden
+        ordenId={orden.id}
+        numeroOrdenCompra={orden.numeroOrdenCompra}
+      />
 
       {/* La cantidad de tela sale de la ficha: se ve junto al formulario. */}
       <div className="mt-3">

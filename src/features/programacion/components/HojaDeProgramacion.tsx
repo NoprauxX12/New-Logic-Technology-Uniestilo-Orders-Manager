@@ -1,3 +1,4 @@
+import { EnlaceDetalleOrden } from "@/components/EnlaceDetalleOrden";
 import type { HojaDeProgramacion as Hoja } from "@/features/programacion/queries";
 import { formatearDia } from "@/lib/utils/fechas";
 
@@ -77,6 +78,10 @@ export function HojaDeProgramacion({ hoja }: { hoja: Hoja }) {
                 <span className="block text-sm text-zinc-500">
                   {orden.numeroOrdenCompra}
                 </span>
+                <EnlaceDetalleOrden
+                  ordenId={orden.id}
+                  numeroOrdenCompra={orden.numeroOrdenCompra}
+                />
               </td>
               <td className="px-4 py-3 align-top text-zinc-700">
                 <ul>
@@ -122,6 +127,10 @@ export function HojaDeProgramacion({ hoja }: { hoja: Hoja }) {
               {orden.turno}. {orden.razonSocial}
             </p>
             <p className="text-sm text-zinc-500">{orden.numeroOrdenCompra}</p>
+            <EnlaceDetalleOrden
+              ordenId={orden.id}
+              numeroOrdenCompra={orden.numeroOrdenCompra}
+            />
 
             <ul className="mt-2 flex flex-col gap-1">
               {orden.referencias.map((referencia) => (
