@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   puedeConfirmarRecepcion,
   puedeDespachar,
+  puedeVerTalleres,
 } from "@/features/talleres/reglas";
 import type { CheckpointId } from "@/features/workflow/checkpoints";
 
@@ -100,5 +101,22 @@ describe("puedeConfirmarRecepcion", () => {
     expect(resultado.permitido === false && resultado.mensaje).toContain(
       "no pertenece",
     );
+  });
+});
+
+describe("puedeVerTalleres", () => {
+  it("terminación ve de qué taller viene la orden", () => {
+    expect(puedeVerTalleres("terminacion")).toBe(true);
+  });
+
+  it("logística y administración también: una maneja los lotes y la otra ve todo", () => {
+    expect(puedeVerTalleres("logistica")).toBe(true);
+    expect(puedeVerTalleres("admin")).toBe(true);
+  });
+
+  it("las demás secciones no ven los talleres", () => {
+    for (const rol of ["secretaria", "diseno", "corte"] as const) {
+      expect(puedeVerTalleres(rol)).toBe(false);
+    }
   });
 });
