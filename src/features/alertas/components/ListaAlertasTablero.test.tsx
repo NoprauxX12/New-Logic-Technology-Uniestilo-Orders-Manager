@@ -12,6 +12,7 @@ vi.mock("@/features/alertas/actions", () => ({
 const ALERTA: AlertaTelaEnTablero = {
   tipo: "falta_tela",
   id: "00000000-0000-0000-0000-0000000000b1",
+  ordenId: "00000000-0000-0000-0000-0000000000f2",
   detalle: "Faltan 40 metros de tela impermeable azul",
   fechaCreacion: "2026-10-16T15:00:00.000Z",
   numeroOrdenCompra: "OC-5002",
@@ -52,6 +53,7 @@ describe("ListaAlertasTablero · avisos de entrega", () => {
           {
             tipo: "proximidad_entrega",
             id: "00000000-0000-0000-0000-0000000000b2",
+            ordenId: "00000000-0000-0000-0000-0000000000f4",
             numeroOrdenCompra: "OC-5004",
             razonSocial: "Transportes La Mesa",
             fechaEntrega: "2026-10-20",

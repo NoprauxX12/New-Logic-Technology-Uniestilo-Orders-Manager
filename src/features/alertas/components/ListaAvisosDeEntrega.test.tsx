@@ -14,6 +14,7 @@ const AHORA = new Date("2026-10-20T17:00:00Z");
 const AVISO: AvisoDeEntrega = {
   tipo: "proximidad_entrega",
   id: "00000000-0000-0000-0000-0000000000b1",
+  ordenId: "00000000-0000-0000-0000-0000000000f4",
   numeroOrdenCompra: "OC-5004",
   razonSocial: "Transportes La Mesa S.A.S.",
   fechaEntrega: "2026-10-22",

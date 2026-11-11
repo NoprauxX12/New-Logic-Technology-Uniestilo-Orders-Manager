@@ -63,7 +63,7 @@ src/
     tablero/              HU-14 + suscripción Realtime
     auth/                 Sesión y acceso por rol (accesoPorRuta.ts, guardia.ts): HU-16, HU-17
     alertas/              HU-06, HU-07, HU-20 (post-MVP)
-    asistente/            Asistente de solo lectura para administración: HU-15 (docs/adr/0009)
+    asistente/            Asistente de solo lectura para administración: HU-15, y señala lo pendiente al abrir: HU-21 (docs/adr/0009)
     correcciones/         Devolver una orden a una etapa y crear órdenes de corrección, solo admin: HU-18 (docs/adr/0011)
     documentos/           Etiquetas y documentos de despacho: HU-13
     insumos/              Validar los insumos de la orden con su listado imprimible: HU-23 (docs/adr/0012)
@@ -76,7 +76,8 @@ src/
                           admin.ts (secret key, solo para Supabase Auth)
     auth/                 getUsuarioActual(): la única respuesta a "quién está actuando"
     talleres/             Estado derivado de los lotes; lo usan talleres y tablero
-    ordenes/              Estado derivado de una orden (avances vigentes, semáforo, etapas); lo usan tablero y asistente
+    ordenes/              Estado derivado de una orden (avances vigentes, semáforo, etapas, pendientes del día); lo usan tablero y asistente
+    alertas/              Alertas sin atender (tela y entrega); las leen el tablero y el asistente
     ai/                   Interfaz propia sobre el LLM: config, proveedor y responderConHerramientas()
     utils/                Helpers puros: fechas, moneda, cn()
   types/                  database.types.ts (generado) y tipos de dominio
