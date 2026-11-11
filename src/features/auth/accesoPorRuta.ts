@@ -1,4 +1,8 @@
-import { CHECKPOINTS, type Rol } from "@/features/workflow/checkpoints";
+import {
+  CHECKPOINTS,
+  ETIQUETAS_ROL,
+  type Rol,
+} from "@/features/workflow/checkpoints";
 
 /**
  * HU-17 · Qué pantallas puede abrir cada rol.
@@ -15,6 +19,9 @@ import { CHECKPOINTS, type Rol } from "@/features/workflow/checkpoints";
  */
 
 const ADMIN: Rol = "admin";
+
+/** Todos los roles, para las pantallas de solo lectura que ve cualquiera. */
+const TODOS = Object.keys(ETIQUETAS_ROL) as Rol[];
 
 /** Se ven sin sesión: el proxy ya las deja pasar. */
 const RUTAS_PUBLICAS = new Set(["/", "/login"]);
@@ -54,9 +61,12 @@ const REGLAS: readonly Regla[] = [
   conIdYSufijo("/ordenes", "editar", [ADMIN]),
   // HU-24: crear cuentas es de administración.
   exacta("/usuarios", [ADMIN]),
-  // HU-10 y HU-11: logística despacha y recibe desde el detalle de la orden.
+  // HU-10 y HU-11: logística despacha y recibe lotes.
   exacta("/ordenes/talleres", ["logistica", ADMIN]),
-  conId("/ordenes", ["logistica", ADMIN]),
+  // El detalle de una orden lo ven todos los roles (para quién es, prendas,
+  // ficha y talleres). Es de lectura; despachar y recibir sigue siendo de
+  // logística, y lo garantizan la página, las actions y RLS.
+  conId("/ordenes", TODOS),
   // HU-06: secretaría valida la tela y avisa cuando falta. No es la pantalla
   // de un checkpoint: avisar crea una alerta (regla 7), no marca una etapa.
   exacta("/ordenes/telas", ["secretaria", ADMIN]),

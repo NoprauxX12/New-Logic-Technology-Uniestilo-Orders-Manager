@@ -75,17 +75,14 @@ const VISTAS: Record<Rol, VistaDeRol> = {
     ],
     aviso: null,
   },
-  marcacion: {
+  terminacion: {
     botones: [
+      // Marcación y terminación son un solo rol: primero llega a marcación
+      // (HU-12) y después queda lista para despachar (HU-19).
       {
         etiqueta: `Marcar ${buscarCheckpoint("llegada_marcacion").etiqueta.toLowerCase()}`,
         ruta: "/ordenes/marcacion",
       },
-    ],
-    aviso: null,
-  },
-  terminacion: {
-    botones: [
       {
         etiqueta: `Marcar ${buscarCheckpoint("lista_despacho").etiqueta.toLowerCase()}`,
         ruta: "/ordenes/despacho",

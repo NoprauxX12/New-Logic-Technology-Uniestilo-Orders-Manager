@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { Rol } from "@/features/workflow/checkpoints";
+import { rolVigente } from "@/lib/auth/usuarioActual";
 import { createClient } from "@/lib/supabase/server";
 
 /** HU-24 · Las personas que ya tienen cuenta, para que administración las vea. */
@@ -33,7 +34,7 @@ export async function listarUsuarios(): Promise<UsuarioListado[]> {
     id: fila.id,
     nombre: fila.nombre,
     email: fila.email,
-    rol: fila.rol,
+    rol: rolVigente(fila.rol),
     activo: fila.activo,
     creadoEn: fila.creado_en,
   }));
@@ -62,7 +63,7 @@ export async function obtenerUsuario(
     id: data.id,
     nombre: data.nombre,
     email: data.email,
-    rol: data.rol,
+    rol: rolVigente(data.rol),
     activo: data.activo,
     creadoEn: data.creado_en,
   };

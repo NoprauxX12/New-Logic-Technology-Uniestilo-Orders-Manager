@@ -244,7 +244,7 @@ select is(
 )
 from (values
   ('a1', 'admin'), ('a3', 'diseno'), ('a4', 'corte'), ('a5', 'logistica'),
-  ('a6', 'marcacion'), ('a7', 'terminacion'), ('b1', 'una secretaria desactivada')
+  ('a6', 'terminacion (antes marcación)'), ('a7', 'terminacion'), ('b1', 'una secretaria desactivada')
 ) as r(sufijo, rol);
 
 select is(
@@ -332,8 +332,8 @@ select alike(
 
 select is(
   pg_temp.destinatarios(5002),
-  'a1,a5,a6',
-  'vencida y en el taller: administración, logística (por el lote) y marcación (la que sigue)'
+  'a1,a5,a6,a7',
+  'vencida y en el taller: administración, logística (por el lote) y las dos cuentas de terminación (la etapa que sigue)'
 );
 
 select alike(

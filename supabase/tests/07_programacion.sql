@@ -314,7 +314,7 @@ select is(
 )
 from (values
   ('a1', 'admin'), ('a3', 'diseno'), ('a4', 'corte'), ('a5', 'logistica'),
-  ('a6', 'marcacion'), ('a7', 'terminacion'), ('b1', 'una secretaria desactivada')
+  ('a6', 'terminacion (antes marcación)'), ('a7', 'terminacion'), ('b1', 'una secretaria desactivada')
 ) as r(sufijo, rol);
 
 select is(
@@ -385,7 +385,7 @@ select is(
 )
 from (values
   ('a1', 'admin'), ('a3', 'diseno'), ('a4', 'corte'), ('a5', 'logistica'),
-  ('a6', 'marcacion'), ('a7', 'terminacion'), ('b1', 'una secretaria desactivada')
+  ('a6', 'terminacion (antes marcación)'), ('a7', 'terminacion'), ('b1', 'una secretaria desactivada')
 ) as r(sufijo, rol);
 
 select is(

@@ -247,8 +247,8 @@ select is_empty(
 select is(
   (select count(distinct public.rol_dueno(cp))::int
      from unnest(enum_range(null::public.checkpoint)) cp),
-  6,
-  'los checkpoints los reparten 6 roles (secretaria, diseno, corte, logistica, marcacion, terminacion)'
+  5,
+  'los checkpoints los reparten 5 roles (secretaria, diseno, corte, logistica, terminacion): marcación se unió a terminación'
 );
 
 -- ---------------------------------------------------------------------------
