@@ -153,6 +153,9 @@ export function resumirTablero(ordenes: OrdenEnTablero[]): ResumenTablero {
     enProduccion: ordenes.filter(
       (o) => o.etapasCompletadas > 0 && o.etapasCompletadas < o.etapasTotales,
     ).length,
+    prendasEnProduccion: ordenes
+      .filter((o) => o.semaforo !== "entregada")
+      .reduce((total, o) => total + o.cantidad, 0),
     atrasadas: ordenes.filter((o) => o.semaforo === "atrasada").length,
     enRiesgo: ordenes.filter((o) => o.semaforo === "en_riesgo").length,
   };

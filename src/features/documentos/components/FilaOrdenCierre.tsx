@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { EnlaceDetalleOrden } from "@/components/EnlaceDetalleOrden";
 import {
   cerrarOrden,
   reportarFactura,
@@ -101,6 +102,10 @@ export function FilaOrdenCierre({ orden }: Props) {
         <p className="text-base text-zinc-600">
           {orden.razonSocial} · entrega el {formatearFecha(orden.fechaEntrega)}
         </p>
+        <EnlaceDetalleOrden
+          ordenId={orden.id}
+          numeroOrdenCompra={orden.numeroOrdenCompra}
+        />
       </header>
 
       <div className="mb-3">

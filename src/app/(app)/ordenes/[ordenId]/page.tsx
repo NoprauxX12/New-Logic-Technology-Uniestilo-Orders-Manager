@@ -15,8 +15,10 @@ export const metadata: Metadata = {
 };
 
 /**
- * HU-10 y HU-11 · Detalle de una orden para logística: despacho a taller y
- * recepción de lotes.
+ * El detalle de una orden, el mismo para todos los roles: para quién es, la
+ * entrega, las prendas con sus tallas, la ficha técnica y los talleres por los
+ * que ha pasado. Es de solo lectura, salvo para logística, que desde aquí
+ * despacha a taller y recibe los lotes (HU-10 y HU-11).
  *
  * Solo enruta: los datos los trae `queries.ts`, la decisión de si se puede
  * despachar la toman las reglas de la feature y el guardado vive en la action.
@@ -36,7 +38,12 @@ export default async function OrdenPage({ params }: Props) {
 
   const permiso = puedeDespachar(orden.marcados, usuario.rol);
   const yaDespachada = orden.lotes.length > 0;
+  // Solo logística despacha y recibe; los demás roles leen.
   const esLogistica = usuario.rol === ROL_DE_TALLERES;
+  const totalPrendas = orden.prendas.reduce(
+    (total, prenda) => total + prenda.cantidad,
+    0,
+  );
 
   return (
     <div className="flex-1 bg-white">
@@ -53,6 +60,36 @@ export default async function OrdenPage({ params }: Props) {
         </header>
 
         <section className="flex flex-col gap-2">
+          <h2 className="text-lg font-semibold text-zinc-900">Para quién es</h2>
+          <dl className="flex flex-col gap-1 text-base text-zinc-700">
+            <div className="flex flex-wrap gap-x-2">
+              <dt className="text-zinc-500">Cliente:</dt>
+              <dd className="font-medium text-zinc-900">{orden.razonSocial}</dd>
+            </div>
+            {orden.contactoNombre ? (
+              <div className="flex flex-wrap gap-x-2">
+                <dt className="text-zinc-500">Contacto:</dt>
+                <dd>
+                  {orden.contactoNombre}
+                  {orden.contactoCelular ? ` · ${orden.contactoCelular}` : ""}
+                </dd>
+              </div>
+            ) : null}
+            <div className="flex flex-wrap gap-x-2">
+              <dt className="text-zinc-500">Entrega:</dt>
+              <dd>{formatearFecha(orden.fechaEntrega)}</dd>
+            </div>
+            <div className="flex flex-wrap gap-x-2">
+              <dt className="text-zinc-500">Pedido recibido:</dt>
+              <dd>{formatearFecha(orden.fechaIngreso)}</dd>
+            </div>
+          </dl>
+          {orden.observaciones ? (
+            <p className="text-base text-zinc-700">{orden.observaciones}</p>
+          ) : null}
+        </section>
+
+        <section className="flex flex-col gap-2">
           <h2 className="text-lg font-semibold text-zinc-900">
             Estado en talleres
           </h2>
@@ -67,11 +104,27 @@ export default async function OrdenPage({ params }: Props) {
         </section>
 
         <section className="flex flex-col gap-2">
-          <h2 className="text-lg font-semibold text-zinc-900">Prendas</h2>
-          <ul className="flex flex-col gap-1 text-base text-zinc-700">
+          <h2 className="text-lg font-semibold text-zinc-900">
+            Prendas{" "}
+            <span className="font-normal text-zinc-500">
+              ({totalPrendas} en total)
+            </span>
+          </h2>
+          <ul className="flex flex-col gap-2 text-base text-zinc-700">
             {orden.prendas.map((prenda) => (
-              <li key={prenda.id}>
-                {prenda.cantidad} × {prenda.descripcion} ({prenda.tallas})
+              <li
+                key={prenda.id}
+                className="rounded-lg border border-zinc-200 px-3 py-2"
+              >
+                <p className="font-medium text-zinc-900">
+                  {prenda.cantidad} × {prenda.descripcion}
+                </p>
+                <p className="text-sm text-zinc-600">Tallas: {prenda.tallas}</p>
+                {prenda.observaciones ? (
+                  <p className="text-sm text-zinc-600">
+                    {prenda.observaciones}
+                  </p>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -83,25 +136,27 @@ export default async function OrdenPage({ params }: Props) {
           puedeConfirmar={esLogistica}
         />
 
-        <section className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold text-zinc-900">
-            {yaDespachada ? "Despachar otro lote" : "Despachar a un taller"}
-          </h2>
+        {esLogistica ? (
+          <section className="flex flex-col gap-4">
+            <h2 className="text-lg font-semibold text-zinc-900">
+              {yaDespachada ? "Despachar otro lote" : "Despachar a un taller"}
+            </h2>
 
-          {yaDespachada ? (
-            <p className="text-base text-zinc-600">
-              Si el resto de la orden va para otro taller, regístralo aquí.
-            </p>
-          ) : null}
+            {yaDespachada ? (
+              <p className="text-base text-zinc-600">
+                Si el resto de la orden va para otro taller, regístralo aquí.
+              </p>
+            ) : null}
 
-          {permiso.permitido ? (
-            <FormularioDespacharTaller ordenId={orden.id} />
-          ) : (
-            <p className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-base font-medium text-amber-900">
-              {permiso.mensaje}
-            </p>
-          )}
-        </section>
+            {permiso.permitido ? (
+              <FormularioDespacharTaller ordenId={orden.id} />
+            ) : (
+              <p className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-base font-medium text-amber-900">
+                {permiso.mensaje}
+              </p>
+            )}
+          </section>
+        ) : null}
       </main>
     </div>
   );

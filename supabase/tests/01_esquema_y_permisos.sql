@@ -171,10 +171,10 @@ select is_empty(
 select is(
   pg_temp.funciones_de('authenticated', false),
   array[
-    'crear_orden_de_correccion', 'devolver_orden_a_etapa',
-    'nit_normalizado', 'orden_espera_tela', 'ordenes_esperando_tela',
+    'campos_cambiados', 'crear_orden_de_correccion', 'devolver_orden_a_etapa',
+    'editar_orden', 'nit_normalizado', 'orden_espera_tela', 'ordenes_esperando_tela',
     'programar_ordenes_a_diseno', 'programar_tela', 'registrar_orden',
-    'reportar_factura', 'rol_actual', 'rol_dueno'
+    'reportar_factura', 'rol_actual', 'rol_dueno', 'validar_insumos'
   ],
   'authenticated ejecuta exactamente estas funciones: una nueva exige decidirlo aquí'
 );
@@ -213,9 +213,10 @@ select is(
      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.prosecdef),
   array[
-    'devolver_orden_a_etapa', 'generar_alertas_proximidad_entrega',
+    'crear_orden_de_correccion', 'devolver_orden_a_etapa', 'editar_orden',
+    'generar_alertas_proximidad_entrega',
     'orden_espera_tela', 'ordenes_esperando_tela',
-    'programar_ordenes_a_diseno', 'rol_actual'
+    'programar_ordenes_a_diseno', 'registrar_orden', 'rol_actual'
   ],
   'las únicas funciones SECURITY DEFINER son las documentadas'
 );
@@ -228,26 +229,26 @@ select is_empty(
 );
 
 -- ---------------------------------------------------------------------------
--- rol_dueno cubre los 13 checkpoints
+-- rol_dueno cubre los 14 checkpoints
 -- ---------------------------------------------------------------------------
 
 select is(
   (select count(*)::int from unnest(enum_range(null::public.checkpoint))),
-  13,
-  'el enum checkpoint tiene 13 valores'
+  14,
+  'el enum checkpoint tiene 14 valores'
 );
 
 select is_empty(
   $$select cp from unnest(enum_range(null::public.checkpoint)) cp
     where public.rol_dueno(cp) is null$$,
-  'rol_dueno devuelve un rol para cada uno de los 13 checkpoints'
+  'rol_dueno devuelve un rol para cada uno de los 14 checkpoints'
 );
 
 select is(
   (select count(distinct public.rol_dueno(cp))::int
      from unnest(enum_range(null::public.checkpoint)) cp),
-  6,
-  'los checkpoints los reparten 6 roles (secretaria, diseno, corte, logistica, marcacion, terminacion)'
+  5,
+  'los checkpoints los reparten 5 roles (secretaria, diseno, corte, logistica, terminacion): marcación se unió a terminación'
 );
 
 -- ---------------------------------------------------------------------------

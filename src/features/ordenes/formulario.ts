@@ -22,6 +22,14 @@ export type EntradaPrenda = {
   tallaje?: string;
   /** Cuántas prendas de cada talla, con la talla como clave. */
   cantidadesPorTalla?: Record<string, string>;
+  /** Al editar: la prenda guardada que es esta fila. Vacío si es nueva. */
+  itemId?: string;
+  /**
+   * Identifica la fila en la pantalla. Al volver de la action, cada fila
+   * recupera lo suyo por esta clave y no por posición: quitar una fila del medio
+   * corre las posiciones de las siguientes.
+   */
+  clave?: string;
 };
 
 /**
@@ -56,6 +64,12 @@ export const ENTRADA_VACIA: EntradaFormularioOrden = {
 
 function texto(valor: FormDataEntryValue | null | undefined): string {
   return typeof valor === "string" ? valor : "";
+}
+
+function textoOpcional(
+  valor: FormDataEntryValue | undefined,
+): string | undefined {
+  return typeof valor === "string" ? valor : undefined;
 }
 
 /**
@@ -116,6 +130,8 @@ export function leerFormularioOrden(
   const valores = formData.getAll("valor");
   const observacionesItem = formData.getAll("observacionesItem");
   const tallajes = formData.getAll("tallaje");
+  const itemIds = formData.getAll("itemId");
+  const claves = formData.getAll("clave");
   const cantidadesPorTalla = leerCantidadesPorTalla(formData);
 
   return {
@@ -133,9 +149,10 @@ export function leerFormularioOrden(
       tallas: texto(tallas[indice]),
       valor: texto(valores[indice]),
       observaciones: texto(observacionesItem[indice]),
-      tallaje:
-        typeof tallajes[indice] === "string" ? tallajes[indice] : undefined,
+      tallaje: textoOpcional(tallajes[indice]),
       cantidadesPorTalla: cantidadesPorTalla.get(indice),
+      itemId: textoOpcional(itemIds[indice]),
+      clave: textoOpcional(claves[indice]),
     })),
   };
 }

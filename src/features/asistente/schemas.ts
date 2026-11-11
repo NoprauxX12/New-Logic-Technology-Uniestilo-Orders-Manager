@@ -7,16 +7,33 @@ import { z } from "zod";
  */
 
 export const MAX_LARGO_MENSAJE = 2000;
+/**
+ * Lo que puede medir una respuesta del asistente que vuelve en la conversación.
+ * Es más que una pregunta porque el resumen proactivo (HU-21) lista varias
+ * órdenes con sus enlaces; con el tope de la pregunta, la primera pregunta
+ * después del resumen se rechazaría.
+ */
+export const MAX_LARGO_RESPUESTA = 8000;
 export const MAX_MENSAJES_ENVIADOS = 200;
 
-export const mensajeChatSchema = z.object({
-  rol: z.enum(["usuario", "asistente"]),
-  contenido: z
-    .string()
-    .trim()
-    .min(1, "Escribe una pregunta.")
-    .max(MAX_LARGO_MENSAJE, "La pregunta es demasiado larga."),
-});
+export const mensajeChatSchema = z.discriminatedUnion("rol", [
+  z.object({
+    rol: z.literal("usuario"),
+    contenido: z
+      .string()
+      .trim()
+      .min(1, "Escribe una pregunta.")
+      .max(MAX_LARGO_MENSAJE, "La pregunta es demasiado larga."),
+  }),
+  z.object({
+    rol: z.literal("asistente"),
+    contenido: z
+      .string()
+      .trim()
+      .min(1)
+      .max(MAX_LARGO_RESPUESTA, "La conversación es demasiado larga."),
+  }),
+]);
 
 export const conversacionSchema = z
   .array(mensajeChatSchema)

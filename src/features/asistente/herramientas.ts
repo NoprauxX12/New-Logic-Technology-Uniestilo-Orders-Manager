@@ -7,6 +7,8 @@ import {
   pareceUuid,
   resumirOrden,
 } from "@/features/asistente/formato";
+import { pendientesParaModelo } from "@/features/asistente/pendientes";
+import { leerPendientes } from "@/features/asistente/queries";
 import {
   filtrarOrdenes,
   filtrarPorEstado,
@@ -21,8 +23,8 @@ import {
 } from "@/lib/ordenes/estadoOrden";
 
 /**
- * HU-15 · Lo único que el modelo puede hacer con los datos: tres consultas de
- * solo lectura, con su entrada validada por zod. No existe ninguna herramienta
+ * HU-15 y HU-21 · Lo único que el modelo puede hacer con los datos: cuatro
+ * consultas de solo lectura, con su entrada validada por zod. No existe ninguna herramienta
  * que escriba, así que "la IA solo informa" (regla 10) se cumple por
  * construcción y no por confianza en el modelo.
  *
@@ -38,6 +40,7 @@ import {
 
 const MAX_RESULTADOS_BUSQUEDA = 5;
 const MAX_RESULTADOS_LISTA = 15;
+const MAX_RESULTADOS_PENDIENTES = 10;
 
 export function crearHerramientas(ahora = new Date()): Herramientas {
   return {
@@ -144,6 +147,18 @@ export function crearHerramientas(ahora = new Date()): Herramientas {
             : {}),
         };
       },
+    }),
+
+    pendientesDelDia: herramienta({
+      description:
+        "Lo que administración tiene por atender hoy: órdenes atrasadas, en riesgo de entrega y detenidas (sin avance hace días), cada una con el área donde está parada, lo que sigue, una sugerencia y su enlace; las alertas de tela sin atender y cuántos avisos de entrega faltan por revisar. Úsala para preguntas como qué hay pendiente, qué debería revisar hoy o qué está frenado.",
+      inputSchema: z.object({}),
+      execute: async () =>
+        pendientesParaModelo(
+          await leerPendientes(ahora),
+          ahora,
+          MAX_RESULTADOS_PENDIENTES,
+        ),
     }),
   };
 }

@@ -62,7 +62,7 @@ insert into public.usuario (id, nombre, email, rol) values
   ('00000000-0000-0000-0000-0000000000a3', 'Andrés Mejía',   'diseno@uniestilo.test',     'diseno'),
   ('00000000-0000-0000-0000-0000000000a4', 'Jorge Cardona',  'corte@uniestilo.test',      'corte'),
   ('00000000-0000-0000-0000-0000000000a5', 'Luis Betancur',  'logistica@uniestilo.test',  'logistica'),
-  ('00000000-0000-0000-0000-0000000000a6', 'Sandra Vélez',   'marcacion@uniestilo.test',  'marcacion'),
+  ('00000000-0000-0000-0000-0000000000a6', 'Sandra Vélez',   'marcacion@uniestilo.test',  'terminacion'),
   ('00000000-0000-0000-0000-0000000000a7', 'Marcela Osorio', 'terminacion@uniestilo.test', 'terminacion');
 
 -- ---------------------------------------------------------------------------
@@ -99,7 +99,7 @@ insert into public.orden (
 ) values
   -- Recién registrada, sin ningún avance: la primera candidata a programación (HU-03).
   ('00000000-0000-0000-0000-0000000000f1', 'OC-5001', '00000000-0000-0000-0000-0000000000c1', current_date - 2,  current_date + 25, 'Dotación de profesores, primer semestre', null, null, null, '00000000-0000-0000-0000-0000000000a1'),
-  -- Con la tela programada: le sigue el corte (HU-08). Hoja 2, tercer turno.
+  -- Con la tela programada: le sigue validar los insumos (HU-23). Hoja 2, tercer turno.
   ('00000000-0000-0000-0000-0000000000f2', 'OC-5002', '00000000-0000-0000-0000-0000000000c1', current_date - 20, current_date + 12, null, 2, 3, null, '00000000-0000-0000-0000-0000000000a1'),
   -- Con el corte hecho: se puede despachar a taller (HU-10). Hoja 2, segundo turno.
   ('00000000-0000-0000-0000-0000000000f3', 'OC-5003', '00000000-0000-0000-0000-0000000000c2', current_date - 28, current_date + 6,  'El cliente pidió bordado en el bolsillo', 2, 2, null, '00000000-0000-0000-0000-0000000000a1'),
@@ -145,8 +145,39 @@ insert into public.item_orden (orden_id, descripcion, cantidad, tallas, tallaje,
 -- que la bitácora se lea como una historia y no como un montón de filas con la
 -- misma hora.
 
+-- HU-23: los insumos validados de las órdenes que ya pasaron la tela. Van antes
+-- del resto de avances porque OC-5007 queda cerrada y una orden cerrada no
+-- admite avances nuevos. Cada validación trae su listado en la misma sentencia:
+-- un avance `insumos_validados` sin insumos no se puede confirmar.
+with validacion as (
+  insert into public.avance_seccion (orden_id, checkpoint, usuario_id, fecha_hora) values
+    ('00000000-0000-0000-0000-0000000000f3', 'insumos_validados', '00000000-0000-0000-0000-0000000000a2', now() - interval '17 days'),
+    ('00000000-0000-0000-0000-0000000000f4', 'insumos_validados', '00000000-0000-0000-0000-0000000000a2', now() - interval '24 days'),
+    ('00000000-0000-0000-0000-0000000000f5', 'insumos_validados', '00000000-0000-0000-0000-0000000000a2', now() - interval '28 days'),
+    ('00000000-0000-0000-0000-0000000000f6', 'insumos_validados', '00000000-0000-0000-0000-0000000000a2', now() - interval '29 days'),
+    ('00000000-0000-0000-0000-0000000000f7', 'insumos_validados', '00000000-0000-0000-0000-0000000000a2', now() - interval '49 days')
+  returning id, orden_id
+)
+insert into public.insumo_orden (orden_id, avance_id, insumo, detalle)
+select v.orden_id, v.id, x.insumo::public.tipo_insumo, x.detalle
+from validacion v
+join (values
+  ('00000000-0000-0000-0000-0000000000f3'::uuid, 'hilo',        '20 conos de hilo verde 40/2'),
+  ('00000000-0000-0000-0000-0000000000f3'::uuid, 'boton',       '1.500 botones verdes de 4 huecos'),
+  ('00000000-0000-0000-0000-0000000000f3'::uuid, 'hilo_bordar', '6 conos de hilo de bordar blanco'),
+  ('00000000-0000-0000-0000-0000000000f4'::uuid, 'hilo',        '12 conos de hilo azul 40/2'),
+  ('00000000-0000-0000-0000-0000000000f4'::uuid, 'cierre',      '120 cierres metálicos de 60 cm'),
+  ('00000000-0000-0000-0000-0000000000f5'::uuid, 'hilo',        '10 conos de hilo blanco 40/2'),
+  ('00000000-0000-0000-0000-0000000000f5'::uuid, 'boton',       '1.000 botones blancos de 4 huecos'),
+  ('00000000-0000-0000-0000-0000000000f6'::uuid, 'hilo',        '15 conos de hilo azul aguamarina'),
+  ('00000000-0000-0000-0000-0000000000f6'::uuid, 'resorte',     '90 metros de resorte de 3 cm'),
+  ('00000000-0000-0000-0000-0000000000f7'::uuid, 'hilo',        '25 conos de hilo blanco 40/2'),
+  ('00000000-0000-0000-0000-0000000000f7'::uuid, 'boton',       '3.150 botones blancos de 4 huecos'),
+  ('00000000-0000-0000-0000-0000000000f7'::uuid, 'estampado',   'Escudo del colegio en el bolsillo, 450 unidades')
+) as x(orden_id, insumo, detalle) on x.orden_id = v.orden_id;
+
 insert into public.avance_seccion (orden_id, checkpoint, usuario_id, fecha_hora, observaciones) values
-  -- OC-5002: hasta la tela programada.
+  -- OC-5002: hasta la tela programada. Le toca a secretaría validar los insumos (HU-23).
   ('00000000-0000-0000-0000-0000000000f2', 'cotizacion_enviada',  '00000000-0000-0000-0000-0000000000a2', now() - interval '19 days', null),
   ('00000000-0000-0000-0000-0000000000f2', 'cotizacion_aprobada', '00000000-0000-0000-0000-0000000000a2', now() - interval '18 days', null),
   ('00000000-0000-0000-0000-0000000000f2', 'programada_diseno',   '00000000-0000-0000-0000-0000000000a2', now() - interval '16 days', null),
@@ -297,7 +328,21 @@ insert into public.avance_seccion (orden_id, checkpoint, usuario_id, fecha_hora,
   ('00000000-0000-0000-0000-0000000000fa', 'cotizacion_aprobada', '00000000-0000-0000-0000-0000000000a2', now() - interval '22 days', null, null),
   ('00000000-0000-0000-0000-0000000000fa', 'programada_diseno',   '00000000-0000-0000-0000-0000000000a2', now() - interval '20 days', 'Programación 2', null),
   ('00000000-0000-0000-0000-0000000000fa', 'ficha_adjunta',       '00000000-0000-0000-0000-0000000000a3', now() - interval '18 days', null, null),
-  ('00000000-0000-0000-0000-0000000000fa', 'tela_programada',     '00000000-0000-0000-0000-0000000000a2', now() - interval '15 days', null, null),
+  ('00000000-0000-0000-0000-0000000000fa', 'tela_programada',     '00000000-0000-0000-0000-0000000000a2', now() - interval '15 days', null, null);
+
+-- HU-23: OC-5010 validó sus insumos antes del primer corte; la devolución fue al
+-- corte, así que la validación sigue vigente.
+with validacion as (
+  insert into public.avance_seccion (orden_id, checkpoint, usuario_id, fecha_hora) values
+    ('00000000-0000-0000-0000-0000000000fa', 'insumos_validados', '00000000-0000-0000-0000-0000000000a2', now() - interval '14 days')
+  returning id, orden_id
+)
+insert into public.insumo_orden (orden_id, avance_id, insumo, detalle)
+select orden_id, id, 'hilo'::public.tipo_insumo, '8 conos de hilo azul oscuro 40/2' from validacion
+union all
+select orden_id, id, 'boton'::public.tipo_insumo, '1.050 botones azules de 4 huecos' from validacion;
+
+insert into public.avance_seccion (orden_id, checkpoint, usuario_id, fecha_hora, observaciones, anulado_por) values
   -- El primer corte: anulado por la devolución de hace 8 días.
   ('00000000-0000-0000-0000-0000000000fa', 'corte_completado',    '00000000-0000-0000-0000-0000000000a4', now() - interval '10 days', null, '00000000-0000-0000-0000-0000000000d1'),
   -- El corte rehecho, ya vigente.

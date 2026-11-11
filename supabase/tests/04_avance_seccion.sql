@@ -170,14 +170,14 @@ insert into dueno values
   (1005, 'tela_programada',     'a2'),
   (1006, 'corte_completado',    'a4'),
   (1007, 'recogido_bordado',    'a5'),
-  (1008, 'llegada_marcacion',   'a6'),
+  (1008, 'llegada_marcacion',   'a7'),
   (1009, 'lista_despacho',      'a7'),
   (1010, 'etiquetas',           'a2'),
   (1011, 'documentos_despacho', 'a2'),
   (1012, 'factura_generada',    'a2'),
   (1013, 'cerrada',             'a2');
 
-select plan(123);
+select plan(111);
 
 select is(
   (select count(*)::int from dueno d
@@ -202,7 +202,9 @@ select is(
 from dueno d
 cross join (values
   ('a1', 'admin'), ('a2', 'secretaria'), ('a3', 'diseno'), ('a4', 'corte'),
-  ('a5', 'logistica'), ('a6', 'marcacion'), ('a7', 'terminacion')
+  -- a6 (la cuenta que era de marcación) también es de terminación: no entra
+  -- en la matriz porque sería un segundo dueño de las mismas dos etapas.
+  ('a5', 'logistica'), ('a7', 'terminacion')
 ) as r(sufijo, rol)
 where r.sufijo <> d.sufijo;
 
@@ -215,6 +217,14 @@ select is(
   format('el dueño marca %s', d.checkpoint)
 )
 from dueno d;
+
+-- Marcación se unió a terminación: el rol viejo ya no se le asigna a nadie.
+select is(
+  pg_temp.intenta('a1', $q$update public.usuario set rol = 'marcacion'
+    where id = '00000000-0000-0000-0000-0000000000a6'$q$),
+  '23514',
+  'ni administración puede volver a asignar el rol marcacion'
+);
 
 -- ---------------------------------------------------------------------------
 -- Firma
@@ -297,7 +307,7 @@ select is(
 )
 from (values
   ('a1', 'admin'), ('a2', 'secretaria'), ('a3', 'diseno'), ('a4', 'corte'),
-  ('a5', 'logistica'), ('a6', 'marcacion'), ('a7', 'terminacion'),
+  ('a5', 'logistica'), ('a6', 'terminacion (antes marcación)'), ('a7', 'terminacion'),
   ('b1', 'secretaria desactivada')
 ) as r(sufijo, rol);
 
@@ -308,7 +318,7 @@ select is(
 )
 from (values
   ('a1', 'admin'), ('a2', 'secretaria'), ('a3', 'diseno'), ('a4', 'corte'),
-  ('a5', 'logistica'), ('a6', 'marcacion'), ('a7', 'terminacion'),
+  ('a5', 'logistica'), ('a6', 'terminacion (antes marcación)'), ('a7', 'terminacion'),
   ('b1', 'secretaria desactivada')
 ) as r(sufijo, rol);
 

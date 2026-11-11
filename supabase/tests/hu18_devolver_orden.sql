@@ -77,8 +77,8 @@ reset role;
 
 select is(
   (select count(*)::int from public.avance_seccion where orden_id = '00000000-0000-0000-0000-0000000000f3'),
-  6,
-  'ningún avance se borra: las 6 filas siguen en la bitácora'
+  7,
+  'ningún avance se borra: las 7 filas siguen en la bitácora'
 );
 
 select is(
@@ -92,7 +92,7 @@ select is(
   (select array_agg(checkpoint::text order by checkpoint)
      from public.avance_seccion
     where orden_id = '00000000-0000-0000-0000-0000000000f3' and anulado_por is not null),
-  array['tela_programada', 'corte_completado'],
+  array['tela_programada', 'insumos_validados', 'corte_completado'],
   'se anulan la etapa de destino y las posteriores'
 );
 
@@ -228,9 +228,9 @@ select ok(
     select 1 from public.alerta
     where orden_id = '00000000-0000-0000-0000-0000000000f3'
       and tipo = 'proximidad_entrega'
-      and detalle like '%y está en Corte'
+      and detalle like '%y está en Validación de insumos'
   ),
-  'la alerta de entrega ignora el corte anulado y ubica la orden en Corte'
+  'la alerta de entrega ignora los avances anulados y ubica la orden en la validación de insumos (HU-23)'
 );
 
 -- Devolver hasta antes de la programación libera la hoja.

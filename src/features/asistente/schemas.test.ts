@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   conversacionSchema,
   MAX_LARGO_MENSAJE,
+  MAX_LARGO_RESPUESTA,
 } from "@/features/asistente/schemas";
 
 describe("conversacionSchema", () => {
@@ -39,6 +40,21 @@ describe("conversacionSchema", () => {
     expect(
       conversacionSchema.safeParse([
         { rol: "usuario", contenido: "a".repeat(MAX_LARGO_MENSAJE + 1) },
+      ]).success,
+    ).toBe(false);
+  });
+
+  it("acepta una respuesta del asistente más larga que una pregunta, como el resumen (HU-21)", () => {
+    expect(
+      conversacionSchema.safeParse([
+        { rol: "asistente", contenido: "a".repeat(MAX_LARGO_MENSAJE * 2) },
+        { rol: "usuario", contenido: "¿Y la primera?" },
+      ]).success,
+    ).toBe(true);
+    expect(
+      conversacionSchema.safeParse([
+        { rol: "asistente", contenido: "a".repeat(MAX_LARGO_RESPUESTA + 1) },
+        { rol: "usuario", contenido: "¿Y la primera?" },
       ]).success,
     ).toBe(false);
   });

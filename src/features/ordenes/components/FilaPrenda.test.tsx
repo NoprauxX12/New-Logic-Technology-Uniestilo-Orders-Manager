@@ -45,6 +45,31 @@ function prendas(erroresDeLaSegunda: Record<string, string[]> = {}) {
   );
 }
 
+describe("FilaPrenda · al volver de la action", () => {
+  it("el tallaje sigue elegido después de que React limpia el formulario", () => {
+    const fila = (valores: typeof ESCRITAS) => (
+      <form data-testid="formulario">
+        <FilaPrenda
+          posicion={0}
+          errores={{}}
+          valores={valores}
+          sePuedeQuitar
+          alQuitar={() => {}}
+        />
+      </form>
+    );
+    const { rerender } = render(fila(ESCRITAS));
+    const selector = screen.getByRole<HTMLSelectElement>("combobox");
+    expect(selector.value).toBe("otro");
+
+    (screen.getByTestId("formulario") as HTMLFormElement).reset();
+    expect(selector.value).toBe("");
+
+    rerender(fila({ ...ESCRITAS }));
+    expect(selector.value).toBe("otro");
+  });
+});
+
 describe("FilaPrenda · campos de varias prendas", () => {
   it("no repite ningún id entre las filas", () => {
     render(prendas());

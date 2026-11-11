@@ -362,7 +362,7 @@ select is(
 )
 from (values
   ('a2', 'secretaria'), ('a3', 'diseno'), ('a4', 'corte'), ('a5', 'logistica'),
-  ('a6', 'marcacion'), ('a7', 'terminacion'),
+  ('a6', 'terminacion (antes marcación)'), ('a7', 'terminacion'),
   ('b2', 'un admin desactivado'), ('b3', 'quien tiene sesión pero no perfil')
 ) as r(sufijo, rol);
 

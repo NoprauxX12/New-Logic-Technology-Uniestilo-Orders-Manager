@@ -79,6 +79,7 @@ function orden(
     etapasTotales: totales,
     avances: [],
     fichas: [],
+    ediciones: [],
   };
 }
 

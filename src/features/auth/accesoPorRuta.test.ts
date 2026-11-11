@@ -56,12 +56,22 @@ describe("puedeEntrar · lo de cada sección", () => {
     expect(puedeEntrar("corte", "/ordenes/cierre")).toBe(false);
     expect(puedeEntrar("corte", "/tablero")).toBe(false);
     expect(puedeEntrar("corte", "/ordenes/nueva")).toBe(false);
-    expect(puedeEntrar("corte", ORDEN)).toBe(false);
   });
 
-  it("marcación entra a su pantalla", () => {
-    expect(puedeEntrar("marcacion", "/ordenes/marcacion")).toBe(true);
-    expect(puedeEntrar("marcacion", "/ordenes/corte")).toBe(false);
+  it("terminación entra a marcación y a despacho: son un solo rol", () => {
+    expect(puedeEntrar("terminacion", "/ordenes/marcacion")).toBe(true);
+    expect(puedeEntrar("terminacion", "/ordenes/despacho")).toBe(true);
+    expect(puedeEntrar("terminacion", "/ordenes/corte")).toBe(false);
+  });
+
+  it("el rol marcación ya no existe", () => {
+    expect(ROLES).not.toContain("marcacion");
+  });
+
+  it("todos los roles abren el detalle de una orden, que es de lectura", () => {
+    for (const rol of ROLES) {
+      expect(puedeEntrar(rol, ORDEN)).toBe(true);
+    }
   });
 
   it("secretaría entra a la programación y al cierre", () => {
@@ -94,6 +104,25 @@ describe("puedeEntrar · lo de cada sección", () => {
     }
   });
 
+  it("solo secretaría y administración validan insumos y ven el listado (HU-23)", () => {
+    for (const rol of ROLES) {
+      const esperado = rol === "secretaria" || rol === "admin";
+      expect(puedeEntrar(rol, "/ordenes/insumos")).toBe(esperado);
+      expect(
+        puedeEntrar(
+          rol,
+          "/ordenes/insumos/00000000-0000-0000-0000-0000000000f2",
+        ),
+      ).toBe(esperado);
+    }
+  });
+
+  it("el listado de insumos exige un id de orden válido (HU-23)", () => {
+    expect(puedeEntrar("secretaria", "/ordenes/insumos/no-es-un-id")).toBe(
+      false,
+    );
+  });
+
   it("logística entra a sus órdenes y al detalle de una orden", () => {
     expect(puedeEntrar("logistica", "/ordenes/talleres")).toBe(true);
     expect(puedeEntrar("logistica", ORDEN)).toBe(true);
@@ -111,6 +140,14 @@ describe("puedeEntrar · lo de cada sección", () => {
   it("una ruta que no está en el mapa no la abre nadie, ni administración", () => {
     for (const rol of ROLES) {
       expect(puedeEntrar(rol, "/ordenes/inventario")).toBe(false);
+    }
+  });
+
+  it("editar una orden es solo de administración", () => {
+    const editar = `${ORDEN}/editar`;
+
+    for (const rol of ROLES) {
+      expect(puedeEntrar(rol, editar)).toBe(rol === "admin");
     }
   });
 

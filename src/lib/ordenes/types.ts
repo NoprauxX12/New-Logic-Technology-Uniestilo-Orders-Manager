@@ -105,8 +105,19 @@ export type OrdenEnTablero = OrdenResumen & {
 export type ResumenTablero = {
   totalOrdenes: number;
   enProduccion: number;
+  /** Prendas de las órdenes registradas que todavía no se entregan. */
+  prendasEnProduccion: number;
   atrasadas: number;
   enRiesgo: number;
+};
+
+/** Una edición de la orden (tabla `edicion_orden`, `docs/adr/0012`). */
+export type EdicionOrden = {
+  id: string;
+  porNombre: string;
+  fechaHora: string; // ISO
+  /** Lo que cambió, una frase por cambio. */
+  cambios: string[];
 };
 
 export type DetalleOrden = OrdenEnTablero & {
@@ -114,4 +125,6 @@ export type DetalleOrden = OrdenEnTablero & {
   avances: AvanceSeccion[];
   /** URLs firmadas para abrir el archivo (expiran; no se guardan). */
   fichas: FichaVisible[];
+  /** Quién editó la orden y qué cambió, de la más vieja a la más nueva. */
+  ediciones: EdicionOrden[];
 };
