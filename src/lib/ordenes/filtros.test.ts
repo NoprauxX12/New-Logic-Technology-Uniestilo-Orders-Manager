@@ -135,7 +135,7 @@ describe("normalizar", () => {
 
 describe("dondeEsta", () => {
   it("lee la sección a la que le toca la siguiente etapa", () => {
-    expect(dondeEsta(ordenStub({ avances: hasta("tela_programada") }))).toBe(
+    expect(dondeEsta(ordenStub({ avances: hasta("insumos_validados") }))).toBe(
       "corte",
     );
     expect(dondeEsta(ordenStub({ avances: hasta("corte_completado") }))).toBe(
@@ -234,7 +234,7 @@ describe("filtrarTablero", () => {
     ordenStub({
       id: "a",
       fechaEntrega: "2026-10-14",
-      avances: hasta("tela_programada"),
+      avances: hasta("insumos_validados"),
     }),
     ordenStub({
       id: "b",
