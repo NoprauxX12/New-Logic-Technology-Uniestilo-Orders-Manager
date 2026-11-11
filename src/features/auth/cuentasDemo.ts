@@ -17,7 +17,6 @@ export const CUENTAS_DEMO: readonly CuentaDemo[] = [
   { nombre: "Andrés", email: "diseno@uniestilo.test", rol: "diseno" },
   { nombre: "Jorge", email: "corte@uniestilo.test", rol: "corte" },
   { nombre: "Luis", email: "logistica@uniestilo.test", rol: "logistica" },
-  { nombre: "Sandra", email: "marcacion@uniestilo.test", rol: "marcacion" },
   {
     nombre: "Marcela",
     email: "terminacion@uniestilo.test",

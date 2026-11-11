@@ -9,6 +9,7 @@ import { CierrePagina } from "@e2e/paginas/CierrePagina";
 import { DetalleOrdenPagina } from "@e2e/paginas/DetalleOrdenPagina";
 import { DisenoPagina } from "@e2e/paginas/DisenoPagina";
 import { InicioPagina } from "@e2e/paginas/InicioPagina";
+import { InsumosPagina } from "@e2e/paginas/InsumosPagina";
 import { NuevaOrdenPagina } from "@e2e/paginas/NuevaOrdenPagina";
 import { ProgramacionPagina } from "@e2e/paginas/ProgramacionPagina";
 import { SeccionPagina } from "@e2e/paginas/SeccionPagina";
@@ -22,7 +23,7 @@ import { TelaPagina } from "@e2e/paginas/TelaPagina";
  * Una sola historia, como pasa en el taller: administración registra la orden y
  * después cada persona entra con su propia cuenta y marca lo suyo, en el orden
  * del flujo, hasta que secretaría la da por completada. Al final se comprueba en
- * el tablero que las 13 etapas quedaron firmadas por su rol.
+ * el tablero que las 14 etapas quedaron firmadas por su rol.
  *
  * Es una prueba larga a propósito: lo que se verifica es la secuencia entre
  * pantallas y roles, que ninguna prueba más pequeña alcanza.
@@ -102,6 +103,34 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
     await page.context().close();
   });
 
+  await test.step("Paula valida los insumos según la orden de compra", async () => {
+    const page = await entrarComo(browser, CUENTAS.secretaria);
+    const insumos = new InsumosPagina(page);
+
+    await insumos.abrir();
+    await expect(insumos.paraValidar().getByText(numero)).toBeVisible();
+    await insumos.validar(numero, {
+      Hilo: "12 conos de hilo azul 40/2",
+      Botón: "300 botones azules de 4 huecos",
+    });
+
+    // Validada, pasa al grupo plegado de lo hecho, con su listado para imprimir.
+    await expect(insumos.paraValidar().getByText(numero)).toBeHidden();
+    await page.getByText(/Validadas en los últimos/).click();
+    await insumos
+      .tarjeta(numero)
+      .getByRole("link", { name: "Ver listado para imprimir" })
+      .click();
+    await expect(page).toHaveURL(/\/ordenes\/insumos\/[0-9a-f-]{36}$/);
+    await expect(
+      page.getByText("300 botones azules de 4 huecos"),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Imprimir listado" }),
+    ).toBeVisible();
+    await page.context().close();
+  });
+
   await test.step("Jorge (corte) marca el corte completado", async () => {
     const page = await entrarComo(browser, CUENTAS.corte);
     const corte = new SeccionPagina(page, "/ordenes/corte");
@@ -111,6 +140,22 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
 
     // A Jorge le toca esta orden: está arriba, en «Para marcar ahora».
     await expect(corte.paraMarcar().getByText(numero)).toBeVisible();
+
+    // Cualquier rol abre el detalle de la orden: para quién es, las prendas y
+    // la ficha. Es de lectura: despachar a taller sigue siendo de logística.
+    await corte
+      .tarjeta(numero)
+      .getByRole("link", { name: `Ver detalle de la orden ${numero}` })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: `Orden ${numero}` }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Para quién es" }),
+    ).toBeVisible();
+    await expect(page.getByText(orden.prendas[0].descripcion)).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Despachar/ })).toBeHidden();
+    await corte.abrir();
 
     await corte.marcar(numero, "Marcar corte completado");
 
@@ -143,18 +188,15 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
     await page.context().close();
   });
 
-  await test.step("Sandra (marcación) marca la llegada a marcación", async () => {
-    const page = await entrarComo(browser, CUENTAS.marcacion);
+  await test.step("Marcela (terminación) marca la llegada a marcación y deja la orden lista para despachar", async () => {
+    // Marcación y terminación son un solo rol: la misma cuenta marca las dos.
+    const page = await entrarComo(browser, CUENTAS.terminacion);
     const marcacion = new SeccionPagina(page, "/ordenes/marcacion");
 
     await marcacion.abrir();
     await expect(marcacion.fichaDe(numero)).toBeVisible();
     await marcacion.marcar(numero, "Marcar llegada a marcación");
-    await page.context().close();
-  });
 
-  await test.step("Marcela (terminación) deja la orden lista para despachar", async () => {
-    const page = await entrarComo(browser, CUENTAS.terminacion);
     const despacho = new SeccionPagina(page, "/ordenes/despacho");
 
     await despacho.abrir();
@@ -173,7 +215,7 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
     await page.context().close();
   });
 
-  await test.step("Diana comprueba en el tablero que la orden terminó con las 13 etapas firmadas por su rol", async () => {
+  await test.step("Diana comprueba en el tablero que la orden terminó con las 14 etapas firmadas por su rol", async () => {
     const page = await entrarComo(browser, CUENTAS.admin);
     const tablero = new TableroPagina(page);
     const detalle = new DetalleOrdenPagina(page);
@@ -185,7 +227,7 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
     await tablero.abrirTrazabilidad(numero);
     await expect(page).toHaveURL(/\/tablero\/[0-9a-f-]{36}$/);
     await expect(detalle.titulo(numero)).toBeVisible();
-    await expect(page.getByText(/13\/13 etapas/)).toBeVisible();
+    await expect(page.getByText(/14\/14 etapas/)).toBeVisible();
 
     // Cada etapa la firma el rol dueño: el historial lo dice entre paréntesis.
     await expect(
@@ -194,14 +236,12 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
     await expect(
       page.getByText(`Reportado por ${CUENTAS.diseno.nombre} (Diseño)`),
     ).toBeVisible();
-    await expect(
-      page.getByText(`Reportado por ${CUENTAS.marcacion.nombre} (Marcación)`),
-    ).toBeVisible();
+    // Terminación firma dos: la llegada a marcación y la salida a despacho.
     await expect(
       page.getByText(
         `Reportado por ${CUENTAS.terminacion.nombre} (Terminación)`,
       ),
-    ).toBeVisible();
+    ).toHaveCount(2);
     await page.context().close();
   });
 });

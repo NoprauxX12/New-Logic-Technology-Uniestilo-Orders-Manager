@@ -1,3 +1,4 @@
+import { EnlaceDetalleOrden } from "@/components/EnlaceDetalleOrden";
 import { BadgeSemaforo } from "@/components/BadgeSemaforo";
 import { FichasAdjuntas } from "@/components/FichasAdjuntas";
 import { agruparOrdenesDeTelas } from "@/features/alertas/agrupacion";
@@ -118,6 +119,10 @@ function Tarjetas({
             <p className="mt-1 text-sm text-zinc-500">
               Entrega: {formatearFecha(orden.fechaEntrega)}
             </p>
+            <EnlaceDetalleOrden
+              ordenId={orden.id}
+              numeroOrdenCompra={orden.numeroOrdenCompra}
+            />
           </header>
 
           <div className="mb-4">

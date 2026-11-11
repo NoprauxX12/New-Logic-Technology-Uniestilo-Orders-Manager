@@ -211,7 +211,7 @@ select is(
 )
 from (values
   ('a1', 'admin'), ('a2', 'secretaria'), ('a3', 'diseno'), ('a4', 'corte'),
-  ('a5', 'logistica'), ('a6', 'marcacion'), ('a7', 'terminacion')
+  ('a5', 'logistica'), ('a6', 'terminacion (antes marcación)'), ('a7', 'terminacion')
 ) as r(sufijo, rol)
 cross join unnest(array[
   'cliente', 'orden', 'item_orden', 'avance_seccion',
@@ -258,7 +258,7 @@ select is(
   format('%s ve solo las alertas que le llegan a él (ninguna ajena)', r.rol)
 )
 from (values
-  ('a3', 'diseno'), ('a4', 'corte'), ('a6', 'marcacion'), ('a7', 'terminacion')
+  ('a3', 'diseno'), ('a4', 'corte'), ('a6', 'terminacion (antes marcación)'), ('a7', 'terminacion')
 ) as r(sufijo, rol);
 
 select is(
@@ -278,7 +278,8 @@ select is(
 )
 from (values
   ('a1', 'admin'), ('a2', 'secretaria'), ('a3', 'diseno'), ('a4', 'corte'),
-  ('a5', 'logistica'), ('a6', 'marcacion'), ('a7', 'terminacion')
+  -- a6 era la cuenta de marcación: ese rol se unió a terminación.
+  ('a5', 'logistica'), ('a6', 'terminacion'), ('a7', 'terminacion')
 ) as r(sufijo, rol);
 
 select is(

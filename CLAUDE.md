@@ -52,20 +52,21 @@ src/
     (auth)/               Rutas públicas: login (HU-16)
     (app)/                Rutas con sesión; su layout carga el usuario y su rol
       tablero/            HU-14 — administrador
-      ordenes/            Lista según rol, nueva (HU-01), [ordenId] detalle + acciones de su sección
+      ordenes/            Lista según rol, nueva (HU-01), [ordenId] detalle de lectura para todos los roles (logística despacha y recibe ahí)
     api/health/           Health check para el monitoreo (RNF-06)
   features/               Un módulo por área del dominio. Cada uno es dueño de sus
                           server actions, consultas, validaciones y componentes.
-    ordenes/              HU-01, HU-02, HU-05
+    ordenes/              HU-01, HU-02, HU-05; editar hasta cotización aprobada (docs/adr/0012)
     programacion/         Hoja de programación a diseño: HU-03 (docs/adr/0010)
     workflow/             Motor de checkpoints: HU-08, HU-09, HU-12, HU-19, HU-13 (RNF-05)
     talleres/             Lotes a taller satélite: HU-10, HU-11
     tablero/              HU-14 + suscripción Realtime
     auth/                 Sesión y acceso por rol (accesoPorRuta.ts, guardia.ts): HU-16, HU-17
     alertas/              HU-06, HU-07, HU-20 (post-MVP)
-    asistente/            Asistente de solo lectura para administración: HU-15 (docs/adr/0009)
+    asistente/            Asistente de solo lectura para administración: HU-15, y señala lo pendiente al abrir: HU-21 (docs/adr/0009)
     correcciones/         Devolver una orden a una etapa y crear órdenes de corrección, solo admin: HU-18 (docs/adr/0011)
     documentos/           Etiquetas y documentos de despacho: HU-13
+    insumos/              Validar los insumos de la orden con su listado imprimible: HU-23 (docs/adr/0013)
     usuarios/             Cuentas de las personas (crear, editar, desactivar, borrar), solo admin: HU-24 (docs/adr/0008)
   components/
     ui/                   Primitivos reutilizables sin dominio (Button, Input, Badge…)
@@ -75,7 +76,8 @@ src/
                           admin.ts (secret key, solo para Supabase Auth)
     auth/                 getUsuarioActual(): la única respuesta a "quién está actuando"
     talleres/             Estado derivado de los lotes; lo usan talleres y tablero
-    ordenes/              Estado derivado de una orden (avances vigentes, semáforo, etapas); lo usan tablero y asistente
+    ordenes/              Estado derivado de una orden (avances vigentes, semáforo, etapas, pendientes del día); lo usan tablero y asistente
+    alertas/              Alertas sin atender (tela y entrega); las leen el tablero y el asistente
     ai/                   Interfaz propia sobre el LLM: config, proveedor y responderConHerramientas()
     utils/                Helpers puros: fechas, moneda, cn()
   types/                  database.types.ts (generado) y tipos de dominio
@@ -117,6 +119,7 @@ Reglas de ubicación:
 - **Sin código muerto ni `TODO`** en PRs a `develop`. Lo pendiente se abre como issue.
 - **UI para gente no digital (RNF-08/09/10):** máximo 1–2 acciones por pantalla por rol, botones grandes, textos del taller sin jerga, responsive desde 360 px, contraste AA.
 - **Las listas de trabajo contestan «¿qué hago ahora?».** Lo que le toca a la sección va arriba y por urgencia (`compararPorUrgencia`, `src/lib/ordenes/urgencia.ts`: atrasadas, luego en riesgo, luego entrega más cercana); lo que aún no llega y lo ya hecho van debajo, plegados; las órdenes cerradas no aparecen. La clasificación es una función pura con pruebas (`agruparOrdenesDeSeccion`, `agruparOrdenesDeTalleres`, `agruparOrdenesDeCierre`, `agruparOrdenesDeTelas`). Una lista nueva no ordena por fecha de entrega sin más.
+- **El detalle de una orden es uno solo y lo ven todos los roles:** `/ordenes/<orden>` (para quién es, entrega, prendas con tallas, ficha técnica y talleres por los que pasó; sin valores). Las tarjetas de las listas no repiten esos datos: llevan `EnlaceDetalleOrden` (`src/components/`). Es de lectura; solo logística ve ahí sus formularios de despacho y recepción.
 
 ## Reglas del dominio (no negociables)
 
@@ -142,10 +145,9 @@ Roles (enum `rol`) y lo que marca cada uno:
 | `diseno`      | Ficha técnica (HU-04)                                                                                         |
 | `corte`       | Corte completado (HU-08)                                                                                      |
 | `logistica`   | Recogido/bordado (HU-09), despacho a taller (HU-10), recepción del taller (HU-11)                             |
-| `marcacion`   | Llegada a marcación (HU-12)                                                                                   |
-| `terminacion` | Lista para despachar (HU-19)                                                                                  |
+| `terminacion` | Llegada a marcación (HU-12), lista para despachar (HU-19)                                                     |
 
-El séptimo rol, `terminacion` (Marcela), es una sección distinta de marcación (Sandra): marca la orden lista para despachar y con eso le queda a secretaría para el cierre.
+Marcación y terminación son un solo rol, `terminacion`: marca la llegada a marcación y la orden lista para despachar, y con eso le queda a secretaría para el cierre. El valor `marcacion` sigue en el enum de la base sin usarse (una restricción impide asignarlo) y no existe en el tipo `Rol` del código.
 
 ## Backlog (HU → sprint)
 

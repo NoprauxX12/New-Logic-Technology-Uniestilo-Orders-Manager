@@ -46,12 +46,6 @@ export const CUENTAS = {
     nombre: "Luis Betancur",
     rol: "Logística",
   },
-  marcacion: {
-    correo: "marcacion@uniestilo.test",
-    contrasena: CONTRASENA_DEL_SEED,
-    nombre: "Sandra Vélez",
-    rol: "Marcación",
-  },
   terminacion: {
     correo: "terminacion@uniestilo.test",
     contrasena: CONTRASENA_DEL_SEED,

@@ -184,6 +184,45 @@ export type Database = {
         }
         Relationships: []
       }
+      edicion_orden: {
+        Row: {
+          cambios: Json
+          creado_en: string
+          creado_por: string
+          id: string
+          orden_id: string
+        }
+        Insert: {
+          cambios: Json
+          creado_en?: string
+          creado_por?: string
+          id?: string
+          orden_id: string
+        }
+        Update: {
+          cambios?: Json
+          creado_en?: string
+          creado_por?: string
+          id?: string
+          orden_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "edicion_orden_creado_por_fkey"
+            columns: ["creado_por"]
+            isOneToOne: false
+            referencedRelation: "usuario"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "edicion_orden_orden_id_fkey"
+            columns: ["orden_id"]
+            isOneToOne: false
+            referencedRelation: "orden"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ficha_tecnica: {
         Row: {
           archivo_ruta: string
@@ -219,6 +258,45 @@ export type Database = {
             columns: ["subida_por"]
             isOneToOne: false
             referencedRelation: "usuario"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      insumo_orden: {
+        Row: {
+          avance_id: string
+          detalle: string
+          id: string
+          insumo: Database["public"]["Enums"]["tipo_insumo"]
+          orden_id: string
+        }
+        Insert: {
+          avance_id: string
+          detalle: string
+          id?: string
+          insumo: Database["public"]["Enums"]["tipo_insumo"]
+          orden_id: string
+        }
+        Update: {
+          avance_id?: string
+          detalle?: string
+          id?: string
+          insumo?: Database["public"]["Enums"]["tipo_insumo"]
+          orden_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insumo_orden_avance_id_fkey"
+            columns: ["avance_id"]
+            isOneToOne: false
+            referencedRelation: "avance_seccion"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insumo_orden_orden_id_fkey"
+            columns: ["orden_id"]
+            isOneToOne: false
+            referencedRelation: "orden"
             referencedColumns: ["id"]
           },
         ]
@@ -477,6 +555,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      campos_cambiados: {
+        Args: { p_antes: Json; p_despues: Json }
+        Returns: Json
+      }
       crear_orden_de_correccion: {
         Args: {
           p_etapa_inicial: Database["public"]["Enums"]["checkpoint"]
@@ -495,6 +577,21 @@ export type Database = {
           p_orden_id: string
         }
         Returns: string
+      }
+      editar_orden: {
+        Args: {
+          p_contacto_celular: string
+          p_contacto_nombre: string
+          p_fecha_entrega: string
+          p_fecha_ingreso: string
+          p_items: Json
+          p_nit: string
+          p_numero_orden_compra: string
+          p_observaciones: string
+          p_orden_id: string
+          p_razon_social: string
+        }
+        Returns: boolean
       }
       generar_alertas_proximidad_entrega: {
         Args: { p_dias?: number }
@@ -534,6 +631,10 @@ export type Database = {
         Args: { p_checkpoint: Database["public"]["Enums"]["checkpoint"] }
         Returns: Database["public"]["Enums"]["rol"]
       }
+      validar_insumos: {
+        Args: { p_insumos: Json; p_orden_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       checkpoint:
@@ -542,6 +643,7 @@ export type Database = {
         | "programada_diseno"
         | "ficha_adjunta"
         | "tela_programada"
+        | "insumos_validados"
         | "corte_completado"
         | "recogido_bordado"
         | "llegada_marcacion"
@@ -560,6 +662,14 @@ export type Database = {
         | "marcacion"
         | "terminacion"
       tipo_alerta: "falta_tela" | "proximidad_entrega"
+      tipo_insumo:
+        | "hilo"
+        | "resorte"
+        | "cierre"
+        | "boton"
+        | "hilo_bordar"
+        | "sublimado"
+        | "estampado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -696,6 +806,7 @@ export const Constants = {
         "programada_diseno",
         "ficha_adjunta",
         "tela_programada",
+        "insumos_validados",
         "corte_completado",
         "recogido_bordado",
         "llegada_marcacion",
@@ -716,6 +827,15 @@ export const Constants = {
         "terminacion",
       ],
       tipo_alerta: ["falta_tela", "proximidad_entrega"],
+      tipo_insumo: [
+        "hilo",
+        "resorte",
+        "cierre",
+        "boton",
+        "hilo_bordar",
+        "sublimado",
+        "estampado",
+      ],
     },
   },
 } as const

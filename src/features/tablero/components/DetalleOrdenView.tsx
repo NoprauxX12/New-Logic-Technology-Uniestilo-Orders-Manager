@@ -170,6 +170,8 @@ type Props = {
    * llega como slot: el tablero no depende de la feature de correcciones.
    */
   correccion?: ReactNode;
+  /** «Editar orden» o por qué ya no se puede. Slot, igual que los anteriores. */
+  edicion?: ReactNode;
 };
 
 function EnlacesDeCorreccion({ orden }: { orden: DetalleOrden }) {
@@ -211,7 +213,12 @@ function EnlacesDeCorreccion({ orden }: { orden: DetalleOrden }) {
   );
 }
 
-export function DetalleOrdenView({ orden, accion, correccion }: Props) {
+export function DetalleOrdenView({
+  orden,
+  accion,
+  correccion,
+  edicion,
+}: Props) {
   const pct = Math.round((orden.etapasCompletadas / orden.etapasTotales) * 100);
   const seccionDevuelta = etapaDevuelta(orden.etapas, orden.devoluciones);
 
@@ -257,6 +264,8 @@ export function DetalleOrdenView({ orden, accion, correccion }: Props) {
         </div>
       </header>
 
+      {edicion}
+
       {accion}
 
       {correccion}
@@ -293,6 +302,35 @@ export function DetalleOrdenView({ orden, accion, correccion }: Props) {
                   {devolucion.porNombre} ({ETIQUETAS_ROL.admin})
                 </p>
                 <p>Motivo: {devolucion.motivo}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {orden.ediciones.length > 0 ? (
+        <section aria-labelledby="ediciones-titulo">
+          <h2
+            id="ediciones-titulo"
+            className="mb-3 text-lg font-semibold text-zinc-900"
+          >
+            Ediciones
+          </h2>
+          <ul className="flex flex-col gap-2">
+            {orden.ediciones.map((edicionHecha) => (
+              <li
+                key={edicionHecha.id}
+                className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-700"
+              >
+                <p className="font-medium text-zinc-900">
+                  Editada el {formatoFechaHora(edicionHecha.fechaHora)} por{" "}
+                  {edicionHecha.porNombre}
+                </p>
+                <ul className="mt-1 flex flex-col gap-1">
+                  {edicionHecha.cambios.map((cambio, posicion) => (
+                    <li key={posicion}>{cambio}</li>
+                  ))}
+                </ul>
               </li>
             ))}
           </ul>

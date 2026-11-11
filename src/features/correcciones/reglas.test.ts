@@ -51,7 +51,7 @@ describe("qué se anula al devolver", () => {
 
   it("lo anterior queda vigente", () => {
     expect(etapasQueQuedanVigentes(marcados, "corte_completado")).toEqual(
-      hasta("tela_programada"),
+      hasta("insumos_validados"),
     );
   });
 
@@ -79,7 +79,6 @@ describe("puedeDevolver / validarDestino", () => {
       "diseno",
       "corte",
       "logistica",
-      "marcacion",
       "terminacion",
     ] as const) {
       expect(

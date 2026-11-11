@@ -193,7 +193,7 @@ select is(
 )
 from (values
   ('a1', 'admin'), ('a2', 'secretaria'), ('a3', 'diseno'), ('a4', 'corte'),
-  ('a5', 'logistica'), ('a6', 'marcacion'), ('a7', 'terminacion')
+  ('a5', 'logistica'), ('a6', 'terminacion (antes marcación)'), ('a7', 'terminacion')
 ) as r(sufijo, rol);
 
 select is(
@@ -251,7 +251,7 @@ select is(
 )
 from (values
   ('anon', 'anon'), ('a1', 'admin'), ('a2', 'secretaria'), ('a4', 'corte'), ('a5', 'logistica'),
-  ('a6', 'marcacion'), ('a7', 'terminacion'), ('b5', 'diseño desactivado')
+  ('a6', 'terminacion (antes marcación)'), ('a7', 'terminacion'), ('b5', 'diseño desactivado')
 ) as r(sufijo, rol);
 
 select is(

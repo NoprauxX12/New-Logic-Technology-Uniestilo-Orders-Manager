@@ -75,6 +75,7 @@ function ordenStub(
     etapasTotales: totales,
     avances,
     fichas: [],
+    ediciones: [],
     ...parcial,
   };
 }

@@ -31,3 +31,17 @@ Había que decidir tres cosas: qué proveedor y SDK, cómo accede el modelo a lo
 - Las variables `IA_*` hay que cargarlas en Vercel; el proyecto arranca sin ellas pero el asistente no responde.
 - Los esquemas de las herramientas son laxos a propósito (`z.string()` en vez de `z.uuid()`): Groq valida los argumentos contra el JSON Schema y un patrón estricto convierte un id que no sea RFC 4122 en un error 400 que tumba la respuesta entera.
 - La capa de IA no reintenta: cuando el proveedor limita por minuto (HTTP 429) pide esperar más de lo que dura `IA_TIEMPO_MAXIMO_MS`, y un reintento solo convertía el "ocupado" en un "tardó demasiado" confuso. El fallo llega clasificado (`ocupado`, `tiempo`, `proveedor`) y la persona ve un mensaje distinto para cada uno.
+
+## Ampliación: HU-21, el asistente señala sin que le pregunten
+
+Fecha: 2026-11-10
+
+HU-21 pide que el asistente le señale a administración, de forma proactiva, las órdenes atrasadas, las notificaciones pendientes y sugerencias de acciones, sin decidir por ella. Se construyó como lo previó este ADR: ampliando lo que el modelo puede leer, no dándole más acceso.
+
+- **Lo pendiente se clasifica en el servidor, no en el modelo.** `clasificarPendientes()` (`src/lib/ordenes/pendientes.ts`, pura y con pruebas) separa las órdenes atrasadas, las en riesgo de entrega y las detenidas (sin avance vigente hace `DIAS_SIN_AVANCE_DETENIDA` = 3 días o más, en hora de Bogotá; sin avances cuenta desde el registro), cada una una sola vez y en su grupo más urgente, con el área donde está parada. Las cerradas no aparecen y las que están en un taller satélite no cuentan como detenidas: ahí el tiempo corre sin avances a propósito. Las alertas sin atender (tela de todos, entrega de la propia cuenta) se leen en `src/lib/alertas/`, de donde también las toma el tablero.
+- **Las sugerencias las arma la aplicación.** `src/features/asistente/pendientes.ts` le pone a cada orden una sugerencia en condicional ("Podrías preguntarle a Corte…") con el área y la etapa reales. El modelo las redacta y prioriza, pero no las inventa; el prompt le prohíbe ordenar o decidir.
+- **Resumen al abrir, una vez por carga.** La action `resumenProactivo()` lee y clasifica lo pendiente y le pasa los datos al modelo en el mensaje, sin herramientas, para que salga en una sola ronda. El panel lo pide la primera vez que se abre en la carga de la página y lo deja como primer mensaje de la conversación. Si no hay nada pendiente no se llama al modelo.
+- **Respaldo sin IA.** Si el modelo no está configurado, falla o responde en blanco, la action devuelve `redactarResumenSinIA()` con los mismos datos y sugerencias. El asistente señala aunque el proveedor no responda.
+- **Cuarta herramienta, `pendientesDelDia`.** La misma lectura, para preguntas como "¿qué tengo pendiente hoy?". Sigue siendo de solo lectura.
+- **El botón muestra cuánto hay.** El layout de administración calcula con conteos livianos (`contarPorAtender()`: órdenes atrasadas más alertas sin atender) el número del botón flotante. Si el conteo falla, el botón sale sin número en vez de tumbar la pantalla.
+- **Las respuestas pueden medir más que las preguntas.** Una respuesta del asistente que vuelve en la conversación admite hasta `MAX_LARGO_RESPUESTA` caracteres; con el tope de la pregunta, el resumen hacía rechazar la siguiente.

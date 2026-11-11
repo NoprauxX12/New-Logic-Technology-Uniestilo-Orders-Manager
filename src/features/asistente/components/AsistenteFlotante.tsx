@@ -9,7 +9,10 @@ import {
   type ReactNode,
 } from "react";
 
-import { preguntarAlAsistente } from "@/features/asistente/actions";
+import {
+  preguntarAlAsistente,
+  resumenProactivo,
+} from "@/features/asistente/actions";
 import { TextoAsistente } from "@/features/asistente/components/TextoAsistente";
 import { useDictado } from "@/features/asistente/useDictado";
 import type { MensajeChat } from "@/lib/ai";
@@ -27,12 +30,18 @@ import type { MensajeChat } from "@/lib/ai";
  * Pensado para gente poco digital (RNF-08/09/10): una sola acción (preguntar),
  * botones grandes, dictado por voz, preguntas de ejemplo para arrancar, y en
  * celular el panel ocupa toda la pantalla.
+ *
+ * HU-21 · Es proactivo: el botón muestra cuántas cosas hay por atender
+ * (atrasadas y alertas sin atender, calculado en el layout) y la primera vez
+ * que se abre en la carga de la página el asistente cuenta solo lo pendiente,
+ * sin que nadie pregunte. Ese resumen queda como primer mensaje de la
+ * conversación, así las preguntas siguientes lo tienen de contexto.
  */
 
 const SUGERENCIAS = [
+  "¿Qué tengo pendiente hoy?",
   "¿En qué va la orden OC-5003?",
   "¿Cuántas órdenes hay atrasadas?",
-  "¿Qué le falta a la orden del Colegio San José?",
 ];
 
 const BIENVENIDA =
@@ -41,7 +50,18 @@ const BIENVENIDA =
 /** Lo que dura el panel entrando o saliendo. Igual que `duration-300`. */
 const DURACION_TRANSICION_MS = 300;
 
-export function AsistenteFlotante() {
+type Props = {
+  /** HU-21: atrasadas más alertas sin atender. 0 no muestra el número. */
+  porAtender?: number;
+};
+
+/** Cómo se lee el botón con su número: "Asistente, 5 cosas por atender". */
+export function nombreDelBoton(porAtender: number): string {
+  if (porAtender <= 0) return "Asistente";
+  return `Asistente, ${porAtender} ${porAtender === 1 ? "cosa" : "cosas"} por atender`;
+}
+
+export function AsistenteFlotante({ porAtender = 0 }: Props) {
   // `montado` es si el panel está en el DOM; `visible` es si está en su sitio
   // o fuera de la pantalla. Al cerrar, primero se desliza y luego se desmonta.
   const [montado, setMontado] = useState(false);
@@ -49,10 +69,14 @@ export function AsistenteFlotante() {
   const [mensajes, setMensajes] = useState<MensajeChat[]>([]);
   const [pregunta, setPregunta] = useState("");
   const [cargando, setCargando] = useState(false);
+  const [revisando, setRevisando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const finDeLaLista = useRef<HTMLDivElement>(null);
   const campo = useRef<HTMLInputElement>(null);
   const temporizadorCierre = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // El resumen se pide una sola vez por carga de la página, aunque el panel se
+  // abra y se cierre muchas veces: cada resumen es una llamada al modelo.
+  const resumenPedido = useRef(false);
 
   const dictado = useDictado({
     alTexto: (texto) => setPregunta(texto),
@@ -74,7 +98,38 @@ export function AsistenteFlotante() {
     }
     setMontado(true);
     setVisible(true);
+
+    if (!resumenPedido.current) {
+      resumenPedido.current = true;
+      void pedirResumen();
+    }
   }
+
+  async function pedirResumen() {
+    setRevisando(true);
+    try {
+      const respuesta = await resumenProactivo();
+      if (respuesta.ok) {
+        // Va primero: es lo que el asistente dijo al abrir, antes de cualquier
+        // pregunta. Mientras se revisa, el campo está deshabilitado.
+        setMensajes((anteriores) => [
+          { rol: "asistente", contenido: respuesta.texto },
+          ...anteriores,
+        ]);
+      } else {
+        setError(respuesta.mensaje);
+      }
+    } catch {
+      setError(
+        "No pude revisar lo pendiente. Revisa tu conexión o pregúntame igual.",
+      );
+    } finally {
+      setRevisando(false);
+    }
+  }
+
+  const ocupado = cargando || revisando;
+  const yaPregunto = mensajes.some((mensaje) => mensaje.rol === "usuario");
 
   useEffect(
     () => () => {
@@ -96,11 +151,17 @@ export function AsistenteFlotante() {
 
   useEffect(() => {
     finDeLaLista.current?.scrollIntoView({ block: "end" });
-  }, [mensajes, cargando]);
+  }, [mensajes, cargando, revisando]);
+
+  // Mientras se revisa lo pendiente el campo está deshabilitado y no toma el
+  // foco; cuando termina, se le devuelve para poder escribir de una vez.
+  useEffect(() => {
+    if (visible && !revisando) campo.current?.focus();
+  }, [visible, revisando]);
 
   async function enviar(texto: string) {
     const contenido = texto.trim();
-    if (!contenido || cargando) return;
+    if (!contenido || ocupado) return;
 
     const conversacion: MensajeChat[] = [
       ...mensajes,
@@ -138,10 +199,19 @@ export function AsistenteFlotante() {
       <button
         type="button"
         onClick={abrir}
-        className="bg-marca hover:bg-marca-oscuro focus:ring-marca fixed right-4 bottom-4 z-40 flex min-h-14 items-center gap-2 rounded-full px-5 text-base font-semibold text-white shadow-lg focus:ring-2 focus:ring-offset-2 focus:outline-none"
+        aria-label={nombreDelBoton(porAtender)}
+        className="bg-marca hover:bg-marca-oscuro focus:ring-marca fixed right-4 bottom-4 z-40 flex min-h-14 items-center gap-2 rounded-full px-5 text-base font-semibold text-white shadow-lg focus:ring-2 focus:ring-offset-2 focus:outline-none print:hidden"
       >
         <IconoChat />
         Asistente
+        {porAtender > 0 ? (
+          <span
+            aria-hidden
+            className="flex min-h-6 min-w-6 items-center justify-center rounded-full bg-red-700 px-1.5 text-sm leading-none font-bold text-white ring-2 ring-white"
+          >
+            {porAtender > 99 ? "99+" : porAtender}
+          </span>
+        ) : null}
       </button>
     );
   }
@@ -191,6 +261,11 @@ export function AsistenteFlotante() {
               )}
             </Burbuja>
           ))}
+          {revisando ? (
+            <Burbuja rol="asistente">
+              <span className="text-zinc-600">Revisando lo pendiente…</span>
+            </Burbuja>
+          ) : null}
           {cargando ? (
             <Burbuja rol="asistente">
               <span className="text-zinc-500">Consultando las órdenes…</span>
@@ -198,7 +273,7 @@ export function AsistenteFlotante() {
           ) : null}
         </ul>
 
-        {mensajes.length === 0 ? (
+        {!yaPregunto && !ocupado ? (
           <div className="mt-4 flex flex-col gap-2">
             <p className="text-sm text-zinc-600">Por ejemplo:</p>
             {SUGERENCIAS.map((sugerencia) => (
@@ -206,7 +281,7 @@ export function AsistenteFlotante() {
                 key={sugerencia}
                 type="button"
                 onClick={() => void enviar(sugerencia)}
-                disabled={cargando}
+                disabled={ocupado}
                 className="min-h-11 rounded-lg border border-zinc-300 px-3 text-left text-sm text-zinc-800 hover:bg-zinc-50 disabled:opacity-50"
               >
                 {sugerencia}
@@ -242,14 +317,14 @@ export function AsistenteFlotante() {
             dictado.escuchando ? "Escuchando…" : "¿En qué va la orden…?"
           }
           autoComplete="off"
-          disabled={cargando}
+          disabled={ocupado}
           className="focus:ring-marca min-h-12 min-w-0 flex-1 rounded-lg border border-zinc-300 px-3 text-base text-zinc-900 focus:ring-2 focus:outline-none disabled:bg-zinc-50"
         />
         {dictado.soportado ? (
           <button
             type="button"
             onClick={dictado.alternar}
-            disabled={cargando}
+            disabled={ocupado}
             aria-pressed={dictado.escuchando}
             aria-label={
               dictado.escuchando ? "Parar el dictado" : "Dictar la pregunta"
@@ -266,7 +341,7 @@ export function AsistenteFlotante() {
         ) : null}
         <button
           type="submit"
-          disabled={cargando || pregunta.trim() === ""}
+          disabled={ocupado || pregunta.trim() === ""}
           className="bg-marca hover:bg-marca-oscuro min-h-12 rounded-lg px-4 text-base font-semibold text-white disabled:opacity-50"
         >
           Enviar

@@ -7,6 +7,7 @@ const TARJETAS: {
 }[] = [
   { clave: "totalOrdenes", etiqueta: "Total órdenes" },
   { clave: "enProduccion", etiqueta: "En producción" },
+  { clave: "prendasEnProduccion", etiqueta: "Prendas en producción" },
   { clave: "atrasadas", etiqueta: "Atrasadas", resaltar: "atrasada" },
   { clave: "enRiesgo", etiqueta: "En riesgo", resaltar: "riesgo" },
 ];
@@ -15,7 +16,7 @@ export function ResumenMetricas({ resumen }: { resumen: ResumenTablero }) {
   return (
     <section
       aria-label="Resumen del tablero"
-      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5"
     >
       {TARJETAS.map(({ clave, etiqueta, resaltar }) => (
         <div

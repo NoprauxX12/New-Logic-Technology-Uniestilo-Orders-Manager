@@ -1,7 +1,16 @@
 "use server";
 
 import { crearHerramientas } from "@/features/asistente/herramientas";
-import { instruccionesDelSistema } from "@/features/asistente/prompt";
+import {
+  pendientesParaModelo,
+  redactarResumenSinIA,
+} from "@/features/asistente/pendientes";
+import {
+  instruccionesDelResumen,
+  instruccionesDelSistema,
+  pedidoDelResumen,
+} from "@/features/asistente/prompt";
+import { leerPendientes } from "@/features/asistente/queries";
 import { puedeUsarAsistente } from "@/features/asistente/reglas";
 import { conversacionSchema } from "@/features/asistente/schemas";
 import {
@@ -14,7 +23,8 @@ import {
 import { getUsuarioActual } from "@/lib/auth/usuarioActual";
 
 /**
- * HU-15 · La pregunta de administración al asistente.
+ * HU-15 · La pregunta de administración al asistente. Abajo, el resumen
+ * proactivo de HU-21.
  *
  * Es una Server Action y no un route handler porque aquí vive la lógica de la
  * aplicación (CLAUDE.md: route handlers solo para webhooks, cron y health).
@@ -79,5 +89,63 @@ export async function preguntarAlAsistente(
     const tipo = error instanceof FalloDelModelo ? error.tipo : "proveedor";
     console.error(`[asistente] El modelo no respondió (${tipo})`, error);
     return { ok: false, mensaje: MENSAJE_POR_FALLO[tipo] };
+  }
+}
+
+const SIN_PENDIENTES_LEIDOS =
+  "No pude revisar lo pendiente en este momento. Puedes preguntarme por una orden igual.";
+
+/**
+ * HU-21 · Lo que el asistente le señala a administración al abrir el panel,
+ * sin que pregunte: órdenes atrasadas, en riesgo y detenidas, alertas sin
+ * atender y sugerencias de qué hacer, en condicional y sin decidir por nadie.
+ *
+ * Los pendientes se leen y se clasifican aquí, en el servidor; el modelo solo
+ * los redacta. Si no hay nada pendiente no se le pregunta (no hay qué
+ * redactar), y si no está configurado o no responde, se devuelve el resumen
+ * armado sin IA con los mismos datos: el asistente señala igual aunque el
+ * proveedor falle.
+ */
+export async function resumenProactivo(): Promise<RespuestaAsistente> {
+  const usuario = await getUsuarioActual();
+  if (!usuario || !puedeUsarAsistente(usuario.rol)) {
+    return { ok: false, mensaje: SIN_ACCESO };
+  }
+
+  const ahora = new Date();
+
+  let datos: ReturnType<typeof pendientesParaModelo>;
+  try {
+    datos = pendientesParaModelo(await leerPendientes(ahora), ahora);
+  } catch (error) {
+    console.error("[asistente] No se pudo leer lo pendiente", error);
+    return { ok: false, mensaje: SIN_PENDIENTES_LEIDOS };
+  }
+
+  const sinIA = redactarResumenSinIA(datos);
+  if (datos.alDia) return { ok: true, texto: sinIA };
+
+  const config = leerConfigIA();
+  if (!config.ok) {
+    console.error("[asistente]", config.motivo);
+    return { ok: true, texto: sinIA };
+  }
+
+  try {
+    const respuesta = await responderConHerramientas({
+      sistema: instruccionesDelResumen(ahora),
+      mensajes: [{ rol: "usuario", contenido: pedidoDelResumen(datos) }],
+      herramientas: {},
+      config: config.config,
+    });
+
+    return { ok: true, texto: respuesta.texto || sinIA };
+  } catch (error) {
+    const tipo = error instanceof FalloDelModelo ? error.tipo : "proveedor";
+    console.error(
+      `[asistente] El modelo no redactó el resumen (${tipo}); va el resumen sin IA`,
+      error,
+    );
+    return { ok: true, texto: sinIA };
   }
 }

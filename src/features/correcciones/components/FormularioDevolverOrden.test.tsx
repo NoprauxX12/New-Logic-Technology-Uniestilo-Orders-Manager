@@ -25,6 +25,7 @@ const MARCADOS: CheckpointId[] = [
   "programada_diseno",
   "ficha_adjunta",
   "tela_programada",
+  "insumos_validados",
   "corte_completado",
   "recogido_bordado",
 ];

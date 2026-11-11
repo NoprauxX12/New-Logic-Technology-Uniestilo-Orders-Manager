@@ -187,15 +187,42 @@ describe("resumirTablero", () => {
     expect(resumen).toEqual({
       totalOrdenes: 4,
       enProduccion: 2, // 6/9 y 2/9; no 0/9 ni 9/9
+      prendasEnProduccion: 4, // ninguna está entregada: 1 prenda cada una
       atrasadas: 1,
       enRiesgo: 1,
     });
+  });
+
+  it("suma las prendas de las órdenes que no se han entregado", () => {
+    const resumen = resumirTablero([
+      ordenStub({
+        semaforo: "a_tiempo",
+        etapasCompletadas: 0,
+        etapasTotales: 9,
+        cantidad: 300,
+      }),
+      ordenStub({
+        semaforo: "atrasada",
+        etapasCompletadas: 5,
+        etapasTotales: 9,
+        cantidad: 200,
+      }),
+      ordenStub({
+        semaforo: "entregada",
+        etapasCompletadas: 9,
+        etapasTotales: 9,
+        cantidad: 1000,
+      }),
+    ]);
+
+    expect(resumen.prendasEnProduccion).toBe(500);
   });
 
   it("devuelve ceros si no hay órdenes", () => {
     expect(resumirTablero([])).toEqual({
       totalOrdenes: 0,
       enProduccion: 0,
+      prendasEnProduccion: 0,
       atrasadas: 0,
       enRiesgo: 0,
     });

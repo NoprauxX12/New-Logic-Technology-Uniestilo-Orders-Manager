@@ -99,13 +99,13 @@ export async function programarTela(
   }
 
   revalidatePath("/ordenes/tela");
-  revalidatePath("/ordenes/corte");
+  revalidatePath("/ordenes/insumos");
   revalidatePath(`/tablero/${ordenId}`);
   revalidatePath("/tablero");
 
   return {
     ok: true,
     mensaje:
-      "Tela programada correctamente. Ahora la orden puede pasar a corte.",
+      "Tela programada correctamente. Ahora siguen los insumos de la orden.",
   };
 }

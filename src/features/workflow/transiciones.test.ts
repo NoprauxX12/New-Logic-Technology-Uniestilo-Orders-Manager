@@ -39,6 +39,7 @@ const TODOS: Record<CheckpointId, true> = {
   programada_diseno: true,
   ficha_adjunta: true,
   tela_programada: true,
+  insumos_validados: true,
   corte_completado: true,
   recogido_bordado: true,
   llegada_marcacion: true,
@@ -478,7 +479,7 @@ describe("HU-09 · recogido y bordado", () => {
       puedeMarcar({
         checkpoint: "llegada_marcacion",
         marcados: hastaElCorte,
-        rol: "marcacion",
+        rol: "terminacion",
         recepcionConfirmada: true,
       }),
     ).toMatchObject({
@@ -588,11 +589,11 @@ describe("HU-19 · lista para despachar es de terminación", () => {
     ).toEqual({ permitido: true });
   });
 
-  it("marcación ya no la puede marcar, y el mensaje dice a quién le toca", () => {
+  it("otra sección no la puede marcar, y el mensaje dice a quién le toca", () => {
     const resultado = puedeMarcar({
       checkpoint: "lista_despacho",
       marcados: hastaMarcacion,
-      rol: "marcacion",
+      rol: "logistica",
     });
 
     expect(resultado.permitido).toBe(false);

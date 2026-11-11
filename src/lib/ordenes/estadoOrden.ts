@@ -1,5 +1,6 @@
 import "server-only";
 
+import { describirCambios } from "@/lib/ordenes/ediciones";
 import {
   armarEtapas,
   contarProgreso,
@@ -11,6 +12,7 @@ import type {
   AvanceSeccion,
   Devolucion,
   DetalleOrden,
+  EdicionOrden,
   EnlaceOrden,
   OrdenEnTablero,
   OrdenResumen,
@@ -295,5 +297,27 @@ export async function obtenerDetalleOrden(
     ...enriquecer(fila, enlaces),
     avances: avancesDe(fila.avance_seccion),
     fichas: await firmarFichas(supabase, fila.ficha_tecnica),
+    ediciones: await leerEdiciones(ordenId),
   };
+}
+
+/** El rastro de ediciones de una orden. Solo lo muestra su detalle. */
+async function leerEdiciones(ordenId: string): Promise<EdicionOrden[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("edicion_orden")
+    .select("id, cambios, creado_en, usuario:creado_por ( nombre )")
+    .eq("orden_id", ordenId)
+    .order("creado_en", { ascending: true });
+
+  if (error) {
+    throw new Error(`No se pudieron leer las ediciones: ${error.message}`);
+  }
+
+  return data.map((fila) => ({
+    id: fila.id,
+    porNombre: fila.usuario?.nombre ?? "Sin nombre",
+    fechaHora: fila.creado_en,
+    cambios: describirCambios(fila.cambios),
+  }));
 }

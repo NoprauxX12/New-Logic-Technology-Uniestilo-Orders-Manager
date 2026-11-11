@@ -22,7 +22,17 @@ import type { Database } from "@/types/database.types";
  * otra.
  */
 
-export type Rol = Database["public"]["Enums"]["rol"];
+/** Los roles vigentes: `marcacion` se unió a `terminacion` y ya no se asigna. */
+export type Rol = Exclude<Database["public"]["Enums"]["rol"], "marcacion">;
+
+/**
+ * El rol de una fila de `usuario` como rol vigente. La migración pasó todas
+ * las cuentas de marcación a terminación y la base ya no deja asignar ese rol;
+ * esto solo estrecha el tipo del enum.
+ */
+export function rolVigente(rol: Database["public"]["Enums"]["rol"]): Rol {
+  return rol === "marcacion" ? "terminacion" : rol;
+}
 
 export type UsuarioActual = {
   id: string;
@@ -57,5 +67,7 @@ export async function getUsuarioActual(): Promise<UsuarioActual | null> {
     return null;
   }
 
-  return data;
+  if (!data) return null;
+
+  return { ...data, rol: rolVigente(data.rol) };
 }

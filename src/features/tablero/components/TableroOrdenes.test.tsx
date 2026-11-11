@@ -49,6 +49,7 @@ describe("TableroOrdenes", () => {
         resumen={{
           totalOrdenes: 0,
           enProduccion: 0,
+          prendasEnProduccion: 0,
           atrasadas: 0,
           enRiesgo: 0,
         }}
@@ -68,6 +69,7 @@ describe("TableroOrdenes", () => {
         resumen={{
           totalOrdenes: 0,
           enProduccion: 0,
+          prendasEnProduccion: 0,
           atrasadas: 1,
           enRiesgo: 1,
         }}
@@ -89,6 +91,7 @@ describe("TableroOrdenes", () => {
         resumen={{
           totalOrdenes: 0,
           enProduccion: 0,
+          prendasEnProduccion: 0,
           atrasadas: 0,
           enRiesgo: 0,
         }}
@@ -108,6 +111,7 @@ describe("TableroOrdenes", () => {
         resumen={{
           totalOrdenes: 5,
           enProduccion: 0,
+          prendasEnProduccion: 0,
           atrasadas: 0,
           enRiesgo: 0,
         }}

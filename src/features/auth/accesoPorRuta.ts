@@ -1,4 +1,8 @@
-import { CHECKPOINTS, type Rol } from "@/features/workflow/checkpoints";
+import {
+  CHECKPOINTS,
+  ETIQUETAS_ROL,
+  type Rol,
+} from "@/features/workflow/checkpoints";
 
 /**
  * HU-17 · Qué pantallas puede abrir cada rol.
@@ -15,6 +19,9 @@ import { CHECKPOINTS, type Rol } from "@/features/workflow/checkpoints";
  */
 
 const ADMIN: Rol = "admin";
+
+/** Todos los roles, para las pantallas de solo lectura que ve cualquiera. */
+const TODOS = Object.keys(ETIQUETAS_ROL) as Rol[];
 
 /** Se ven sin sesión: el proxy ya las deja pasar. */
 const RUTAS_PUBLICAS = new Set(["/", "/login"]);
@@ -35,20 +42,37 @@ function conId(prefijo: string, roles: readonly Rol[]): Regla {
   return { coincide: (candidata) => patron.test(candidata), roles };
 }
 
+function conIdYSufijo(
+  prefijo: string,
+  sufijo: string,
+  roles: readonly Rol[],
+): Regla {
+  const patron = new RegExp(`^${prefijo}/${UUID}/${sufijo}$`, "i");
+  return { coincide: (candidata) => patron.test(candidata), roles };
+}
+
 const REGLAS: readonly Regla[] = [
   // HU-14: el tablero y la trazabilidad de una orden son de administración.
   exacta("/tablero", [ADMIN]),
   conId("/tablero", [ADMIN]),
   // HU-01: registrar órdenes es de administración.
   exacta("/ordenes/nueva", [ADMIN]),
+  // Editar una orden es de administración (docs/adr/0012).
+  conIdYSufijo("/ordenes", "editar", [ADMIN]),
   // HU-24: crear cuentas es de administración.
   exacta("/usuarios", [ADMIN]),
-  // HU-10 y HU-11: logística despacha y recibe desde el detalle de la orden.
+  // HU-10 y HU-11: logística despacha y recibe lotes.
   exacta("/ordenes/talleres", ["logistica", ADMIN]),
-  conId("/ordenes", ["logistica", ADMIN]),
+  // El detalle de una orden lo ven todos los roles (para quién es, prendas,
+  // ficha y talleres). Es de lectura; despachar y recibir sigue siendo de
+  // logística, y lo garantizan la página, las actions y RLS.
+  conId("/ordenes", TODOS),
   // HU-06: secretaría valida la tela y avisa cuando falta. No es la pantalla
   // de un checkpoint: avisar crea una alerta (regla 7), no marca una etapa.
   exacta("/ordenes/telas", ["secretaria", ADMIN]),
+  // HU-23: el listado de insumos de una orden, para imprimir. La pantalla de
+  // la lista sale de `checkpoints.ts` como las demás etapas.
+  conId("/ordenes/insumos", ["secretaria", ADMIN]),
   // La pantalla de cada etapa es de su rol dueño.
   ...CHECKPOINTS.flatMap((checkpoint) =>
     checkpoint.ruta

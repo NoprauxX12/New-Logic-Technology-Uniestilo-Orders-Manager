@@ -2,6 +2,7 @@
 
 import { useActionState, useId, useMemo, useState } from "react";
 
+import { EnlaceDetalleOrden } from "@/components/EnlaceDetalleOrden";
 import { BadgeSemaforo } from "@/components/BadgeSemaforo";
 import { FichasAdjuntas } from "@/components/FichasAdjuntas";
 import {
@@ -158,6 +159,10 @@ function TarjetaFicha({
           <p className="mt-1 text-sm text-zinc-500">
             Entrega: {formatearFecha(orden.fechaEntrega)}
           </p>
+          <EnlaceDetalleOrden
+            ordenId={orden.id}
+            numeroOrdenCompra={orden.numeroOrdenCompra}
+          />
         </div>
 
         {orden.yaMarcada ? (
