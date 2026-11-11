@@ -141,6 +141,22 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
     // A Jorge le toca esta orden: está arriba, en «Para marcar ahora».
     await expect(corte.paraMarcar().getByText(numero)).toBeVisible();
 
+    // Cualquier rol abre el detalle de la orden: para quién es, las prendas y
+    // la ficha. Es de lectura: despachar a taller sigue siendo de logística.
+    await corte
+      .tarjeta(numero)
+      .getByRole("link", { name: `Ver detalle de la orden ${numero}` })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: `Orden ${numero}` }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Para quién es" }),
+    ).toBeVisible();
+    await expect(page.getByText(orden.prendas[0].descripcion)).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Despachar/ })).toBeHidden();
+    await corte.abrir();
+
     await corte.marcar(numero, "Marcar corte completado");
 
     // Ya marcada, sale de ahí y pasa al grupo plegado de lo hecho esta semana.
@@ -172,18 +188,15 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
     await page.context().close();
   });
 
-  await test.step("Sandra (marcación) marca la llegada a marcación", async () => {
-    const page = await entrarComo(browser, CUENTAS.marcacion);
+  await test.step("Marcela (terminación) marca la llegada a marcación y deja la orden lista para despachar", async () => {
+    // Marcación y terminación son un solo rol: la misma cuenta marca las dos.
+    const page = await entrarComo(browser, CUENTAS.terminacion);
     const marcacion = new SeccionPagina(page, "/ordenes/marcacion");
 
     await marcacion.abrir();
     await expect(marcacion.fichaDe(numero)).toBeVisible();
     await marcacion.marcar(numero, "Marcar llegada a marcación");
-    await page.context().close();
-  });
 
-  await test.step("Marcela (terminación) deja la orden lista para despachar", async () => {
-    const page = await entrarComo(browser, CUENTAS.terminacion);
     const despacho = new SeccionPagina(page, "/ordenes/despacho");
 
     await despacho.abrir();
@@ -223,14 +236,12 @@ test("una orden recorre todas las etapas, cada una marcada por su rol, hasta cer
     await expect(
       page.getByText(`Reportado por ${CUENTAS.diseno.nombre} (Diseño)`),
     ).toBeVisible();
-    await expect(
-      page.getByText(`Reportado por ${CUENTAS.marcacion.nombre} (Marcación)`),
-    ).toBeVisible();
+    // Terminación firma dos: la llegada a marcación y la salida a despacho.
     await expect(
       page.getByText(
         `Reportado por ${CUENTAS.terminacion.nombre} (Terminación)`,
       ),
-    ).toBeVisible();
+    ).toHaveCount(2);
     await page.context().close();
   });
 });

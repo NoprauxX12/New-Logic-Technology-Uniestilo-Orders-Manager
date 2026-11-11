@@ -48,7 +48,7 @@ describe("vistaDeRol · roles con pantalla propia", () => {
       "diseno",
       "corte",
       "logistica",
-      "marcacion",
+      "terminacion",
     ] as const) {
       expect(vistaDeRol(rol).aviso).toBeNull();
     }
@@ -79,26 +79,15 @@ describe("vistaDeRol · roles con pantalla propia", () => {
     expect(vista.botones[0].etiqueta).toMatch(/corte completado/i);
   });
 
-  it("marcación va a marcar su etapa, con la etiqueta de checkpoints.ts", () => {
-    const vista = vistaDeRol("marcacion");
-
-    expect(vista.botones[0].ruta).toBe("/ordenes/marcacion");
-    expect(vista.botones[0].etiqueta).toMatch(/llegada a marcación/i);
-  });
-
-  it("terminación marca la salida a despacho (HU-19), en su propia pantalla", () => {
+  it("terminación marca la llegada a marcación (HU-12) y la salida a despacho (HU-19), en ese orden", () => {
     const vista = vistaDeRol("terminacion");
-    const ruta = buscarCheckpoint("lista_despacho").ruta;
 
-    expect(ruta).not.toBeNull();
-    expect(vista.botones.map((b) => b.ruta)).toEqual([ruta]);
-    expect(vista.botones[0].etiqueta).toMatch(/lista para despachar/i);
-  });
-
-  it("marcación ya no marca la salida a despacho: solo su llegada", () => {
-    const rutas = vistaDeRol("marcacion").botones.map((b) => b.ruta);
-
-    expect(rutas).toEqual(["/ordenes/marcacion"]);
+    expect(vista.botones.map((b) => b.ruta)).toEqual([
+      buscarCheckpoint("llegada_marcacion").ruta,
+      buscarCheckpoint("lista_despacho").ruta,
+    ]);
+    expect(vista.botones[0].etiqueta).toMatch(/llegada a marcación/i);
+    expect(vista.botones[1].etiqueta).toMatch(/lista para despachar/i);
   });
 
   it("secretaría empieza por las cotizaciones (HU-02), antes de programar a diseño", () => {

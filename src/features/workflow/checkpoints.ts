@@ -12,7 +12,12 @@ import type { Database } from "@/types/database.types";
  */
 
 export type CheckpointId = Database["public"]["Enums"]["checkpoint"];
-export type Rol = Database["public"]["Enums"]["rol"];
+/**
+ * Los roles que existen hoy. `marcacion` sigue en el enum de la base (Postgres
+ * no deja quitar un valor), pero se unió a `terminacion` y ya no se le asigna a
+ * nadie: aquí no existe.
+ */
+export type Rol = Exclude<Database["public"]["Enums"]["rol"], "marcacion">;
 
 export type Checkpoint = {
   id: CheckpointId;
@@ -137,14 +142,14 @@ export const CHECKPOINTS = [
   {
     id: "llegada_marcacion",
     etiqueta: "Llegada a marcación",
-    rolDueno: "marcacion",
+    // Marcación y terminación son un solo rol: `terminacion` marca las dos.
+    rolDueno: "terminacion",
     hu: "HU-12",
     requisito: "recepcion_de_taller",
     disponible: true,
     ruta: "/ordenes/marcacion",
   },
   {
-    // HU-19 la marca terminación (Marcela), una sección distinta de marcación.
     id: "lista_despacho",
     etiqueta: "Lista para despachar",
     rolDueno: "terminacion",
@@ -201,7 +206,6 @@ export const ETIQUETAS_ROL: Record<Rol, string> = {
   diseno: "Diseño",
   corte: "Corte",
   logistica: "Logística",
-  marcacion: "Marcación",
   terminacion: "Terminación",
 };
 

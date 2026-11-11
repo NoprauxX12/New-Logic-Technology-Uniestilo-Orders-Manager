@@ -79,7 +79,6 @@ describe("puedeDevolver / validarDestino", () => {
       "diseno",
       "corte",
       "logistica",
-      "marcacion",
       "terminacion",
     ] as const) {
       expect(

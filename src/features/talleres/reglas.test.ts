@@ -71,7 +71,10 @@ describe("puedeConfirmarRecepcion", () => {
   });
 
   it("no deja que otro rol confirme la recepción", () => {
-    const resultado = puedeConfirmarRecepcion({ recibido: false }, "marcacion");
+    const resultado = puedeConfirmarRecepcion(
+      { recibido: false },
+      "terminacion",
+    );
 
     expect(resultado.permitido).toBe(false);
     expect(resultado.permitido === false && resultado.mensaje).toContain(

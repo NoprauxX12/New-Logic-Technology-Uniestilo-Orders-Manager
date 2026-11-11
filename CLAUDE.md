@@ -52,7 +52,7 @@ src/
     (auth)/               Rutas públicas: login (HU-16)
     (app)/                Rutas con sesión; su layout carga el usuario y su rol
       tablero/            HU-14 — administrador
-      ordenes/            Lista según rol, nueva (HU-01), [ordenId] detalle + acciones de su sección
+      ordenes/            Lista según rol, nueva (HU-01), [ordenId] detalle de lectura para todos los roles (logística despacha y recibe ahí)
     api/health/           Health check para el monitoreo (RNF-06)
   features/               Un módulo por área del dominio. Cada uno es dueño de sus
                           server actions, consultas, validaciones y componentes.
@@ -119,6 +119,7 @@ Reglas de ubicación:
 - **Sin código muerto ni `TODO`** en PRs a `develop`. Lo pendiente se abre como issue.
 - **UI para gente no digital (RNF-08/09/10):** máximo 1–2 acciones por pantalla por rol, botones grandes, textos del taller sin jerga, responsive desde 360 px, contraste AA.
 - **Las listas de trabajo contestan «¿qué hago ahora?».** Lo que le toca a la sección va arriba y por urgencia (`compararPorUrgencia`, `src/lib/ordenes/urgencia.ts`: atrasadas, luego en riesgo, luego entrega más cercana); lo que aún no llega y lo ya hecho van debajo, plegados; las órdenes cerradas no aparecen. La clasificación es una función pura con pruebas (`agruparOrdenesDeSeccion`, `agruparOrdenesDeTalleres`, `agruparOrdenesDeCierre`, `agruparOrdenesDeTelas`). Una lista nueva no ordena por fecha de entrega sin más.
+- **El detalle de una orden es uno solo y lo ven todos los roles:** `/ordenes/<orden>` (para quién es, entrega, prendas con tallas, ficha técnica y talleres por los que pasó; sin valores). Las tarjetas de las listas no repiten esos datos: llevan `EnlaceDetalleOrden` (`src/components/`). Es de lectura; solo logística ve ahí sus formularios de despacho y recepción.
 
 ## Reglas del dominio (no negociables)
 
@@ -144,10 +145,9 @@ Roles (enum `rol`) y lo que marca cada uno:
 | `diseno`      | Ficha técnica (HU-04)                                                                                         |
 | `corte`       | Corte completado (HU-08)                                                                                      |
 | `logistica`   | Recogido/bordado (HU-09), despacho a taller (HU-10), recepción del taller (HU-11)                             |
-| `marcacion`   | Llegada a marcación (HU-12)                                                                                   |
-| `terminacion` | Lista para despachar (HU-19)                                                                                  |
+| `terminacion` | Llegada a marcación (HU-12), lista para despachar (HU-19)                                                     |
 
-El séptimo rol, `terminacion` (Marcela), es una sección distinta de marcación (Sandra): marca la orden lista para despachar y con eso le queda a secretaría para el cierre.
+Marcación y terminación son un solo rol, `terminacion`: marca la llegada a marcación y la orden lista para despachar, y con eso le queda a secretaría para el cierre. El valor `marcacion` sigue en el enum de la base sin usarse (una restricción impide asignarlo) y no existe en el tipo `Rol` del código.
 
 ## Backlog (HU → sprint)
 

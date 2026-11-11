@@ -62,7 +62,7 @@ insert into public.usuario (id, nombre, email, rol) values
   ('00000000-0000-0000-0000-0000000000a3', 'Andrés Mejía',   'diseno@uniestilo.test',     'diseno'),
   ('00000000-0000-0000-0000-0000000000a4', 'Jorge Cardona',  'corte@uniestilo.test',      'corte'),
   ('00000000-0000-0000-0000-0000000000a5', 'Luis Betancur',  'logistica@uniestilo.test',  'logistica'),
-  ('00000000-0000-0000-0000-0000000000a6', 'Sandra Vélez',   'marcacion@uniestilo.test',  'marcacion'),
+  ('00000000-0000-0000-0000-0000000000a6', 'Sandra Vélez',   'marcacion@uniestilo.test',  'terminacion'),
   ('00000000-0000-0000-0000-0000000000a7', 'Marcela Osorio', 'terminacion@uniestilo.test', 'terminacion');
 
 -- ---------------------------------------------------------------------------

@@ -56,12 +56,22 @@ describe("puedeEntrar · lo de cada sección", () => {
     expect(puedeEntrar("corte", "/ordenes/cierre")).toBe(false);
     expect(puedeEntrar("corte", "/tablero")).toBe(false);
     expect(puedeEntrar("corte", "/ordenes/nueva")).toBe(false);
-    expect(puedeEntrar("corte", ORDEN)).toBe(false);
   });
 
-  it("marcación entra a su pantalla", () => {
-    expect(puedeEntrar("marcacion", "/ordenes/marcacion")).toBe(true);
-    expect(puedeEntrar("marcacion", "/ordenes/corte")).toBe(false);
+  it("terminación entra a marcación y a despacho: son un solo rol", () => {
+    expect(puedeEntrar("terminacion", "/ordenes/marcacion")).toBe(true);
+    expect(puedeEntrar("terminacion", "/ordenes/despacho")).toBe(true);
+    expect(puedeEntrar("terminacion", "/ordenes/corte")).toBe(false);
+  });
+
+  it("el rol marcación ya no existe", () => {
+    expect(ROLES).not.toContain("marcacion");
+  });
+
+  it("todos los roles abren el detalle de una orden, que es de lectura", () => {
+    for (const rol of ROLES) {
+      expect(puedeEntrar(rol, ORDEN)).toBe(true);
+    }
   });
 
   it("secretaría entra a la programación y al cierre", () => {

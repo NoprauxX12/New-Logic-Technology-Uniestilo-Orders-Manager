@@ -240,7 +240,7 @@ select is(
 )
 from (values
   ('a1', 'admin'), ('a2', 'secretaria'), ('a3', 'diseno'), ('a4', 'corte'),
-  ('a5', 'logistica'), ('a6', 'marcacion'), ('a7', 'terminacion'),
+  ('a5', 'logistica'), ('a6', 'terminacion (antes marcación)'), ('a7', 'terminacion'),
   ('b2', 'admin desactivado'), ('b1', 'secretaria desactivada')
 ) as r(sufijo, rol);
 
@@ -289,7 +289,7 @@ select is(
 )
 from (values
   ('a2', 'secretaria'), ('a3', 'diseno'), ('a4', 'corte'), ('a5', 'logistica'),
-  ('a6', 'marcacion'), ('a7', 'terminacion'), ('b2', 'admin desactivado')
+  ('a6', 'terminacion (antes marcación)'), ('a7', 'terminacion'), ('b2', 'admin desactivado')
 ) as r(sufijo, rol);
 
 select is(
@@ -305,7 +305,7 @@ select is(
 )
 from (values
   ('a1', 'admin'), ('a3', 'diseno'), ('a4', 'corte'), ('a5', 'logistica'),
-  ('a6', 'marcacion'), ('a7', 'terminacion'), ('b1', 'secretaria desactivada')
+  ('a6', 'terminacion (antes marcación)'), ('a7', 'terminacion'), ('b1', 'secretaria desactivada')
 ) as r(sufijo, rol);
 
 select is(
@@ -347,7 +347,7 @@ select is(
 )
 from (values
   ('a1', 'admin'), ('a2', 'secretaria'), ('a3', 'diseno'), ('a4', 'corte'),
-  ('a5', 'logistica'), ('a6', 'marcacion'), ('a7', 'terminacion'), ('b2', 'admin desactivado')
+  ('a5', 'logistica'), ('a6', 'terminacion (antes marcación)'), ('a7', 'terminacion'), ('b2', 'admin desactivado')
 ) as r(sufijo, rol);
 
 select is(
@@ -369,7 +369,7 @@ select is(
 )
 from (values
   ('a1', 'admin'), ('a3', 'diseno'), ('a4', 'corte'), ('a5', 'logistica'),
-  ('a6', 'marcacion'), ('a7', 'terminacion'), ('b1', 'secretaria desactivada')
+  ('a6', 'terminacion (antes marcación)'), ('a7', 'terminacion'), ('b1', 'secretaria desactivada')
 ) as r(sufijo, rol);
 
 select is(
@@ -411,7 +411,7 @@ select is(
 )
 from (values
   ('a1', 'admin'), ('a2', 'secretaria'), ('a3', 'diseno'), ('a4', 'corte'),
-  ('a6', 'marcacion'), ('a7', 'terminacion')
+  ('a6', 'terminacion (antes marcación)'), ('a7', 'terminacion')
 ) as r(sufijo, rol);
 
 -- La cuenta desactivada ni siquiera ve los avances, así que el trigger que
@@ -446,7 +446,7 @@ select is(
 )
 from (values
   ('a1', 'admin'), ('a2', 'secretaria'), ('a3', 'diseno'), ('a4', 'corte'),
-  ('a6', 'marcacion'), ('a7', 'terminacion'), ('b6', 'logistica desactivada')
+  ('a6', 'terminacion (antes marcación)'), ('a7', 'terminacion'), ('b6', 'logistica desactivada')
 ) as r(sufijo, rol);
 
 select is(
@@ -516,7 +516,7 @@ select is(
 )
 from (values
   ('a1', 'admin'), ('a2', 'secretaria'), ('a4', 'corte'), ('a5', 'logistica'),
-  ('a6', 'marcacion'), ('a7', 'terminacion'), ('b5', 'diseno desactivado')
+  ('a6', 'terminacion (antes marcación)'), ('a7', 'terminacion'), ('b5', 'diseno desactivado')
 ) as r(sufijo, rol);
 
 select is(
@@ -590,7 +590,7 @@ select is(
   format('%s no puede crear alertas', r.rol)
 )
 from (values
-  ('a3', 'diseno'), ('a4', 'corte'), ('a5', 'logistica'), ('a6', 'marcacion'),
+  ('a3', 'diseno'), ('a4', 'corte'), ('a5', 'logistica'), ('a6', 'terminacion (antes marcación)'),
   ('a7', 'terminacion'), ('b1', 'secretaria desactivada'), ('b2', 'admin desactivado')
 ) as r(sufijo, rol);
 
@@ -648,7 +648,7 @@ select is(
   format('%s no atiende la alerta de otra persona', r.rol)
 )
 from (values
-  ('a2', 'secretaria'), ('a3', 'diseno'), ('a4', 'corte'), ('a6', 'marcacion'),
+  ('a2', 'secretaria'), ('a3', 'diseno'), ('a4', 'corte'), ('a6', 'terminacion (antes marcación)'),
   ('a7', 'terminacion'), ('b1', 'secretaria desactivada')
 ) as r(sufijo, rol);
 
@@ -735,7 +735,7 @@ select is(
   format('%s no puede editar su propio perfil', r.rol)
 )
 from (values
-  ('a3', 'diseno'), ('a4', 'corte'), ('a5', 'logistica'), ('a6', 'marcacion'), ('b2', 'admin desactivado')
+  ('a3', 'diseno'), ('a4', 'corte'), ('a5', 'logistica'), ('a6', 'terminacion (antes marcación)'), ('b2', 'admin desactivado')
 ) as r(sufijo, rol);
 
 select is(
@@ -757,7 +757,7 @@ select is(
 )
 from (values
   ('a2', 'secretaria'), ('a3', 'diseno'), ('a4', 'corte'), ('a5', 'logistica'),
-  ('a6', 'marcacion'), ('a7', 'terminacion'), ('b2', 'admin desactivado')
+  ('a6', 'terminacion (antes marcación)'), ('a7', 'terminacion'), ('b2', 'admin desactivado')
 ) as r(sufijo, rol);
 
 select is(
