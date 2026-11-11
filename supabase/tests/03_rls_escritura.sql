@@ -246,13 +246,13 @@ from (values
 
 select is(
   pg_temp.intenta('a1', $q$update public.cliente set razon_social = 'Otro'$q$),
-  'ok:0',
-  'nadie edita un cliente (no hay política de UPDATE), ni admin'
+  '42501',
+  'nadie edita un cliente directo, ni admin (solo editar_orden, con sus condiciones)'
 );
 
 select is(
   pg_temp.intenta('a1', $q$delete from public.cliente$q$),
-  'ok:0',
+  '42501',
   'nadie borra un cliente, ni admin'
 );
 
@@ -330,19 +330,20 @@ select is(
 
 select is(
   pg_temp.intenta('a1', $q$delete from public.orden$q$),
-  'ok:0',
+  '42501',
   'nadie borra una orden, ni admin'
 );
 
 -- ---------------------------------------------------------------------------
--- item_orden: admin crea; secretaría programa la tela (solo antes de programarla)
+-- item_orden: nadie agrega prendas directo (van por las funciones, ver
+-- 11_editar_orden.sql); secretaría programa la tela (solo antes de programarla)
 -- ---------------------------------------------------------------------------
 
 select is(
   pg_temp.intenta(r.sufijo, format($q$insert into public.item_orden (orden_id, descripcion, cantidad, tallas, valor)
     values (%L, 'Extra', 1, 'M:1', 10)$q$, pg_temp.id(1))),
-  case when r.rol = 'admin' then 'ok:1' else '42501' end,
-  format('%s %s agregar una prenda', r.rol, case when r.rol = 'admin' then 'puede' else 'no puede' end)
+  '42501',
+  format('%s no puede agregar una prenda directo', r.rol)
 )
 from (values
   ('a1', 'admin'), ('a2', 'secretaria'), ('a3', 'diseno'), ('a4', 'corte'),
@@ -351,7 +352,7 @@ from (values
 
 select is(
   pg_temp.intenta('a2', format($q$update public.item_orden set tipo_tela = 'Poliéster', cantidad_tela = 10, unidad_tela = 'metros' where orden_id = %L$q$, pg_temp.id(1))),
-  'ok:2',
+  'ok:1',
   'secretaría escribe la tela de las prendas de una orden sin tela programada'
 );
 
@@ -373,7 +374,7 @@ from (values
 
 select is(
   pg_temp.intenta('a1', $q$delete from public.item_orden$q$),
-  'ok:0',
+  '42501',
   'nadie borra prendas, ni admin'
 );
 

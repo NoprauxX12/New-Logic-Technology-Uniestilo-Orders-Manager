@@ -8,6 +8,8 @@ import {
   puedeCrearCorreccion,
   puedeDevolver,
 } from "@/features/correcciones/reglas";
+import { AccionEditarOrden } from "@/features/ordenes/components/AccionEditarOrden";
+import { puedeEditarOrden } from "@/features/ordenes/edicion";
 import { DetalleOrdenView } from "@/features/tablero/components/DetalleOrdenView";
 import { TableroEnVivo } from "@/features/tablero/components/TableroEnVivo";
 import { obtenerDetalleOrden } from "@/lib/ordenes/estadoOrden";
@@ -74,9 +76,27 @@ export default async function DetalleOrdenPage({ params }: Props) {
     </>
   );
 
+  // Editar la orden es solo de administración; las demás personas no ven nada.
+  const edicion =
+    usuario.rol === "admin" ? (
+      <AccionEditarOrden
+        ordenId={orden.id}
+        veredicto={puedeEditarOrden({
+          marcados,
+          etapaInicial: orden.etapaInicial,
+          rol: usuario.rol,
+        })}
+      />
+    ) : null;
+
   return (
     <TableroEnVivo>
-      <DetalleOrdenView orden={orden} accion={accion} correccion={correccion} />
+      <DetalleOrdenView
+        orden={orden}
+        accion={accion}
+        correccion={correccion}
+        edicion={edicion}
+      />
     </TableroEnVivo>
   );
 }

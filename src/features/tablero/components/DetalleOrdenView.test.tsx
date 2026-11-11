@@ -47,6 +47,7 @@ function ordenDePrueba(): DetalleOrden {
     etapasTotales: ETAPAS_PENDIENTES.length,
     avances: [],
     fichas: [],
+    ediciones: [],
   };
 }
 
@@ -203,6 +204,36 @@ describe("DetalleOrdenView · devoluciones y correcciones (HU-18)", () => {
     expect(
       screen.getByRole("heading", { name: "Devoluciones" }),
     ).toBeInTheDocument();
+  });
+
+  it("cuenta quién editó la orden y qué cambió", () => {
+    render(
+      <DetalleOrdenView
+        orden={{
+          ...ordenDePrueba(),
+          ediciones: [
+            {
+              id: "e1",
+              porNombre: "Diana Restrepo",
+              fechaHora: "2026-10-31T15:00:00Z",
+              cambios: ["Fecha de entrega: 2026-11-01 → 2026-11-05"],
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Ediciones" })).toBeVisible();
+    expect(screen.getByText(/por Diana Restrepo/)).toBeInTheDocument();
+    expect(
+      screen.getByText("Fecha de entrega: 2026-11-01 → 2026-11-05"),
+    ).toBeInTheDocument();
+  });
+
+  it("una orden sin ediciones no muestra ese bloque", () => {
+    render(<DetalleOrdenView orden={ordenDePrueba()} />);
+
+    expect(screen.queryByRole("heading", { name: "Ediciones" })).toBeNull();
   });
 
   it("una orden sin devoluciones no muestra ese bloque", () => {

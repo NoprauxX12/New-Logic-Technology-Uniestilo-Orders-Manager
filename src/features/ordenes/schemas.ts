@@ -94,6 +94,8 @@ export const itemOrdenSchema = z
     cantidadesPorTalla: z.record(z.string(), z.string()).optional(),
     valor: z.string(),
     observaciones: z.string().optional(),
+    /** Al editar: la prenda guardada que es esta fila. Vacío si es nueva. */
+    itemId: z.string().optional(),
   })
   .transform((item, ctx) => {
     let hayError = false;
@@ -123,6 +125,13 @@ export const itemOrdenSchema = z
       observacionesPrenda,
       item.observaciones,
       "observaciones",
+    );
+    // `guid` y no `uuid`: los ids del seed no cumplen los dígitos de versión de
+    // la RFC (ver `workflow/schemas.ts`).
+    const itemId = validar(
+      z.guid("No se pudo identificar la prenda").optional(),
+      item.itemId || undefined,
+      "itemId",
     );
 
     const tallaje = item.tallaje === undefined ? TALLAJE_OTRO : item.tallaje;
@@ -175,74 +184,97 @@ export const itemOrdenSchema = z
       return z.NEVER;
     }
 
-    return { descripcion, cantidad, tallas, tallaje, valor, observaciones };
+    return {
+      descripcion,
+      cantidad,
+      tallas,
+      tallaje,
+      valor,
+      observaciones,
+      itemId,
+    };
   });
 
-export const nuevaOrdenSchema = z
-  .object({
-    // Identifica la orden. La base impide que se repita, sin distinguir
-    // mayúsculas: `OC-A-650225` y `oc-a-650225` son el mismo número.
-    numeroOrdenCompra: z
-      .string()
-      .trim()
-      .min(1, "Escribe el número de la orden de compra")
-      .max(50, "El número de orden de compra es muy largo"),
+/** Los campos de una orden: los mismos al registrarla y al editarla. */
+const camposOrden = z.object({
+  // Identifica la orden. La base impide que se repita, sin distinguir
+  // mayúsculas: `OC-A-650225` y `oc-a-650225` son el mismo número.
+  numeroOrdenCompra: z
+    .string()
+    .trim()
+    .min(1, "Escribe el número de la orden de compra")
+    .max(50, "El número de orden de compra es muy largo"),
 
-    // Datos del cliente. El NIT dice de quién es la orden: si ya existe, se
-    // reutiliza ese cliente. La comparación ignora puntos, guiones y espacios,
-    // así que `900.123.456-7` y `9001234567` son el mismo cliente.
-    nit: z
-      .string()
-      .trim()
-      .min(1, "Escribe el NIT del cliente")
-      .max(20, "El NIT es muy largo")
-      .regex(/^[0-9.\-\s]+$/, "El NIT solo lleva números, puntos y guiones")
-      // Sin esto, un NIT de puros separadores ("....." ) pasaba la validación.
-      // Como es la llave del cliente, todo lo que se registrara así se pegaba
-      // al mismo cliente vacío.
-      .refine(
-        (valor) => valor.replace(/[^0-9]/g, "").length >= 5,
-        "El NIT debe tener al menos 5 números",
-      ),
-    razonSocial: z
-      .string()
-      .trim()
-      .min(1, "Escribe la razón social del cliente")
-      .max(200, "La razón social es muy larga"),
-    contactoNombre: z
-      .string()
-      .trim()
-      .min(1, "Escribe el nombre de la persona de contacto")
-      .max(150, "El nombre es muy largo"),
-    contactoCelular: z
-      .string()
-      .trim()
-      .min(7, "Escribe el número de celular")
-      .max(20, "El número de celular es muy largo")
-      .regex(
-        /^[0-9+\-\s()]+$/,
-        "El celular solo lleva números, espacios y los signos + - ( )",
-      ),
+  // Datos del cliente. El NIT dice de quién es la orden: si ya existe, se
+  // reutiliza ese cliente. La comparación ignora puntos, guiones y espacios,
+  // así que `900.123.456-7` y `9001234567` son el mismo cliente.
+  nit: z
+    .string()
+    .trim()
+    .min(1, "Escribe el NIT del cliente")
+    .max(20, "El NIT es muy largo")
+    .regex(/^[0-9.\-\s]+$/, "El NIT solo lleva números, puntos y guiones")
+    // Sin esto, un NIT de puros separadores ("....." ) pasaba la validación.
+    // Como es la llave del cliente, todo lo que se registrara así se pegaba
+    // al mismo cliente vacío.
+    .refine(
+      (valor) => valor.replace(/[^0-9]/g, "").length >= 5,
+      "El NIT debe tener al menos 5 números",
+    ),
+  razonSocial: z
+    .string()
+    .trim()
+    .min(1, "Escribe la razón social del cliente")
+    .max(200, "La razón social es muy larga"),
+  contactoNombre: z
+    .string()
+    .trim()
+    .min(1, "Escribe el nombre de la persona de contacto")
+    .max(150, "El nombre es muy largo"),
+  contactoCelular: z
+    .string()
+    .trim()
+    .min(7, "Escribe el número de celular")
+    .max(20, "El número de celular es muy largo")
+    .regex(
+      /^[0-9+\-\s()]+$/,
+      "El celular solo lleva números, espacios y los signos + - ( )",
+    ),
 
-    fechaIngreso: z.iso.date({
-      error: "Escoge la fecha en que entró el pedido",
-    }),
-    fechaEntrega: z.iso.date({ error: "Escoge la fecha de entrega" }),
+  fechaIngreso: z.iso.date({
+    error: "Escoge la fecha en que entró el pedido",
+  }),
+  fechaEntrega: z.iso.date({ error: "Escoge la fecha de entrega" }),
 
-    observaciones: z
-      .string()
-      .trim()
-      .max(2000, "Las observaciones son muy largas")
-      .optional(),
+  observaciones: z
+    .string()
+    .trim()
+    .max(2000, "Las observaciones son muy largas")
+    .optional(),
 
-    items: z.array(itemOrdenSchema).min(1, "Agrega al menos una prenda"),
-  })
-  // Criterio de aceptación de HU-01. Las fechas son ISO (2026-09-07), así que
-  // compararlas como texto da el mismo resultado que compararlas como fechas.
-  .refine((orden) => orden.fechaEntrega >= orden.fechaIngreso, {
+  items: z.array(itemOrdenSchema).min(1, "Agrega al menos una prenda"),
+});
+
+// Criterio de aceptación de HU-01. Las fechas son ISO (2026-09-07), así que
+// compararlas como texto da el mismo resultado que compararlas como fechas.
+const entregaNoAnterior = {
+  check: (orden: { fechaIngreso: string; fechaEntrega: string }) =>
+    orden.fechaEntrega >= orden.fechaIngreso,
+  params: {
     error: "La fecha de entrega no puede ser anterior a la fecha de ingreso",
     path: ["fechaEntrega"],
-  });
+  },
+};
+
+export const nuevaOrdenSchema = camposOrden.refine(
+  entregaNoAnterior.check,
+  entregaNoAnterior.params,
+);
+
+/** Editar una orden: los mismos campos, más cuál orden es. */
+export const edicionOrdenSchema = camposOrden
+  .extend({ ordenId: z.guid("No se pudo identificar la orden") })
+  .refine(entregaNoAnterior.check, entregaNoAnterior.params);
 
 /** Datos ya validados y convertidos: cantidad y valor salen como números. */
 export type NuevaOrden = z.infer<typeof nuevaOrdenSchema>;
