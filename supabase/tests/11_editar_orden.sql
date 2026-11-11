@@ -209,7 +209,7 @@ create function pg_temp.ediciones(p_n int) returns int language sql as $$
   select count(*)::int from public.edicion_orden where orden_id = pg_temp.id(p_n)
 $$;
 
-select plan(182);
+select plan(183);
 
 -- ---------------------------------------------------------------------------
 -- Admin sí, hasta cotización aprobada inclusive
@@ -481,8 +481,8 @@ select is(
 
 select is(
   (select count(*)::int from public.avance_seccion where orden_id = pg_temp.id(6)),
-  7,
-  'la edición no tocó la bitácora: siguen los 6 avances anulados y el nuevo'
+  8,
+  'la edición no tocó la bitácora: siguen los 7 avances de antes (con insumos, HU-23) y el nuevo'
 );
 
 -- ---------------------------------------------------------------------------

@@ -40,7 +40,7 @@ describe("puedeEditarOrden", () => {
       SECUENCIA.indexOf(PRIMERA_ETAPA_NO_EDITABLE),
     );
 
-    expect(posteriores).toHaveLength(11);
+    expect(posteriores).toHaveLength(12);
     for (const etapa of posteriores) {
       expect(comoAdmin(hasta(etapa)).permitido).toBe(false);
       // Aunque falten las anteriores: las órdenes viejas las pasaron de largo.

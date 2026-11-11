@@ -8,6 +8,6 @@
 -- siguiente porque Postgres no deja usar un valor de enum en la misma
 -- transacción que lo crea.
 --
--- Ver `docs/adr/0012`.
+-- Ver `docs/adr/0013`.
 
 alter type public.checkpoint add value if not exists 'insumos_validados' after 'tela_programada';

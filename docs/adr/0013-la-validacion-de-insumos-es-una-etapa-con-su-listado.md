@@ -1,4 +1,4 @@
-# 0012. La validación de insumos es una etapa del flujo con su listado inmutable
+# 0013. La validación de insumos es una etapa del flujo con su listado inmutable
 
 Fecha: 2026-11-10 · Estado: Aceptada
 

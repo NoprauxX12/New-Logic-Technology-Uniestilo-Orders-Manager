@@ -66,7 +66,7 @@ src/
     asistente/            Asistente de solo lectura para administración: HU-15, y señala lo pendiente al abrir: HU-21 (docs/adr/0009)
     correcciones/         Devolver una orden a una etapa y crear órdenes de corrección, solo admin: HU-18 (docs/adr/0011)
     documentos/           Etiquetas y documentos de despacho: HU-13
-    insumos/              Validar los insumos de la orden con su listado imprimible: HU-23 (docs/adr/0012)
+    insumos/              Validar los insumos de la orden con su listado imprimible: HU-23 (docs/adr/0013)
     usuarios/             Cuentas de las personas (crear, editar, desactivar, borrar), solo admin: HU-24 (docs/adr/0008)
   components/
     ui/                   Primitivos reutilizables sin dominio (Button, Input, Badge…)

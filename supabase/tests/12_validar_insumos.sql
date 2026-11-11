@@ -343,7 +343,7 @@ set constraints public.avance_insumos_trae_listado immediate;
 select throws_ok(
   format($$insert into public.avance_seccion (orden_id, checkpoint, usuario_id)
     values (%L, 'insumos_validados', '00000000-0000-0000-0000-0000000000a2')$$, pg_temp.id(4002)),
-  'UE016', null,
+  'UE018', null,
   'un avance insumos_validados sin insumos se rechaza'
 );
 

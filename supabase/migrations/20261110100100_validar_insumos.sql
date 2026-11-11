@@ -14,7 +14,7 @@
 --      transacción (ADR 0005).
 --   5. HU-20 nombra el área nueva en sus avisos.
 --
--- Ver `docs/adr/0012`.
+-- Ver `docs/adr/0013`.
 
 -- ---------------------------------------------------------------------------
 -- 1. Secretaría es la dueña de "insumos validados"
@@ -144,7 +144,7 @@ begin
     select 1 from public.insumo_orden i where i.avance_id = new.id
   ) then
     raise exception 'Los insumos se validan con su listado: usa la pantalla de insumos'
-      using errcode = 'UE016';
+      using errcode = 'UE018';
   end if;
 
   return null;
